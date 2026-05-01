@@ -36,28 +36,49 @@
 | 3 | **Learning a new package is hard for users.** No quick start, missing edge cases, undocumented "when not to use" — all silent failures. | A failing newb run names exactly which question the docs couldn't answer, with the agent's own response — surfacing gaps before users hit them. |
 | 4 | **Maintaining doc quality across many packages doesn't scale.** Manual review per release, per package, per branch is the bottleneck for ecosystem-wide quality. | One CLI per package; JSON output for CI; runs in isolation (`host` / `docker` / `apptainer`); pluggable graders (substring + LLM judge) via `tests_newb.yaml`. Plug into a CI matrix and quality scales with your portfolio. |
 
-## How it works
+## How it works (`--runtime docker`, the hard-isolation default for CI)
 
 ```
-┌──────────────────────┐    ┌────────────────────────────────────┐    ┌──────────────────────┐
-│   Your package       │    │   claude-agent-sdk                 │    │   Report             │
-│                      │    │   (Anthropic, official)            │    │                      │
-│   ./docs/   or       │    │                                    │    │   what_for           │
-│   ./_skills/<pkg>/   │ →  │   fresh Claude Code session,       │ →  │   problems_solved    │
-│   tests_newb.yaml    │    │   setting_sources=[],              │    │   quick_start        │
-│   (optional)         │    │   allowed_tools=["Read"]           │    │   when_not_to_use    │
-│                      │    │   cwd=<staged copy of your docs>   │    │   tests[] (pass/fail)│
-└──────────────────────┘    └────────────────────────────────────┘    └──────────────────────┘
-            │                              ▲
-            │                              │  newb sends N prompts via the SDK's
-            └────── stages copy ───────────┘  ``query()`` async iterator
-                                              (structured streaming, no --print)
+HOST                                                      DOCKER CONTAINER (ghcr.io/.../newb-runner)
+┌──────────────────────────────────┐                      ┌─────────────────────────────────────────────┐
+│   Your package                   │                      │                                             │
+│                                  │   docker run --rm    │   claude-agent-sdk (Anthropic, MIT)         │
+│   ./docs/  or                    │   --network bridge   │     ClaudeAgentOptions(                     │
+│   ./_skills/<pkg>/               │   -v <staged>:ro     │       cwd="/work/skills",                   │
+│   tests_newb.yaml (optional)     │ ───────────────────► │       setting_sources=[],   # no host CLAUDE│
+│                                  │   -e ANTHROPIC_…     │       allowed_tools=["Read"], # NO Bash/Write│
+│                                  │                      │       max_turns=8,                          │
+│   ├── shutil.copytree            │                      │     )                                       │
+│   │   to /tmp/newb-stage-XXX/    │                      │                                             │
+│   │   skills/  (read-only mount) │   stdout = answer    │   for each canonical question:              │
+│   └── 1 prompt per canonical Q   │ ◄─────────────────── │     async for msg in query(prompt, options):│
+│       + 1 per tests_newb.yaml    │                      │       collect AssistantMessage text         │
+│       entry                      │                      │     return ResultMessage.result             │
+└──────────────────────────────────┘                      └─────────────────────────────────────────────┘
+                │
+                ▼
+        ┌──────────────────────┐
+        │   Report             │
+        │   what_for           │
+        │   problems_solved    │
+        │   quick_start        │
+        │   when_not_to_use    │
+        │   tests[] (pass/fail)│
+        │   tests_summary      │
+        └──────────────────────┘
 ```
+
+**Three isolation runtimes** (`--runtime`):
+
+| Value | FS fence | Net fence | Use when |
+|---|---|---|---|
+| `host` (default — fast) | soft (Read tool reaches host fs in principle) | none | local development, your own repo, no CI |
+| `docker` *(diagrammed above)* | **hard** — only `<staged>:ro` mounted | bridged | CI, third-party repo, untrusted source |
+| `apptainer` | **hard** — `--no-home --containall` | rootless | HPC where docker isn't allowed |
 
 newb owns the **test schema** (4 canonical questions + `tests_newb.yaml`
 + graders + report rendering). The SDK owns **everything else**: session
-lifecycle, transport, message structuring, tool execution. No docker, no
-multiplexer, no wire format — just a Python import.
+lifecycle, transport, message structuring, tool execution.
 
 ## Installation
 
