@@ -213,32 +213,15 @@ def _resolve_source(spec: Union[Path, str]) -> Tuple[Path, Optional[Path]]:
 
 def _make_runner(
     *,
-    runtime: str,
-    api_key: Optional[str],
-    claude_code_credential: Optional[str],
-    skills_mount: Path,
-    config_dir: Optional[Path],
+    skills_dir: Path,
+    model: str,
+    host: str,
 ) -> Any:
-    """Build a runner for the chosen runtime."""
-    if runtime == "docker":
-        from ._runner import NewbieDockerRunner
+    """Build the sac-backed runner. Single backend in 0.6.x — sac handles
+    runtime/auth/isolation/lifecycle. newb only knows A2A."""
+    from ._sac_runner import SacRunner
 
-        return NewbieDockerRunner(skills_mount=skills_mount)
-    if runtime == "local":
-        from ._runner import LocalRunner
-
-        return LocalRunner(
-            skills_mount=skills_mount,
-            api_key=api_key,
-            claude_code_credential=claude_code_credential,
-            config_dir=config_dir,
-        )
-    if runtime == "apptainer":
-        raise NotImplementedError(
-            "runtime='apptainer' is planned for v0.6.0 (HPC use case). "
-            "Contributions welcome: https://github.com/ywatanabe1989/newb"
-        )
-    raise ValueError(f"unknown runtime: {runtime!r}")
+    return SacRunner(skills_mount=skills_dir, model=model, host=host)
 
 
 # ---------------------------------------------------------------------------
@@ -251,10 +234,7 @@ def run(
     *,
     model: str = "claude-haiku-4-5",
     runs_per_prompt: int = 1,
-    runtime: str = "docker",
-    api_key: Optional[str] = None,
-    claude_code_credential: Optional[str] = None,
-    config_dir: Optional[Union[Path, str]] = None,
+    host: str = "ywata-note-win",
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -290,15 +270,9 @@ def run(
     cleanup_mount: Optional[Path] = None
     try:
         if runner is None:
-            mount = _stage_skills_mount(skills_src, name)
-            cleanup_mount = mount
-            runner = _make_runner(
-                runtime=runtime,
-                api_key=api_key,
-                claude_code_credential=claude_code_credential,
-                skills_mount=mount,
-                config_dir=Path(config_dir) if config_dir else None,
-            )
+            # sac stages skills under its own workspace; we just point
+            # SacRunner at the skills source dir.
+            runner = _make_runner(skills_dir=skills_src, model=model, host=host)
 
         # Resolve the skills path the agent will see inside the runner.
         # Docker mounts at /home/agent/.claude/skills/; LocalRunner uses

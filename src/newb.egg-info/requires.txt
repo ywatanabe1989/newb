@@ -1,4 +1,5 @@
 click>=8.0
+scitex-agent-container>=0.10.0
 
 [yaml]
 PyYAML>=6.0

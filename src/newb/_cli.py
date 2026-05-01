@@ -1,7 +1,9 @@
 """newb CLI — ``newb <skills_dir>``.
 
-Pytest-style: no subcommand. ``newb ./skills`` runs the agent the same
-way ``pytest ./tests`` runs the test suite.
+newb 0.6.0 delegates ALL runtime/auth/isolation/lifecycle to
+scitex-agent-container (sac). The CLI surface is therefore minimal:
+just the source, model, output format, and the host sac will run the
+agent on. Everything else is sac-internal.
 """
 
 from __future__ import annotations
@@ -26,47 +28,14 @@ from ._verify import run as _run_impl
     help="Output format.",
 )
 @click.option(
-    "--runtime",
-    type=click.Choice(["docker", "local", "apptainer"]),
-    default="docker",
-    help="Where to run the agent. local=host subprocess, docker=container, "
-    "apptainer=HPC (planned).",
-)
-@click.option(
-    "--claude-code-credential",
-    "claude_code_credential",
-    type=click.Path(dir_okay=False),
-    default=None,
-    help="Path to Claude Code credentials JSON (extracts OAuth token; "
-    "uses subscription quota — $0 marginal). Env: $NEWB_CLAUDE_CODE_CREDENTIAL. "
-    "PREFERRED over --api-key when both resolve.",
-)
-@click.option(
-    "--api-key",
-    "api_key",
-    default=None,
-    help="Direct Anthropic API token (sk-ant-api03-...). "
-    "Env: $NEWB_ANTHROPIC_API_KEY. Per-call API spend.",
-)
-@click.option(
-    "--config-dir",
-    type=click.Path(file_okay=False),
-    default=None,
-    help="Explicit isolation HOME for --runtime=local (default: fresh tmp).",
+    "--host",
+    default="ywata-note-win",
+    help="Host where sac will start the agent (per the agent YAML's spec.host). "
+    "Default matches the local fleet's primary host.",
 )
 @click.version_option()
 @click.pass_context
-def main(
-    ctx,
-    source,
-    model,
-    runs,
-    out_format,
-    runtime,
-    claude_code_credential,
-    api_key,
-    config_dir,
-):
+def main(ctx, source, model, runs, out_format, host):
     """Run a fresh AI agent against a docs/skills directory or git URL.
 
     \b
@@ -76,16 +45,17 @@ def main(
         _skills/, docs/, or repo root is auto-detected.
 
     \b
-    Auth (--runtime=local; pick one — claude-code-credential wins if both):
-      $ export NEWB_CLAUDE_CODE_CREDENTIAL=~/.claude/.credentials.json   # subscription
-      $ export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...                   # per-call $
+    Backed by scitex-agent-container (sac):
+      sac handles runtime selection (local/docker/apptainer/remote),
+      auth, isolation, Claude Code session lifecycle. newb only knows
+      the A2A JSON-RPC protocol over which it sends prompts.
 
     \b
     Example:
         $ newb ./docs
         $ newb ./src/mypkg/_skills/mypkg
         $ newb https://github.com/user/repo.git
-        $ newb ./docs --runtime local --claude-code-credential ~/.claude/.credentials.json
+        $ newb ./docs --format markdown >> README.md
     """
     if source is None:
         click.echo(ctx.get_help())
@@ -95,10 +65,7 @@ def main(
         source,
         model=model,
         runs_per_prompt=runs,
-        runtime=runtime,
-        api_key=api_key,
-        claude_code_credential=claude_code_credential,
-        config_dir=config_dir,
+        host=host,
     )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)
