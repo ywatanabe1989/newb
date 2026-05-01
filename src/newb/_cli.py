@@ -15,7 +15,11 @@ from ._verify import run as _run_impl
 
 
 @click.command()
-@click.argument("skills_dir", type=click.Path(exists=True, file_okay=False))
+@click.argument(
+    "skills_dir",
+    required=False,
+    type=click.Path(exists=True, file_okay=False),
+)
 @click.option("--model", default="claude-haiku-4-5", help="Claude model id.")
 @click.option("--runs", default=1, type=int, help="Runs per prompt.")
 @click.option(
@@ -26,7 +30,8 @@ from ._verify import run as _run_impl
     help="Output format.",
 )
 @click.version_option()
-def main(skills_dir, model, runs, out_format):
+@click.pass_context
+def main(ctx, skills_dir, model, runs, out_format):
     """Run a fresh AI agent against your package's skills.
 
     \b
@@ -34,6 +39,9 @@ def main(skills_dir, model, runs, out_format):
         $ newb ./src/mypkg/_skills/mypkg
         $ newb ./_skills --format markdown >> README.md
     """
+    if skills_dir is None:
+        click.echo(ctx.get_help())
+        ctx.exit(0)
     result = _run_impl(skills_dir, model=model, runs_per_prompt=runs)
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)
