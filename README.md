@@ -43,7 +43,21 @@ newb ./docs                                # any dir of .md files
 newb ./src/mypkg/_skills/mypkg             # standard SciTeX layout
 newb https://github.com/user/repo.git      # git URL — shallow-clones
 newb ./docs --format markdown >> README.md
+newb ./docs --runtime docker               # hard isolation in container
+newb ./docs --runtime apptainer            # HPC variant
 ```
+
+## Isolation runtimes (`--runtime`)
+
+| Value       | Where the agent runs                                          | Isolation             | Speed         |
+|-------------|---------------------------------------------------------------|-----------------------|---------------|
+| `host`      | host subprocess via `claude-agent-sdk`                        | soft (Read tool can technically reach host fs) | ~10-15s/q     |
+| `docker`    | `ghcr.io/ywatanabe1989/newb-runner` container, only `<staged>` mounted ro | hard (real fs + network ns)             | ~15-20s/q     |
+| `apptainer` | same image via `apptainer run docker://...` (HPC)             | hard (rootless)       | ~20-30s/q     |
+
+The container image is published from `containers/Dockerfile` in this
+repo via `.github/workflows/publish-image.yml`. Override the image
+with `NEWB_DOCKER_IMAGE=...`.
 
 Asks a fresh Claude agent four canonical questions (what for / problems
 solved / quick start / when not to use), plus any author-defined tests

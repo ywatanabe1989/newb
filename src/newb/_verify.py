@@ -215,12 +215,35 @@ def _make_runner(
     *,
     skills_dir: Path,
     model: str,
+    runtime: str = "host",
 ) -> Any:
-    """Build the SDK-backed runner. 0.7.x uses ``claude-agent-sdk``
-    directly — no docker, no multiplexer, no A2A wire format."""
-    from ._sdk_runner import SdkRunner
+    """Build a runner.
 
-    return SdkRunner(skills_mount=skills_dir, model=model)
+    ``runtime`` selects the isolation backend:
+
+    * ``host`` (default) — host subprocess via ``claude-agent-sdk``;
+      soft fence (the agent's Read tool can technically reach the host
+      filesystem). Fast (~10-15s/q).
+    * ``docker`` — run the SDK inside ``ghcr.io/.../newb-runner``;
+      hard isolation (only the staged skills are mounted). ~15-20s/q
+      after image pull.
+    * ``apptainer`` — same image via apptainer; HPC use case.
+    """
+    if runtime == "host":
+        from ._sdk_runner import SdkRunner
+
+        return SdkRunner(skills_mount=skills_dir, model=model)
+    if runtime == "docker":
+        from ._container_runner import DockerRunner
+
+        return DockerRunner(skills_mount=skills_dir, model=model)
+    if runtime == "apptainer":
+        from ._container_runner import ApptainerRunner
+
+        return ApptainerRunner(skills_mount=skills_dir, model=model)
+    raise ValueError(
+        f"unknown runtime: {runtime!r} (expected host / docker / apptainer)"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -233,6 +256,7 @@ def run(
     *,
     model: str = "claude-haiku-4-5",
     runs_per_prompt: int = 1,
+    runtime: str = "host",
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -270,7 +294,7 @@ def run(
         if runner is None:
             # sac stages skills under its own workspace; we just point
             # SacRunner at the skills source dir.
-            runner = _make_runner(skills_dir=skills_src, model=model)
+            runner = _make_runner(skills_dir=skills_src, model=model, runtime=runtime)
 
         # Resolve the skills path the agent will see inside the runner.
         # Docker mounts at /home/agent/.claude/skills/; LocalRunner uses

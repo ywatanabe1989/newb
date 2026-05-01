@@ -27,9 +27,17 @@ from ._verify import run as _run_impl
     default="json",
     help="Output format.",
 )
+@click.option(
+    "--runtime",
+    type=click.Choice(["host", "docker", "apptainer"]),
+    default="host",
+    help="Where the agent runs. host=subprocess (fast, soft isolation); "
+    "docker=ghcr.io/ywatanabe1989/newb-runner image (hard isolation); "
+    "apptainer=same image via apptainer (HPC).",
+)
 @click.version_option()
 @click.pass_context
-def main(ctx, source, model, runs, out_format):
+def main(ctx, source, model, runs, out_format, runtime):
     """Run a fresh AI agent against a docs/skills directory or git URL.
 
     \b
@@ -63,6 +71,7 @@ def main(ctx, source, model, runs, out_format):
         source,
         model=model,
         runs_per_prompt=runs,
+        runtime=runtime,
     )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)
