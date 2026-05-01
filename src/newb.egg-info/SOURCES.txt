@@ -2,6 +2,7 @@ LICENSE
 README.md
 pyproject.toml
 src/newb/__init__.py
+src/newb/__main__.py
 src/newb/_cli.py
 src/newb/_container_runner.py
 src/newb/_sdk_runner.py
@@ -12,4 +13,3 @@ src/newb.egg-info/dependency_links.txt
 src/newb.egg-info/entry_points.txt
 src/newb.egg-info/requires.txt
 src/newb.egg-info/top_level.txt
-tests/test_verify.py

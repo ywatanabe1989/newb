@@ -54,7 +54,14 @@ NEWB_DOCKER_IMAGE=ghcr.io/me/my-fork:latest newb ./skills --runtime docker
 
 ## Auth pass-through
 
-Container runtimes require `ANTHROPIC_API_KEY` to be set on the host —
-they pass it through (`-e` for docker, `--env` for apptainer). The
-`host` runtime additionally accepts `~/.claude/` OAuth (the SDK's
-bundled CLI inherits it on personal machines).
+Container runtimes require `NEWB_ANTHROPIC_API_KEY` to be set on the
+host — they read that NEWB_-prefixed var and forward it to the
+container as `ANTHROPIC_API_KEY` (`-e` for docker, `--env` for
+apptainer) so the SDK inside the container can pick it up. newb never
+reads the upstream `ANTHROPIC_API_KEY` directly.
+
+The `host` runtime additionally accepts `~/.claude/` OAuth (the SDK's
+bundled CLI inherits it on personal machines) when
+`NEWB_ANTHROPIC_API_KEY` is unset; in that case newb actively masks
+any stray `ANTHROPIC_API_KEY` for the duration of the call so it
+can't sneak in.

@@ -55,7 +55,7 @@ present) a Boundary tests section listing each test with PASS/FAIL.
 ```yaml
 - name: Verify docs (newb)
   env:
-    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    NEWB_ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
   run: |
     pip install newb[yaml]
     newb ./src/$PKG/_skills/$PKG --format json --runs 2 > /tmp/newb.json

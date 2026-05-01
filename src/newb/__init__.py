@@ -26,7 +26,20 @@ import types
 
 from ._verify import render_markdown, run, self_explain
 
-__version__ = "0.8.0"
+# Resolve version from installed metadata so source edits don't drift
+# the in-tree string. Fallback uses a PEP 440 local segment so an
+# editable install without metadata still parses correctly.
+try:
+    from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
+    from importlib.metadata import version as _version
+
+    try:
+        __version__ = _version("newb")
+    except _PackageNotFoundError:
+        __version__ = "0.0.0+local"
+except ImportError:
+    __version__ = "0.0.0+local"
+
 __all__ = ["__version__", "render_markdown", "run", "self_explain"]
 
 

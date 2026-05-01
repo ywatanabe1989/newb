@@ -51,6 +51,9 @@ print(newb.render_markdown(report))
 
 ## Auth
 
-Set `ANTHROPIC_API_KEY` (canonical, ToS-clean) or rely on a local
-`~/.claude/` OAuth login on personal machines (not sanctioned for
-redistributed products).
+Set `NEWB_ANTHROPIC_API_KEY` to opt newb into API key auth (the only
+env var newb reads — no upstream surprise from a stray
+`ANTHROPIC_API_KEY` in your shell). On personal machines, leaving
+NEWB_ANTHROPIC_API_KEY unset falls through to your local `~/.claude/`
+OAuth login (the host runtime masks any stray `ANTHROPIC_API_KEY` for
+you). Container runtimes require the NEWB_-prefixed var.

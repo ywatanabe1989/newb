@@ -40,11 +40,13 @@ class _BaseContainerRunner:
             raise RuntimeError(
                 f"{type(self).__name__} requires `{self.runtime_bin}` on PATH."
             )
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        api_key = os.environ.get("NEWB_ANTHROPIC_API_KEY")
         if not api_key:
             raise RuntimeError(
-                f"{type(self).__name__} needs $ANTHROPIC_API_KEY set "
-                "(passed through to the container)."
+                f"{type(self).__name__} needs $NEWB_ANTHROPIC_API_KEY set "
+                "(forwarded to the container as ANTHROPIC_API_KEY for the SDK). "
+                "newb never reads the upstream ANTHROPIC_API_KEY env var — "
+                "set NEWB_ANTHROPIC_API_KEY explicitly to opt in."
             )
         self._api_key = api_key
         self.skills_mount = Path(skills_mount).resolve()

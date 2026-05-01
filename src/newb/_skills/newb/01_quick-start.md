@@ -14,7 +14,9 @@ pip install newb[yaml]        # + tests_newb.yaml support (pyyaml)
 ```
 
 `claude-agent-sdk` (Anthropic, MIT) is pulled in automatically. Auth via
-`ANTHROPIC_API_KEY` env var (canonical) or `~/.claude/` OAuth login.
+`NEWB_ANTHROPIC_API_KEY` (newb-owned namespace, no upstream surprise) or
+a local `~/.claude/` OAuth login on personal machines. newb actively
+masks any stray `ANTHROPIC_API_KEY` so it can't sneak in unintentionally.
 
 ## CLI
 

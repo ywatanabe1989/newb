@@ -52,9 +52,10 @@ def main(ctx, source, model, runs, out_format, runtime):
       Claude Code session; newb owns the test schema + grading.
 
     \b
-    Auth:
-      $ export ANTHROPIC_API_KEY=sk-ant-api03-...   # canonical, ToS-clean
-      (or use your local ~/.claude/ login — also works on personal machines.)
+    Auth (NEWB_-prefixed env vars only — no upstream surprises):
+      $ export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...   # canonical, ToS-clean
+      (Or rely on your local ~/.claude/ OAuth login on personal machines —
+       newb actively masks any stray ANTHROPIC_API_KEY so it can't sneak in.)
 
     \b
     Example:

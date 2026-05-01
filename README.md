@@ -11,12 +11,8 @@
 
 <p align="center">
   <a href="https://scitex.ai">
-    <img src="docs/assets/images/scitex-logo-blue-cropped.png" alt="SciTeX" width="320">
+    <img src="docs/assets/images/scitex-logo-blue-cropped.png" alt="SciTeX" width="240">
   </a>
-</p>
-
-<p align="center">
-  <img src="docs/assets/newb-logo.png" alt="newb mascot" width="200">
 </p>
 
 <p align="center"><b>Test your package through the eyes of a newbie agent — a fresh AI agent reads only your docs and tries to use your package. If it succeeds, your docs work.</b></p>
@@ -24,6 +20,8 @@
 <p align="center">
   <a href="https://newb.readthedocs.io/">Full Documentation</a> · <code>pip install newb</code>
 </p>
+
+<p align="center"><sub>Python 3.10+ · bundles <a href="https://github.com/anthropics/claude-agent-sdk-python"><code>claude-agent-sdk</code></a> (Anthropic, MIT) · newb itself AGPL-3.0-only · auth: <code>NEWB_ANTHROPIC_API_KEY</code> or local <code>~/.claude/</code> OAuth</sub></p>
 
 ---
 
@@ -43,14 +41,15 @@ HOST                                                      DOCKER CONTAINER (ghcr
 ┌──────────────────────────────────┐                      ┌─────────────────────────────────────────────┐
 │   Your package                   │                      │                                             │
 │                                  │   docker run --rm    │   claude-agent-sdk (Anthropic, MIT)         │
-│   ./docs/  or                    │   --network bridge   │     ClaudeAgentOptions(                     │
-│   ./_skills/<pkg>/               │   -v <staged>:ro     │       cwd="/work/skills",                   │
+│   docs (any tree of .md files —  │   --network bridge   │     ClaudeAgentOptions(                     │
+│      README, scratch notes,      │   -v <staged>:ro     │       cwd="/work/docs",                     │
+│      agent skills, …)            │                      │                                             │
 │   tests_newb.yaml (optional)     │ ───────────────────► │       setting_sources=[],   # no host CLAUDE│
 │                                  │   -e ANTHROPIC_…     │       allowed_tools=["Read"], # NO Bash/Write│
 │                                  │                      │       max_turns=8,                          │
 │   ├── shutil.copytree            │                      │     )                                       │
 │   │   to /tmp/newb-stage-XXX/    │                      │                                             │
-│   │   skills/  (read-only mount) │   stdout = answer    │   for each canonical question:              │
+│   │   docs/   (read-only mount)  │   stdout = answer    │   for each canonical question:              │
 │   └── 1 prompt per canonical Q   │ ◄─────────────────── │     async for msg in query(prompt, options):│
 │       + 1 per tests_newb.yaml    │                      │       collect AssistantMessage text         │
 │       entry                      │                      │     return ResultMessage.result             │
@@ -153,20 +152,22 @@ Each test combines optional substring grading and an optional LLM judge.
 ## Auth
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-api03-...     # canonical, ToS-clean
+export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...   # canonical, ToS-clean
 ```
 
-Per [Anthropic's commercial ToS](https://www.anthropic.com/legal/commercial-terms),
-products built on the Claude Agent SDK should use API key auth. On a
-personal machine where you've run `claude` to authenticate, an existing
-`~/.claude/` OAuth login also works (the SDK's bundled CLI inherits it),
-but Anthropic doesn't sanction this for redistributed products.
+newb owns its own env namespace and never silently inherits the
+upstream `ANTHROPIC_API_KEY`. On a personal machine, leaving the var
+unset falls through to your local `~/.claude/` OAuth login (host
+runtime only — containers require the explicit env var). Per
+[Anthropic's commercial ToS](https://www.anthropic.com/legal/commercial-terms),
+redistributed / CI use should set `NEWB_ANTHROPIC_API_KEY`.
 
 ## Part of SciTeX
 
-`newb` is part of [**SciTeX**](https://scitex.ai). It is the docs-quality
-verifier for the ecosystem — every `scitex-*` package's `_skills/<pkg>/`
-can be re-run through `newb` in CI to catch doc drift before users do.
+`newb` is part of [**SciTeX**](https://scitex.ai). It is the
+docs-quality verifier for the ecosystem — every `scitex-*` package's
+docs can be re-run through `newb` in CI to catch doc drift before
+users do.
 
 >Four Freedoms for Research
 >
@@ -176,17 +177,6 @@ can be re-run through `newb` in CI to catch doc drift before users do.
 >3. The freedom to **modify** any module and share improvements with the community.
 >
 >AGPL-3.0 — because we believe research infrastructure deserves the same freedoms as the software it runs on.
-
-## Requirements
-
-- Python 3.10+
-- `claude-agent-sdk` (auto-installed; bundles a Claude CLI)
-- `$ANTHROPIC_API_KEY` (or local `claude` login)
-
-## License
-
-newb itself: AGPL-3.0-only. The bundled `claude-agent-sdk`: MIT,
-governed by [Anthropic's Commercial Terms of Service](https://www.anthropic.com/legal/commercial-terms).
 
 ---
 

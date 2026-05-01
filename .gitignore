@@ -5,6 +5,10 @@ build/
 __pycache__/
 *.pyc
 
+# Local venv
+.venv/
+venv/
+
 # Test/coverage
 .pytest_cache/
 .coverage

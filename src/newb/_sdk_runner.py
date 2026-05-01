@@ -9,14 +9,17 @@ Replaces the sac+A2A pipeline (newb 0.6) with a direct SDK call. Reasons:
   honors the same ``ANTHROPIC_API_KEY`` env var and falls back to
   ``~/.claude/.credentials.json`` if neither is set.
 
-Auth (per Anthropic's documented best practice):
+Auth — newb owns its own env namespace (NEWB_ prefix only) so it never
+silently picks up an upstream ``ANTHROPIC_API_KEY`` the user set for
+something else:
 
-* Set ``ANTHROPIC_API_KEY`` for production / CI / redistributed use.
-* For personal/local use, an existing ``~/.claude/`` OAuth login also
-  works (the bundled CLI inherits it). Note Anthropic's commercial ToS
-  technically requires API key auth for products built on the SDK; OSS
-  tools running on the user's own machine with the user's own creds
-  are a documented gray zone.
+* Set ``NEWB_ANTHROPIC_API_KEY`` to opt newb into API key auth (canonical
+  for production / CI / redistributed use). Forwarded to the SDK as
+  ``ANTHROPIC_API_KEY`` only for the duration of the call, then restored.
+* If ``NEWB_ANTHROPIC_API_KEY`` is unset, newb actively *masks* any stray
+  ``ANTHROPIC_API_KEY`` in the environment for the SDK call so the
+  bundled CLI falls through to ``~/.claude/`` OAuth login (personal-use
+  gray zone per Anthropic's commercial ToS) or fails cleanly.
 
 Isolation:
 
@@ -79,6 +82,8 @@ class SdkRunner:
         return asyncio.run(self._run_async(prompt, model or self.model, timeout))
 
     async def _run_async(self, prompt: str, model: str, timeout: int) -> dict:
+        import os
+
         from claude_agent_sdk import (
             AssistantMessage,
             ClaudeAgentOptions,
@@ -86,6 +91,19 @@ class SdkRunner:
             TextBlock,
             query,
         )
+
+        # NEWB_ prefix only — never silently inherit ANTHROPIC_API_KEY from
+        # the user's shell environment. Forward the explicit
+        # NEWB_ANTHROPIC_API_KEY to the SDK by temporarily setting the
+        # canonical env var; if NEWB_ANTHROPIC_API_KEY is unset, mask any
+        # stray ANTHROPIC_API_KEY so the SDK's bundled CLI falls through to
+        # the personal-machine ~/.claude/ OAuth login (or fails cleanly).
+        prior_anthropic_key = os.environ.get("ANTHROPIC_API_KEY")
+        newb_key = os.environ.get("NEWB_ANTHROPIC_API_KEY")
+        if newb_key:
+            os.environ["ANTHROPIC_API_KEY"] = newb_key
+        elif prior_anthropic_key is not None:
+            os.environ.pop("ANTHROPIC_API_KEY", None)
 
         options = ClaudeAgentOptions(
             model=model,
@@ -116,6 +134,12 @@ class SdkRunner:
             return {
                 "result": f"(SDK timeout after {timeout}s; partial: {''.join(text_chunks)[:200]})"
             }
+        finally:
+            # Restore the user's original env exactly.
+            if prior_anthropic_key is None:
+                os.environ.pop("ANTHROPIC_API_KEY", None)
+            else:
+                os.environ["ANTHROPIC_API_KEY"] = prior_anthropic_key
 
         text = result_text or "\n".join(text_chunks).strip() or "(empty response)"
         return {"result": text}

@@ -33,10 +33,15 @@ real. Strategies for stable CI:
 
 ## Auth caveat
 
-The container runtimes hard-fail if `ANTHROPIC_API_KEY` is unset; they
-do not fall back to OAuth. The `host` runtime accepts either, but
-Anthropic's commercial ToS expects API key auth for redistributed
-products — OAuth is documented as a personal-use gray zone.
+newb owns its own env namespace (`NEWB_ANTHROPIC_API_KEY`) and never
+silently inherits the upstream `ANTHROPIC_API_KEY` — set the NEWB_-
+prefixed var explicitly to opt in.
+
+The container runtimes hard-fail if `NEWB_ANTHROPIC_API_KEY` is unset
+(no OAuth fallback inside containers). The `host` runtime falls
+through to `~/.claude/` OAuth login when the env var is unset, which
+is a personal-use gray zone per Anthropic's commercial ToS — for
+redistributed / CI use, set `NEWB_ANTHROPIC_API_KEY`.
 
 ## Surface limit
 
