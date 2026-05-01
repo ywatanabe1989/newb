@@ -45,6 +45,10 @@ newb https://github.com/user/repo.git      # git URL — shallow-clones
 newb ./docs --format markdown >> README.md
 newb ./docs --runtime docker               # hard isolation in container
 newb ./docs --runtime apptainer            # HPC variant
+
+# newb verifying its own docs in a fresh container — first self-verification:
+newb https://github.com/ywatanabe1989/newb.git --runtime docker \
+  > .history/$(date +%F)-self-verification.txt 2>&1
 ```
 
 ## Isolation runtimes (`--runtime`)
