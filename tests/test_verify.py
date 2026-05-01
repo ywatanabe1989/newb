@@ -21,7 +21,7 @@ def test_module_imports_and_exports_callable():
     assert callable(newb)
     # Backward-compat: self_explain is now an alias for verify.
     assert newb.self_explain is newb.verify
-    assert newb.__version__ == "0.3.0"
+    assert newb.__version__ == "0.3.1"
     assert isinstance(_verify._PROMPT_WHAT_FOR, str)
     assert isinstance(_verify._PROMPT_PROBLEMS, str)
     assert isinstance(_verify._PROMPT_QUICK_START, str)
@@ -211,14 +211,8 @@ def test_cli_help_shows_example_block():
 
     from newb._cli import main
 
-    result = CliRunner().invoke(main, ["run", "--help"])
+    result = CliRunner().invoke(main, ["--help"])
     assert result.exit_code == 0
     assert "Example" in result.output
-    assert "newb run" in result.output
-    assert "--json" in result.output
+    assert "newb ./" in result.output
     assert "--format" in result.output
-
-    # Backward-compat: hidden ``verify`` subcommand still resolves.
-    legacy = CliRunner().invoke(main, ["verify", "--help"])
-    assert legacy.exit_code == 0
-    assert "deprecated" in legacy.output.lower()

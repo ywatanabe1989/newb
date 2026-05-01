@@ -27,7 +27,7 @@ import types
 
 from ._verify import render_markdown, run, self_explain, verify
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __all__ = ["__version__", "render_markdown", "run", "self_explain", "verify"]
 
 
