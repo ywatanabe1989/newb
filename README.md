@@ -5,6 +5,26 @@
 A fresh AI agent reads only your docs and tries to use your package. If it
 succeeds, your docs work.
 
+## How it works
+
+```
+┌──────────────────────┐         ┌────────────────────────────────────┐         ┌──────────────────────┐
+│   Your package       │         │   Fresh agent                      │         │   Report             │
+│                      │  newb   │                                    │  asks   │                      │
+│   ./docs/  or        │  spins  │   docker / local / apptainer       │  4 + N  │   what_for           │
+│   ./_skills/<pkg>/   │   up    │   isolated HOME (no ~/.claude)     │  ────→  │   problems_solved    │
+│   tests_newb.yaml    │         │   sees ONLY your docs              │  reads  │   quick_start        │
+│   (optional)         │         │   no internet to your real session │  back   │   when_not_to_use    │
+└──────────────────────┘         └────────────────────────────────────┘         │   tests[] (pass/fail)│
+         │                                       ▲                              └──────────────────────┘
+         └───────────── stages skills ───────────┘
+                       (read-only mount)
+```
+
+The agent has no prior context — it sees only what you ship. If it answers
+the 4 canonical questions correctly and your `tests_newb.yaml` graders
+pass, your docs work for the realistic case of a brand-new user (or AI).
+
 ## Install
 
 ```bash

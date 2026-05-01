@@ -17,23 +17,23 @@ from typing import Any, Dict, Optional, Tuple, Union
 # ---------------------------------------------------------------------------
 
 _PROMPT_WHAT_FOR = (
-    "Use the Read tool to open every .md file under /home/agent/.claude/skills/ (there's exactly one package directory there). Then and answer in ONE sentence: "
+    "Use the Read tool to open every .md file under {skills_path} (there's exactly one package directory there). Then and answer in ONE sentence: "
     "what is this package for?"
 )
 
 _PROMPT_PROBLEMS = (
-    "Use the Read tool to open every .md file under /home/agent/.claude/skills/ (there's exactly one package directory there). Then and list 3-5 problems this "
+    "Use the Read tool to open every .md file under {skills_path} (there's exactly one package directory there). Then and list 3-5 problems this "
     "package solves. Output as a markdown table with columns: "
     "| # | Problem | Solution |. No prose around the table."
 )
 
 _PROMPT_QUICK_START = (
-    "Use the Read tool to open every .md file under /home/agent/.claude/skills/ (there's exactly one package directory there). Then and show the minimal working "
+    "Use the Read tool to open every .md file under {skills_path} (there's exactly one package directory there). Then and show the minimal working "
     "example as a Python code block. Just the code, no commentary."
 )
 
 _PROMPT_WHEN_NOT_TO_USE = (
-    "Use the Read tool to open every .md file under /home/agent/.claude/skills/ (there's exactly one package directory there). Then and answer in 1-2 sentences: "
+    "Use the Read tool to open every .md file under {skills_path} (there's exactly one package directory there). Then and answer in 1-2 sentences: "
     "when should someone NOT use this package? If the skills don't say, "
     "answer 'not specified in the skills'."
 )
@@ -292,11 +292,19 @@ def run(
                 config_dir=Path(config_dir) if config_dir else None,
             )
 
+        # Resolve the skills path the agent will see inside the runner.
+        # Docker mounts at /home/agent/.claude/skills/; LocalRunner uses
+        # an isolated HOME. Each runner can expose `.skills_path` to
+        # override the default. The path is interpolated into prompts so
+        # the agent reads from the right place.
+        skills_path = getattr(runner, "skills_path", "/home/agent/.claude/skills/")
+
         out: Dict[str, Any] = {"package": name}
         for key, prompt in _PROMPTS.items():
             answers = []
+            rendered = prompt.format(skills_path=skills_path)
             for _ in range(max(1, int(runs_per_prompt))):
-                result = runner.run(prompt, model=model)
+                result = runner.run(rendered, model=model)
                 answers.append(_extract_text(result))
             out[key] = answers[0] if runs_per_prompt == 1 else answers
 

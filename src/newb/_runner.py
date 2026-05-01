@@ -255,6 +255,9 @@ class LocalRunner:
         )
         self.home.mkdir(parents=True, exist_ok=True)
         (self.home / ".claude" / "skills").mkdir(parents=True, exist_ok=True)
+        # Path the agent will see when asked "read every .md under X".
+        # (_verify.py reads this attribute; docker uses the default.)
+        self.skills_path = str(self.home / ".claude" / "skills")
 
         if skills_mount is not None:
             src = Path(skills_mount) / ".claude" / "skills"
