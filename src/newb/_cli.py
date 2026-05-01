@@ -33,11 +33,20 @@ from ._verify import run as _run_impl
     "apptainer=HPC (planned).",
 )
 @click.option(
-    "--auth",
-    type=click.Choice(["api-key", "claude-code"]),
-    default="api-key",
-    help="api-key uses $ANTHROPIC_API_KEY; claude-code copies your "
-    "~/.claude/.credentials* into the isolated session.",
+    "--claude-code-credential",
+    "claude_code_credential",
+    type=click.Path(dir_okay=False),
+    default=None,
+    help="Path to Claude Code credentials JSON (extracts OAuth token; "
+    "uses subscription quota — $0 marginal). Env: $NEWB_CLAUDE_CODE_CREDENTIAL. "
+    "PREFERRED over --api-key when both resolve.",
+)
+@click.option(
+    "--api-key",
+    "api_key",
+    default=None,
+    help="Direct Anthropic API token (sk-ant-api03-...). "
+    "Env: $NEWB_ANTHROPIC_API_KEY. Per-call API spend.",
 )
 @click.option(
     "--config-dir",
@@ -47,7 +56,17 @@ from ._verify import run as _run_impl
 )
 @click.version_option()
 @click.pass_context
-def main(ctx, source, model, runs, out_format, runtime, auth, config_dir):
+def main(
+    ctx,
+    source,
+    model,
+    runs,
+    out_format,
+    runtime,
+    claude_code_credential,
+    api_key,
+    config_dir,
+):
     """Run a fresh AI agent against a docs/skills directory or git URL.
 
     \b
@@ -57,11 +76,16 @@ def main(ctx, source, model, runs, out_format, runtime, auth, config_dir):
         _skills/, docs/, or repo root is auto-detected.
 
     \b
+    Auth (--runtime=local; pick one — claude-code-credential wins if both):
+      $ export NEWB_CLAUDE_CODE_CREDENTIAL=~/.claude/.credentials.json   # subscription
+      $ export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...                   # per-call $
+
+    \b
     Example:
         $ newb ./docs
         $ newb ./src/mypkg/_skills/mypkg
         $ newb https://github.com/user/repo.git
-        $ newb ./docs --runtime local --auth claude-code
+        $ newb ./docs --runtime local --claude-code-credential ~/.claude/.credentials.json
     """
     if source is None:
         click.echo(ctx.get_help())
@@ -72,7 +96,8 @@ def main(ctx, source, model, runs, out_format, runtime, auth, config_dir):
         model=model,
         runs_per_prompt=runs,
         runtime=runtime,
-        auth=auth,
+        api_key=api_key,
+        claude_code_credential=claude_code_credential,
         config_dir=config_dir,
     )
     if out_format == "markdown":

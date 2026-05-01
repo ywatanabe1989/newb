@@ -214,11 +214,12 @@ def _resolve_source(spec: Union[Path, str]) -> Tuple[Path, Optional[Path]]:
 def _make_runner(
     *,
     runtime: str,
-    auth: str,
+    api_key: Optional[str],
+    claude_code_credential: Optional[str],
     skills_mount: Path,
     config_dir: Optional[Path],
 ) -> Any:
-    """Build a runner for the chosen runtime + auth combination."""
+    """Build a runner for the chosen runtime."""
     if runtime == "docker":
         from ._runner import NewbieDockerRunner
 
@@ -226,7 +227,12 @@ def _make_runner(
     if runtime == "local":
         from ._runner import LocalRunner
 
-        return LocalRunner(skills_mount=skills_mount, auth=auth, config_dir=config_dir)
+        return LocalRunner(
+            skills_mount=skills_mount,
+            api_key=api_key,
+            claude_code_credential=claude_code_credential,
+            config_dir=config_dir,
+        )
     if runtime == "apptainer":
         raise NotImplementedError(
             "runtime='apptainer' is planned for v0.6.0 (HPC use case). "
@@ -246,7 +252,8 @@ def run(
     model: str = "claude-haiku-4-5",
     runs_per_prompt: int = 1,
     runtime: str = "docker",
-    auth: str = "api-key",
+    api_key: Optional[str] = None,
+    claude_code_credential: Optional[str] = None,
     config_dir: Optional[Union[Path, str]] = None,
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
@@ -287,7 +294,8 @@ def run(
             cleanup_mount = mount
             runner = _make_runner(
                 runtime=runtime,
-                auth=auth,
+                api_key=api_key,
+                claude_code_credential=claude_code_credential,
                 skills_mount=mount,
                 config_dir=Path(config_dir) if config_dir else None,
             )

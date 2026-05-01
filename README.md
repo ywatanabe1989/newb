@@ -37,7 +37,7 @@ pip install newb
 newb ./docs                                     # any dir of .md files
 newb https://github.com/user/repo.git           # git URL — auto-clones
 newb ./docs --format markdown >> README.md
-newb ./docs --runtime local --auth claude-code  # host subprocess
+newb ./docs --runtime local --claude-code-credential ~/.claude/.credentials.json  # subscription
 ```
 
 Asks a fresh Claude agent four canonical questions (what for / problems
@@ -55,7 +55,7 @@ solved / quick start / when not to use), plus any author-defined tests in
 
 Each test combines optional substring grading and an optional LLM judge.
 
-## Runtime · Auth
+## Runtime
 
 | `--runtime` | what                                          |
 |-------------|-----------------------------------------------|
@@ -63,10 +63,22 @@ Each test combines optional substring grading and an optional LLM judge.
 | `local`     | host subprocess with isolated `HOME`          |
 | `apptainer` | HPC (planned)                                 |
 
-| `--auth`      | what                                                                              |
-|---------------|-----------------------------------------------------------------------------------|
-| `api-key`     | default — uses `$ANTHROPIC_API_KEY` (per-call API spend)                          |
-| `claude-code` | extracts OAuth token from `~/.claude/.credentials.json` → uses subscription quota |
+### Auth (`--runtime=local`)
+
+Two options. Each cascades **CLI flag → env var → unset**. When both
+resolve, **`--claude-code-credential` wins** (subscription quota → $0
+marginal cost).
+
+| Option                   | CLI flag                          | Env var (newb-namespaced)        | Cost           |
+|--------------------------|-----------------------------------|----------------------------------|----------------|
+| Claude Code subscription | `--claude-code-credential PATH`   | `NEWB_CLAUDE_CODE_CREDENTIAL`    | $0 marginal    |
+| Anthropic API key        | `--api-key TOKEN`                 | `NEWB_ANTHROPIC_API_KEY`         | per-call $     |
+
+```bash
+# Recommended: subscription quota
+export NEWB_CLAUDE_CODE_CREDENTIAL=~/.claude/.credentials.json
+newb ./docs --runtime local
+```
 
 ## Isolation — soft fence, not a sandbox
 
@@ -98,7 +110,7 @@ print(newb.render_markdown(report))
 ## Requirements
 
 - `docker` on PATH (or `claude` CLI if `--runtime local`)
-- `$ANTHROPIC_API_KEY` (or `--auth claude-code`)
+- For `--runtime local`: either `$NEWB_CLAUDE_CODE_CREDENTIAL` (subscription) or `$NEWB_ANTHROPIC_API_KEY` (per-call)
 - Python 3.10+
 
 ## License

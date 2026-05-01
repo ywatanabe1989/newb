@@ -221,6 +221,39 @@ class NewbieDockerRunner:
         self._started = False
 
 
+def _extract_oauth_token(cred_path: Path) -> str:
+    """Extract the OAuth accessToken from a Claude Code credentials.json.
+
+    Path layout::
+
+        {"claudeAiOauth": {"accessToken": "sk-ant-oat01-...", ...}}
+
+    The value can be a real dict or (in some saved formats) a Python-repr
+    string; both are handled.
+    """
+    if not cred_path.is_file():
+        raise RuntimeError(
+            f"claude-code credential file not found: {cred_path}. "
+            "Run `claude` once to authenticate, or pass a different path."
+        )
+    try:
+        import ast as _ast
+        import json as _json
+
+        raw = _json.loads(cred_path.read_text(encoding="utf-8"))
+        oauth = raw.get("claudeAiOauth")
+        if isinstance(oauth, str):
+            oauth = _ast.literal_eval(oauth)
+        token = (oauth or {}).get("accessToken")
+        if not token:
+            raise KeyError("no accessToken in claudeAiOauth")
+        return token
+    except Exception as e:
+        raise RuntimeError(
+            f"could not extract OAuth token from {cred_path}: {e}"
+        ) from e
+
+
 class LocalRunner:
     """Run ``claude -p`` directly on the host with an isolated HOME.
 
@@ -238,7 +271,8 @@ class LocalRunner:
         self,
         *,
         skills_mount: Path | None = None,
-        auth: str = "api-key",
+        api_key: str | None = None,
+        claude_code_credential: str | None = None,
         config_dir: Path | None = None,
     ):
         import shutil as _sh
@@ -272,44 +306,28 @@ class LocalRunner:
         self.env["HOME"] = str(self.home)
         self.env["CLAUDE_DISABLE_AUTO_UPDATE"] = "1"
 
-        if auth == "api-key":
-            if not self.env.get("ANTHROPIC_API_KEY"):
-                raise RuntimeError(
-                    "LocalRunner with auth='api-key' needs $ANTHROPIC_API_KEY set."
-                )
-        elif auth == "claude-code":
-            # Extract the OAuth subscription token from ~/.claude/.credentials.json
-            # and pass it as ANTHROPIC_API_KEY. Works with `claude --bare`
-            # because bare-mode accepts any token via that env var (it just
-            # doesn't read keychain/OAuth files itself). This routes calls
-            # through the user's subscription quota — no per-call API spend.
-            cred_file = Path.home() / ".claude" / ".credentials.json"
-            if not cred_file.is_file():
-                raise RuntimeError(
-                    "auth='claude-code' needs ~/.claude/.credentials.json "
-                    "(run `claude` once to authenticate)."
-                )
-            try:
-                import ast as _ast
-                import json as _json
-
-                raw = _json.loads(cred_file.read_text(encoding="utf-8"))
-                oauth = raw.get("claudeAiOauth")
-                if isinstance(oauth, str):
-                    oauth = _ast.literal_eval(oauth)
-                token = (oauth or {}).get("accessToken")
-                if not token:
-                    raise KeyError("no accessToken in claudeAiOauth")
-            except Exception as e:
-                raise RuntimeError(
-                    f"auth='claude-code' could not parse OAuth token from "
-                    f"{cred_file}: {e}. Try re-authenticating with `claude`."
-                ) from e
-            self.env["ANTHROPIC_API_KEY"] = token
-        else:
-            raise ValueError(
-                f"unknown auth: {auth!r} (expected 'api-key' or 'claude-code')"
+        # Auth resolution. Two independent options; each cascades
+        # CLI-flag → env-var → unset (mirrors scitex-config PriorityConfig).
+        # When both resolve, claude-code-credential wins (subscription
+        # quota → $0 marginal vs per-call $$$ on api-key).
+        cc_path = claude_code_credential or os.environ.get(
+            "NEWB_CLAUDE_CODE_CREDENTIAL"
+        )
+        api_key_value = api_key or os.environ.get("NEWB_ANTHROPIC_API_KEY")
+        token = None
+        if cc_path:
+            token = _extract_oauth_token(Path(cc_path).expanduser())
+        elif api_key_value:
+            token = api_key_value
+        if not token:
+            raise RuntimeError(
+                "LocalRunner: no auth resolved. Provide either:\n"
+                "  --claude-code-credential PATH (or $NEWB_CLAUDE_CODE_CREDENTIAL) "
+                "→ subscription quota, $0 marginal\n"
+                "  --api-key TOKEN (or $NEWB_ANTHROPIC_API_KEY) "
+                "→ per-call API spend"
             )
+        self.env["ANTHROPIC_API_KEY"] = token
         atexit.register(self.close)
 
     def run(
