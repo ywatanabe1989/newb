@@ -1,0 +1,8 @@
+LICENSE
+README.md
+pyproject.toml
+src/newb/__init__.py
+src/newb.egg-info/PKG-INFO
+src/newb.egg-info/SOURCES.txt
+src/newb.egg-info/dependency_links.txt
+src/newb.egg-info/top_level.txt

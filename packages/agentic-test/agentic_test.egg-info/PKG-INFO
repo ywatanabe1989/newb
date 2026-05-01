@@ -1,0 +1,30 @@
+Metadata-Version: 2.4
+Name: agentic-test
+Version: 0.0.1
+Summary: Alias for newb — agentic testing for Python packages.
+Author-email: Yusuke Watanabe <ywata1989@gmail.com>
+License-Expression: AGPL-3.0-only
+Project-URL: Homepage, https://github.com/ywatanabe1989/newb
+Keywords: newb,newbie-test,agentic-test,skill-verify,documentation-testing,ai-agent,llm
+Classifier: Development Status :: 1 - Planning
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: newb>=0.0.1
+
+# agentic-test
+
+Alias package for **[newb](https://pypi.org/project/newb/)**.
+
+```bash
+pip install agentic-test
+# equivalent to:
+pip install newb
+```
+
+The "agentic test" category covers using AI agents to verify package
+documentation. The actual implementation lives in
+[newb](https://github.com/ywatanabe1989/newb).
+
+See the canonical [newb README](https://github.com/ywatanabe1989/newb)
+for full documentation.

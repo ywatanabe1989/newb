@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+newbie_test.egg-info/PKG-INFO
+newbie_test.egg-info/SOURCES.txt
+newbie_test.egg-info/dependency_links.txt
+newbie_test.egg-info/requires.txt
+newbie_test.egg-info/top_level.txt

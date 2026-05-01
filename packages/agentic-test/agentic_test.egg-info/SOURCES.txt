@@ -1,0 +1,7 @@
+README.md
+pyproject.toml
+agentic_test.egg-info/PKG-INFO
+agentic_test.egg-info/SOURCES.txt
+agentic_test.egg-info/dependency_links.txt
+agentic_test.egg-info/requires.txt
+agentic_test.egg-info/top_level.txt
