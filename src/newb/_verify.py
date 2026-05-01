@@ -54,31 +54,104 @@ _PROMPTS = _PROMPTS_DEFAULT
 
 
 def _load_red_tests(skills_src: Path) -> list[dict]:
-    """Load per-package red tests from ``<skills_src>/_red_tests.yaml``."""
-    red_file = Path(skills_src) / "_red_tests.yaml"
-    if not red_file.is_file():
+    """Back-compat shim — see ``_load_tests``."""
+    return _load_tests(skills_src)
+
+
+def _load_tests(skills_src: Path) -> list[dict]:
+    """Load author tests from ``tests_newb.yaml`` (or legacy ``_red_tests.yaml``).
+
+    Schema per entry::
+
+        - name: optional human label
+          prompt: "the question to ask the agent"
+          expect_contains: [substrings that MUST appear]   # optional
+          expect_excludes: [substrings that MUST NOT appear] # optional
+          judge: "criteria text for an LLM judge"          # optional
+
+    The legacy ``question`` key is accepted as an alias for ``prompt``.
+    """
+    candidates = [
+        Path(skills_src) / "tests_newb.yaml",
+        Path(skills_src) / "_red_tests.yaml",
+    ]
+    test_file = next((p for p in candidates if p.is_file()), None)
+    if test_file is None:
         return []
     try:
         import yaml  # type: ignore[import-untyped]
     except ImportError:
         return []
     try:
-        data = yaml.safe_load(red_file.read_text(encoding="utf-8"))
+        data = yaml.safe_load(test_file.read_text(encoding="utf-8"))
     except Exception:
         return []
     if not isinstance(data, list):
         return []
     out = []
-    for entry in data:
-        if not isinstance(entry, dict) or "question" not in entry:
+    for i, entry in enumerate(data):
+        if not isinstance(entry, dict):
+            continue
+        prompt = entry.get("prompt") or entry.get("question")
+        if not prompt:
             continue
         out.append(
             {
-                "question": str(entry["question"]),
+                "name": str(entry.get("name") or f"test_{i}"),
+                "prompt": str(prompt),
+                "question": str(prompt),  # back-compat alias
                 "expect_contains": list(entry.get("expect_contains") or []),
                 "expect_excludes": list(entry.get("expect_excludes") or []),
+                "judge": entry.get("judge"),
             }
         )
+    return out
+
+
+_JUDGE_PROMPT = (
+    "You are an objective test judge. The CRITERIA describes what a "
+    "correct answer must include or do. The ANSWER is the candidate's "
+    "response. Reply with exactly one line: 'PASS: <reason>' or "
+    "'FAIL: <reason>'. Be strict.\n\n"
+    "CRITERIA:\n{criteria}\n\nANSWER:\n{answer}"
+)
+
+
+def _judge(criteria: str, answer: str, runner, model: str) -> tuple[bool, str]:
+    res = runner.run(
+        _JUDGE_PROMPT.format(criteria=criteria, answer=answer), model=model
+    )
+    text = _extract_text(res).strip()
+    return text.upper().startswith("PASS"), text
+
+
+def _grade(test: dict, answer: str, runner, model: str) -> dict:
+    low = answer.lower()
+    has_substring = bool(test["expect_contains"] or test["expect_excludes"])
+    contains_ok = all(s.lower() in low for s in test["expect_contains"])
+    excludes_ok = all(s.lower() not in low for s in test["expect_excludes"])
+    substring_passed = contains_ok and excludes_ok
+    out: Dict[str, Any] = {
+        "name": test["name"],
+        "prompt": test["prompt"],
+        "question": test["prompt"],  # back-compat
+        "answer": answer,
+    }
+    passed = True
+    if has_substring:
+        out["substring"] = {
+            "contains_ok": contains_ok,
+            "excludes_ok": excludes_ok,
+            "passed": substring_passed,
+        }
+        passed = passed and substring_passed
+    if test.get("judge"):
+        j_passed, j_reason = _judge(test["judge"], answer, runner, model)
+        out["judge"] = {"passed": j_passed, "reason": j_reason}
+        passed = passed and j_passed
+    if not (has_substring or test.get("judge")):
+        passed = True
+    out["passed"] = bool(passed)
     return out
 
 
@@ -155,23 +228,18 @@ def run(
                 answers.append(_extract_text(result))
             out[key] = answers[0] if runs_per_prompt == 1 else answers
 
-        red_results = []
-        for entry in _load_red_tests(skills_src):
-            ans_text = _extract_text(runner.run(entry["question"], model=model))
-            low = ans_text.lower()
-            passes_contains = all(s.lower() in low for s in entry["expect_contains"])
-            passes_excludes = all(
-                s.lower() not in low for s in entry["expect_excludes"]
-            )
-            red_results.append(
-                {
-                    "question": entry["question"],
-                    "answer": ans_text,
-                    "passed": bool(passes_contains and passes_excludes),
-                }
-            )
-        if red_results:
-            out["red_tests"] = red_results
+        test_results = []
+        for entry in _load_tests(skills_src):
+            ans_text = _extract_text(runner.run(entry["prompt"], model=model))
+            test_results.append(_grade(entry, ans_text, runner, model))
+        if test_results:
+            passed = sum(1 for t in test_results if t["passed"])
+            out["tests"] = test_results
+            out["tests_summary"] = {
+                "passed": passed,
+                "total": len(test_results),
+            }
+            out["red_tests"] = test_results  # back-compat
         return out
     finally:
         if cleanup_mount is not None and cleanup_mount.exists():

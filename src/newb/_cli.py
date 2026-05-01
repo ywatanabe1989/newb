@@ -42,11 +42,25 @@ def main(ctx, skills_dir, model, runs, out_format):
     if skills_dir is None:
         click.echo(ctx.get_help())
         ctx.exit(0)
+    click.echo(f"\U0001f41d newb: probing {skills_dir} ...", err=True)
     result = _run_impl(skills_dir, model=model, runs_per_prompt=runs)
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)
     else:
         click.echo(json.dumps(result, indent=2))
+    summary = result.get("tests_summary")
+    if summary:
+        p, t = summary["passed"], summary["total"]
+        emoji = (
+            "\U0001f41d\u2705"
+            if p == t
+            else ("\U0001f41d\u26a0\ufe0f" if p > 0 else "\U0001f41d\u274c")
+        )
+        click.echo(f"{emoji} {p}/{t} tests passed", err=True)
+    else:
+        click.echo(
+            "\U0001f41d smoke check complete (no tests_newb.yaml found)", err=True
+        )
 
 
 if __name__ == "__main__":

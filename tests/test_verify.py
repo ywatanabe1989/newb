@@ -21,7 +21,7 @@ def test_module_imports_and_exports_callable():
     assert callable(newb)
     # Backward-compat: self_explain is now an alias for verify.
     assert newb.self_explain is newb.verify
-    assert newb.__version__ == "0.3.2"
+    assert newb.__version__ == "0.4.0"
     assert isinstance(_verify._PROMPT_WHAT_FOR, str)
     assert isinstance(_verify._PROMPT_PROBLEMS, str)
     assert isinstance(_verify._PROMPT_QUICK_START, str)
@@ -175,6 +175,96 @@ def test_load_red_tests_invalid_yaml_returns_empty(tmp_path):
 
     (tmp_path / "_red_tests.yaml").write_text("not: a list: just: garbage:")
     assert _load_red_tests(tmp_path) == []
+
+
+# ---------------------------------------------------------------------------
+# tests_newb.yaml (v0.4.0 — pytest-style)
+# ---------------------------------------------------------------------------
+
+
+def test_load_tests_prefers_tests_newb_over_red(tmp_path):
+    pytest.importorskip("yaml")
+    from newb._verify import _load_tests
+
+    (tmp_path / "_red_tests.yaml").write_text("- question: legacy\n")
+    (tmp_path / "tests_newb.yaml").write_text(
+        "- name: pkg_purpose\n  prompt: What is this?\n"
+    )
+    rs = _load_tests(tmp_path)
+    assert len(rs) == 1
+    assert rs[0]["name"] == "pkg_purpose"
+    assert rs[0]["prompt"] == "What is this?"
+
+
+def test_load_tests_accepts_judge_field(tmp_path):
+    pytest.importorskip("yaml")
+    from newb._verify import _load_tests
+
+    (tmp_path / "tests_newb.yaml").write_text(
+        "- name: redirect_check\n"
+        "  prompt: How do I do parallel?\n"
+        "  judge: Must say not supported and recommend an alternative.\n"
+    )
+    rs = _load_tests(tmp_path)
+    assert rs[0]["judge"].startswith("Must say")
+
+
+class _JudgeRunner:
+    """Runner that returns canned answers + a PASS/FAIL judge verdict."""
+
+    def __init__(
+        self, answer="The package does not support parallel.", verdict="PASS: ok"
+    ):
+        self.answer = answer
+        self.verdict = verdict
+        self.calls = []
+
+    def run(self, prompt, *, model="claude-haiku-4-5", timeout=120):
+        self.calls.append(prompt)
+        if "CRITERIA" in prompt:
+            return {"result": self.verdict}
+        return {"result": self.answer}
+
+    def close(self):
+        pass
+
+
+def test_run_with_yaml_tests_records_pass_fail(tmp_path):
+    pytest.importorskip("yaml")
+    from newb import run
+
+    skills = _make_skills(tmp_path)
+    (skills / "tests_newb.yaml").write_text(
+        "- name: contains_check\n"
+        "  prompt: Anything?\n"
+        "  expect_contains: ['parallel']\n"
+        "- name: judge_check\n"
+        "  prompt: Anything else?\n"
+        "  judge: Must say no parallel.\n"
+    )
+    runner = _JudgeRunner()
+    result = run(skills, _runner=runner)
+
+    assert "tests" in result
+    assert "tests_summary" in result
+    assert result["tests_summary"]["total"] == 2
+    assert result["tests_summary"]["passed"] == 2
+    assert result["red_tests"] is result["tests"]  # back-compat
+
+
+def test_run_judge_fail_reflected_in_summary(tmp_path):
+    pytest.importorskip("yaml")
+    from newb import run
+
+    skills = _make_skills(tmp_path)
+    (skills / "tests_newb.yaml").write_text(
+        "- name: judge_check\n  prompt: Q\n  judge: criteria\n"
+    )
+    runner = _JudgeRunner(verdict="FAIL: not enough detail")
+    result = run(skills, _runner=runner)
+
+    assert result["tests_summary"]["passed"] == 0
+    assert result["tests"][0]["judge"]["passed"] is False
 
 
 # ---------------------------------------------------------------------------
