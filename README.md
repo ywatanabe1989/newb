@@ -1,4 +1,4 @@
-# 🐝 newb
+# newb
 
 > Test your package through the eyes of a newbie agent.
 
