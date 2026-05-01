@@ -1,7 +1,5 @@
 # newb
 
-> Test your package through the eyes of a newbie agent.
-
 <p align="center"><img src="./assets/newb-logo.png" width="220" alt="newb mascot"/></p>
 
 A fresh AI agent reads only your `_skills/` (or equivalent docs) and tries
