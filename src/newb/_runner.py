@@ -306,17 +306,27 @@ class LocalRunner:
         model: str = DEFAULT_MODEL,
         timeout: int = DEFAULT_TIMEOUT,
     ) -> dict:
+        # `--bare` mode is the isolation primitive: skips hooks, LSP,
+        # plugin sync, attribution, auto-memory, background prefetches,
+        # keychain reads, and CLAUDE.md auto-discovery. Auth must come
+        # from ANTHROPIC_API_KEY (no OAuth, no host ~/.claude leak).
+        # `--add-dir <skills_path>` explicitly grants read access to the
+        # staged skills, sidestepping claude's CWD-based file access guard.
+        cmd = [
+            "claude",
+            "--bare",
+            "-p",
+            prompt,
+            "--output-format",
+            "stream-json",
+            "--verbose",
+            "--model",
+            model,
+            "--add-dir",
+            self.skills_path,
+        ]
         proc = subprocess.run(
-            [
-                "claude",
-                "-p",
-                prompt,
-                "--output-format",
-                "stream-json",
-                "--verbose",
-                "--model",
-                model,
-            ],
+            cmd,
             capture_output=True,
             text=True,
             timeout=timeout,

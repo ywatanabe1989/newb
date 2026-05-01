@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: newb
-Version: 0.5.1
+Version: 0.5.2
 Summary: Test your package through the eyes of a newbie agent — a fresh AI agent reads only your docs/skills and tries to use your package.
 Author-email: Yusuke Watanabe <ywata1989@gmail.com>
 License-Expression: AGPL-3.0-only
