@@ -1,6 +1,8 @@
-# newb
+# 🐝 newb
 
-> Test your package through the eyes of a newbie agent.
+> Test your package through the eyes of a newbie agent — a fresh bee landing on your docs.
+
+<p align="center"><img src="./assets/bee.svg" width="96" alt="newb mascot"/></p>
 
 A fresh AI agent reads only your `_skills/` (or equivalent docs) and tries
 to use your package. If it succeeds — your docs work. If it fails — your CI
