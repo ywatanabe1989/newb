@@ -41,23 +41,6 @@ print(newb.render_markdown(report))
 - `ANTHROPIC_API_KEY` in env
 - Python 3.10+
 
-## No aggregate score
-
-> **No verification without specification.**
-
-`newb` returns raw answers, not a "0.85". Author-defined expected
-answers (pytest-style `tests_newb.py`) are planned for v0.4.0+.
-
-## Aliases
-
-`pip install newbie-test` and `pip install agentic-test` both depend on
-`newb` — defensive name reservations.
-
-## Heritage
-
-Extracted from [scitex-dev](https://github.com/ywatanabe1989/scitex-dev),
-where `scitex-dev skills self-explain <pkg>` is the canonical integration.
-
 ## License
 
 AGPL-3.0-only.
