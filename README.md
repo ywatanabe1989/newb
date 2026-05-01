@@ -6,41 +6,61 @@ A fresh AI agent reads only your `_skills/` (or equivalent docs) and tries
 to use your package. If it succeeds — your docs work. If it fails — your CI
 tells you why.
 
-## Status
-
-`0.0.1` — name reservation + placeholder. Active development is happening
-inside [scitex-dev](https://github.com/ywatanabe1989/scitex-dev) under
-`scitex-dev skills self-explain`. The standalone `newb` package will land
-once the API stabilizes (~2-4 weeks).
-
-## Try the prototype today
-
-```bash
-pip install scitex-dev[cli]
-scitex-dev skills self-explain <your-package>
-```
-
-## What it will do (when fleshed out)
+## Install
 
 ```bash
 pip install newb
-newb verify ./my-package
 ```
 
-The agent will be asked, against ONLY the package's docs:
+## Use
 
-1. **Comprehension** — "What is this for?" / "What problems does it solve?"
-2. **Execution** — "Show a working example" / "When should I NOT use this?"
-3. **Boundary** — "Can this do <unrelated thing>?" → must redirect, not hallucinate
+```bash
+newb verify ./src/mypkg/_skills/mypkg
+newb verify ./_skills --format markdown >> README.md
+```
 
-Results render as JSON (for CI) or markdown (for README injection).
+`newb verify` spins up a clean docker container with **only your skills**
+mounted (no host `~/.claude` leak), then asks a fresh Claude agent four
+canonical questions:
+
+1. **Identity** — "What is this package for?" / "What problems does it solve?"
+2. **Usage** — "Show a working example" / "When should I NOT use this?"
+3. **Boundary** — author-supplied red tests in `_red_tests.yaml`
+   ("Can this do <unrelated thing>?" → must redirect, not hallucinate)
+
+Output: JSON (for CI) or markdown (for README injection).
+
+## Requirements
+
+- Docker on PATH (for the agent sandbox).
+- `ANTHROPIC_API_KEY` in env (used inside the container).
+- Python 3.10+.
+
+## Library API
+
+```python
+from pathlib import Path
+import newb
+
+result = newb.self_explain(Path("./src/mypkg/_skills/mypkg"))
+print(newb.render_markdown(result))
+```
 
 ## Aliases
 
 Also available as `pip install newbie-test` and `pip install agentic-test`
-(same package, just defensive name reservations).
+(same package, defensive name reservations that depend on `newb`).
+
+## Heritage
+
+`newb` was extracted from
+[scitex-dev](https://github.com/ywatanabe1989/scitex-dev) where the
+canonical integration still lives:
+
+```bash
+scitex-dev skills self-explain <package-name>
+```
 
 ## License
 
-AGPL-3.0-only. Same as the SciTeX ecosystem from which `newb` was
-extracted.
+AGPL-3.0-only. Same as the SciTeX ecosystem from which `newb` was extracted.

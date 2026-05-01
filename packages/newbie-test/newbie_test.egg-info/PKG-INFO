@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: newbie-test
-Version: 0.0.1
+Version: 0.1.0
 Summary: Alias for newb — agentic testing for Python packages.
 Author-email: Yusuke Watanabe <ywata1989@gmail.com>
 License-Expression: AGPL-3.0-only
@@ -10,7 +10,7 @@ Classifier: Development Status :: 1 - Planning
 Classifier: Programming Language :: Python :: 3
 Requires-Python: >=3.10
 Description-Content-Type: text/markdown
-Requires-Dist: newb>=0.0.1
+Requires-Dist: newb>=0.1.0
 
 # newbie-test
 

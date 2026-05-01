@@ -4,17 +4,24 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "newb"
-version = "0.0.1"
+version = "0.1.0"
 description = "Test your package through the eyes of a newbie agent — a fresh AI agent reads only your docs/skills and tries to use your package."
 readme = "README.md"
 license = "AGPL-3.0-only"
 requires-python = ">=3.10"
 authors = [{name = "Yusuke Watanabe", email = "ywata1989@gmail.com"}]
+dependencies = ["click>=8.0"]
 keywords = ["agentic-test", "newbie-test", "skill-verify", "documentation-testing", "ai-agent", "llm"]
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
 ]
+
+[project.optional-dependencies]
+yaml = ["PyYAML>=6.0"]
+
+[project.scripts]
+newb = "newb._cli:main"
 
 [project.urls]
 Homepage = "https://github.com/ywatanabe1989/newb"

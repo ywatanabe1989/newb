@@ -14,13 +14,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic-test"
-version = "0.0.1"
+version = "0.1.0"
 description = "Alias for newb — agentic testing for Python packages."
 readme = "README.md"
 license = "AGPL-3.0-only"
 requires-python = ">=3.10"
 authors = [{name = "Yusuke Watanabe", email = "ywata1989@gmail.com"}]
-dependencies = ["newb>=0.0.1"]
+dependencies = ["newb>=0.1.0"]
 keywords = ["newb", "newbie-test", "agentic-test", "skill-verify", "documentation-testing", "ai-agent", "llm"]
 classifiers = [
     "Development Status :: 1 - Planning",
