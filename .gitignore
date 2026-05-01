@@ -13,7 +13,6 @@ htmlcov/
 
 # Local agent / claude scratch
 .claude/
-.history/
 GITIGNORED/
 logs/
 docs/to_claude/
