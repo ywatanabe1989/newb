@@ -29,11 +29,12 @@ from ._verify import run as _run_impl
 )
 @click.option(
     "--runtime",
-    type=click.Choice(["host", "docker", "apptainer"]),
-    default="host",
-    help="Where the agent runs. host=subprocess (fast, soft isolation); "
-    "docker=ghcr.io/ywatanabe1989/newb-runner image (hard isolation); "
-    "apptainer=same image via apptainer (HPC).",
+    type=click.Choice(["docker", "apptainer"]),
+    default="docker",
+    help="Container the agent runs in. "
+    "docker=ghcr.io/ywatanabe1989/newb-runner (hard isolation, default); "
+    "apptainer=same image via apptainer (HPC). "
+    "host runtime was removed in 0.9 — container is the boundary.",
 )
 @click.version_option()
 @click.pass_context

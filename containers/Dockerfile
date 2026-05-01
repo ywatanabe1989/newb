@@ -1,43 +1,53 @@
 # newb runtime container — runs the claude-agent-sdk against a mounted
-# skills directory, in real isolation (the agent's Read tool can only
-# touch what's mounted).
+# project root. Container = the real isolation boundary; SDK options
+# inside grant the agent FULL agentic permissions (Read + Write + Edit
+# + Bash + Glob + Grep + acceptEdits) so it can actually try the
+# package: pip install -e ., python -c "import pkg", <pkg> --help.
 #
 # Build:
 #   docker build -t ghcr.io/ywatanabe1989/newb-runner:VERSION containers/
 #
 # Run (manual):
 #   docker run --rm \
-#     -v <staged>:/work/skills:ro \
+#     -v <staged-project>:/work/project \
 #     -e ANTHROPIC_API_KEY \
 #     ghcr.io/ywatanabe1989/newb-runner:VERSION \
-#     python /opt/newb/runner.py "<prompt>"
+#     "<prompt>"
 #
-# newb's DockerRunner does this automatically.
+# newb's DockerRunner does this automatically (and stages the project
+# root respecting .gitignore via `git ls-files`).
 
 FROM python:3.11-slim
 
 # Minimal: claude-agent-sdk bundles its own self-contained CLI binary
-# (~237MB ELF, no Node needed). Add only:
+# (~237MB ELF, no Node needed). Add:
 # * `ca-certificates` for HTTPS to api.anthropic.com
-# * `git` so newb can pass git-URL sources straight through
+# * `git`             so newb can pass git-URL sources + so packages
+#                     using setuptools_scm can resolve their version
+#                     when the agent runs `pip install -e .`
+# * `build-essential` so `pip install -e .` succeeds for packages
+#                     with optional C extensions (best-effort)
 RUN apt-get update -y \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         git \
+        build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install the SDK. Pin a floor version so behavior matches the host
 # newb that spawned the container.
 RUN pip install --no-cache-dir 'claude-agent-sdk>=0.1.0'
 
-# Bake the runner script into the image so newb only mounts the skills.
+# Bake the runner script into the image so newb only mounts the project.
 COPY runner.py /opt/newb/runner.py
 
-# The agent's CWD inside the container — only the skills get mounted here.
+# The agent's CWD inside the container; the project is bind-mounted here.
 WORKDIR /work
 
 # Default to non-root for hardening. ANTHROPIC_API_KEY is passed via -e.
-RUN useradd -m -u 1000 newb
+# The agent needs write access to /work/project for `pip install -e .`,
+# so make the staged copy owned by the runtime user.
+RUN useradd -m -u 1000 newb && mkdir -p /work && chown -R newb:newb /work
 USER newb
 
 ENTRYPOINT ["python", "/opt/newb/runner.py"]

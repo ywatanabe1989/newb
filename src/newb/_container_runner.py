@@ -20,12 +20,21 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from ._stage import stage_project
+
 DEFAULT_IMAGE = "ghcr.io/ywatanabe1989/newb-runner:latest"
 DEFAULT_TIMEOUT_S = 240
 
 
 class _BaseContainerRunner:
-    """Common: stage skills under a tmp dir, exec via subprocess, capture stdout."""
+    """Common: stage the project root under a tmp dir, exec via subprocess, capture stdout.
+
+    The container itself is the hard boundary — only the staged project
+    root is bind-mounted read-only. Inside the container, the agent
+    sees the full package context (README, src/, tests/, _skills/,
+    examples/, ...) at /work/project, with the focused docs dir at
+    /work/project/<skills-relpath>.
+    """
 
     runtime_bin: str = ""  # "docker" or "apptainer" — set by subclass
 
@@ -33,6 +42,7 @@ class _BaseContainerRunner:
         self,
         *,
         skills_mount: Path,
+        project_root: Path | None = None,
         model: str = "claude-haiku-4-5",
         image: str | None = None,
     ):
@@ -50,14 +60,24 @@ class _BaseContainerRunner:
             )
         self._api_key = api_key
         self.skills_mount = Path(skills_mount).resolve()
+        self.project_root = (
+            Path(project_root).resolve() if project_root else self.skills_mount
+        )
         self.model = model
         self.image = image or os.environ.get("NEWB_DOCKER_IMAGE") or DEFAULT_IMAGE
-        # Stage a clean read-only copy so the container can't see anything
-        # outside the package's skills.
+        # Stage the whole project root (with cache/build/venv ignored).
+        # The container mounts this read-only as /work/project so the
+        # agent has the full post-install package shape — README,
+        # src/, tests/, _skills/, examples/.
         self._stage_dir = Path(tempfile.mkdtemp(prefix="newb-stage-"))
-        target = self._stage_dir / "skills"
-        shutil.copytree(self.skills_mount, target)
-        self.skills_path = "/work/skills"
+        target = self._stage_dir / "project"
+        stage_project(self.project_root, target)
+        self._stage_target = target
+        try:
+            rel = self.skills_mount.relative_to(self.project_root)
+            self.skills_path = f"/work/project/{rel.as_posix()}"
+        except ValueError:
+            self.skills_path = "/work/project"
 
     def _build_argv(self, prompt: str) -> list[str]:
         raise NotImplementedError
@@ -93,7 +113,11 @@ class DockerRunner(_BaseContainerRunner):
     runtime_bin = "docker"
 
     def _build_argv(self, prompt: str) -> list[str]:
-        skills_host = str(self._stage_dir / "skills")
+        project_host = str(self._stage_target)
+        # NOTE: bind-mount is read-write (no `:ro`) so the agent can
+        # `pip install -e .` and write small example files. The staged
+        # dir is a tmp copy that gets rmtree'd after the run, so the
+        # user's source is untouched.
         return [
             "docker",
             "run",
@@ -101,11 +125,13 @@ class DockerRunner(_BaseContainerRunner):
             "--network",
             "bridge",
             "-v",
-            f"{skills_host}:/work/skills:ro",
+            f"{project_host}:/work/project",
             "-e",
             f"ANTHROPIC_API_KEY={self._api_key}",
             "-e",
             f"NEWB_MODEL={self.model}",
+            "-e",
+            f"NEWB_SKILLS_PATH={self.skills_path}",
             self.image,
             prompt,
         ]
@@ -122,25 +148,23 @@ class ApptainerRunner(_BaseContainerRunner):
     runtime_bin = "apptainer"
 
     def _build_argv(self, prompt: str) -> list[str]:
-        skills_host = str(self._stage_dir / "skills")
-        # apptainer's --bind format is host:container[:ro]
-        # Note: env vars go via SINGULARITYENV_* / APPTAINERENV_* prefix.
-        env = os.environ.copy()
-        env["APPTAINERENV_ANTHROPIC_API_KEY"] = self._api_key
-        env["APPTAINERENV_NEWB_MODEL"] = self.model
-        # We can't return env from _build_argv; subclass's run() needs to
-        # override. Simpler: use --env on the apptainer cmdline.
+        project_host = str(self._stage_target)
+        # bind-mount is read-write (default — no `:ro`) so the agent
+        # can `pip install -e .` and write small example files inside.
+        # The staged dir is tmp; user's source is untouched.
         return [
             "apptainer",
             "run",
             "--no-home",
             "--containall",
             "--bind",
-            f"{skills_host}:/work/skills:ro",
+            f"{project_host}:/work/project",
             "--env",
             f"ANTHROPIC_API_KEY={self._api_key}",
             "--env",
             f"NEWB_MODEL={self.model}",
+            "--env",
+            f"NEWB_SKILLS_PATH={self.skills_path}",
             f"docker://{self.image}",
             prompt,
         ]

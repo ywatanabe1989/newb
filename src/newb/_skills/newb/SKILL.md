@@ -1,6 +1,6 @@
 ---
 name: newb
-description: Test your Python package through the eyes of a fresh AI agent. `newb <docs-or-skills-dir>` spins up a sandboxed `claude-agent-sdk` session (setting_sources=[], allowed_tools=["Read"], cwd=staged copy) that reads only your documentation and answers four canonical questions — what for, problems solved, quick start, when not to use — plus any author-defined prompts in `tests_newb.yaml`. JSON or markdown output for CI. Three isolation runtimes — host (subprocess, soft), docker / apptainer (real filesystem + network namespace, hard). The first-class reader of a modern package is an agent; newb tests docs through the actual reader. Use whenever the user asks "is my docs good enough?", "would an agent understand this?", "can a newcomer use my package from docs alone?", "verify package docs", "test my package's discoverability", "audit skills quality", or works on multi-package ecosystem doc quality. Do NOT use as a unit-test runner (use pytest), as a benchmark for the model itself (use eval frameworks), or for code coverage (use pytest-cov).
+description: Test your Python package through the eyes of a fresh AI agent. `newb <project-dir>` spins up a sandboxed container (docker default, apptainer for HPC), stages the project respecting .gitignore, and runs a `claude-agent-sdk` session at `/work/project` with FULL agentic permissions (Read+Write+Edit+Bash+Glob+Grep, acceptEdits) — agent can `pip install -e .`, `python -c "import pkg"`, `<pkg> --help`, write an example. The container IS the boundary; SDK options inside grant the agent enough power to actually try the package. The agent answers four canonical questions — what for, problems solved, quick start, when not to use — plus any author-defined prompts in `tests_newb.yaml`. JSON or markdown output for CI. The first-class reader of a modern package is an agent; newb tests docs through the actual reader. Use whenever the user asks "is my docs good enough?", "would an agent understand this?", "can a newcomer use my package from docs alone?", "verify package docs", "audit skills quality". Do NOT use as a unit-test runner (use pytest), as a benchmark for the model (use eval frameworks), or for code coverage (use pytest-cov).
 primary_interface: cli
 interfaces:
   python: 1
@@ -38,22 +38,34 @@ prompt names the gap.
 ## Quick example
 
 ```bash
-newb ./docs                           # one-shot probe → JSON
-newb ./docs --format markdown         # readable for humans
-newb https://github.com/u/r.git --runtime docker   # hard isolation
+newb .                               # current project — docker by default
+newb . --format markdown             # readable for humans
+newb https://github.com/u/r.git      # git URL — shallow-clones first
+newb . --runtime apptainer           # HPC variant
 ```
 
 ```python
 import newb
-report = newb("./docs")               # bare-module callable
+report = newb(".")                   # bare-module callable
 print(newb.render_markdown(report))
 ```
 
+## Container is the boundary, not the SDK options (newb 0.9)
+
+newb runs in `docker` (default) or `apptainer`. Inside the container
+the agent has FULL agentic permissions — Read+Write+Edit+Bash+Glob+
+Grep, `permission_mode=acceptEdits`, max_turns=15 — so it can
+actually try the package: `pip install -e .`, `python -c "import pkg"`,
+`<pkg> --help`, write an example, run pytest. The container itself
+is the real isolation boundary.
+
+The `host` runtime was removed in 0.9 — full agentic permissions on
+the host are unsafe (agent could `rm -rf` your projects, `pip install`
+into the global env). Use a container.
+
 ## Auth
 
-Set `NEWB_ANTHROPIC_API_KEY` to opt newb into API key auth (the only
-env var newb reads — no upstream surprise from a stray
-`ANTHROPIC_API_KEY` in your shell). On personal machines, leaving
-NEWB_ANTHROPIC_API_KEY unset falls through to your local `~/.claude/`
-OAuth login (the host runtime masks any stray `ANTHROPIC_API_KEY` for
-you). Container runtimes require the NEWB_-prefixed var.
+Set `NEWB_ANTHROPIC_API_KEY` (the only env var newb reads — no
+upstream surprise from a stray `ANTHROPIC_API_KEY` in your shell).
+The container runtimes forward it as `ANTHROPIC_API_KEY` so the SDK
+inside picks it up.

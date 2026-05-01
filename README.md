@@ -34,7 +34,7 @@
 | 3 | **Learning a new package is hard for users.** No quick start, missing edge cases, undocumented "when not to use" — all silent failures. | A failing newb run names exactly which question the docs couldn't answer, with the agent's own response — surfacing gaps before users hit them. |
 | 4 | **Maintaining doc quality across many packages doesn't scale.** Manual review per release, per package, per branch is the bottleneck for ecosystem-wide quality. | One CLI per package; JSON output for CI; runs in isolation (`host` / `docker` / `apptainer`); pluggable graders (substring + LLM judge) via `tests_newb.yaml`. Plug into a CI matrix and quality scales with your portfolio. |
 
-## How it works (`--runtime docker`, the hard-isolation default for CI)
+## How it works
 
 ```
 HOST                                                      DOCKER CONTAINER (ghcr.io/.../newb-runner)
@@ -96,18 +96,17 @@ pip install newb[yaml]    # + tests_newb.yaml support
 <br>
 
 ```bash
-newb ./docs                                # any dir of .md files
-newb ./src/mypkg/_skills/mypkg             # standard SciTeX layout
+newb .                                     # current project — uses docker by default
+newb ./src/mypkg/_skills/mypkg             # focused docs subdir
 newb https://github.com/user/repo.git      # git URL — shallow-clones
-newb ./docs --format markdown >> README.md
-newb ./docs --runtime docker               # hard isolation in container
-newb ./docs --runtime apptainer            # HPC variant
+newb . --format markdown >> README.md
+newb . --runtime apptainer                 # HPC variant
 ```
 
 Self-verification example (newb verifying its own docs in a fresh container):
 
 ```bash
-newb https://github.com/ywatanabe1989/newb.git --runtime docker \
+newb https://github.com/ywatanabe1989/newb.git \
   > .history/$(date +%F)-self-verification.txt 2>&1
 ```
 
@@ -120,7 +119,7 @@ newb https://github.com/ywatanabe1989/newb.git --runtime docker \
 
 ```python
 import newb
-report = newb("./docs")
+report = newb(".")              # cwd as the project root
 print(newb.render_markdown(report))
 ```
 
@@ -128,13 +127,22 @@ print(newb.render_markdown(report))
 
 ## Isolation runtimes (`--runtime`)
 
-| Value       | Where the agent runs                                          | Isolation                                      | Speed     |
-|-------------|---------------------------------------------------------------|------------------------------------------------|-----------|
-| `host`      | host subprocess via `claude-agent-sdk`                        | soft (Read tool can technically reach host fs) | ~10-15s/q |
-| `docker`    | `ghcr.io/ywatanabe1989/newb-runner`, only `<staged>` mounted ro | hard (real fs + network ns)                    | ~15-20s/q |
-| `apptainer` | same image via `apptainer run docker://...` (HPC)             | hard (rootless)                                | ~20-30s/q |
+newb 0.9 dropped the `host` runtime — full agentic permissions on the
+host are unsafe (agent could `rm -rf` your projects, `pip install` into
+your global env). **The container is the boundary, not the SDK
+options** — inside, the agent gets full Read+Write+Edit+Bash+Glob+Grep
+so it can actually try the package (`pip install -e .`,
+`python -c "import pkg"`, `<pkg> --help`, write a small example).
 
-Image is published from `containers/Dockerfile` via
+| Value | Where the agent runs | Isolation | Speed |
+|---|---|---|---|
+| `docker` *(default)* | `ghcr.io/ywatanabe1989/newb-runner`, project bind-mounted at `/work/project` | hard (filesystem + network ns) | ~15-30 s/q after pull |
+| `apptainer` | same image via `apptainer run docker://…` (HPC where docker isn't allowed) | hard (rootless, `--no-home --containall`) | ~20-40 s/q |
+
+The staged copy mounted into the container respects the project's
+`.gitignore` (via `git ls-files --cached --others --exclude-standard`)
+so build artifacts, virtualenvs, agent state, etc. never enter the
+agent's view. Image is published from `containers/Dockerfile` via
 `.github/workflows/publish-image.yml`. Override with
 `NEWB_DOCKER_IMAGE=...`.
 

@@ -3,16 +3,21 @@
 newb's DockerRunner / ApptainerRunner spawns this script with:
 
     <runtime> run --rm \\
-        -v <staged>:/work/skills:ro \\
+        -v <staged-project>:/work/project \\
         -e ANTHROPIC_API_KEY \\
+        -e NEWB_MODEL \\
+        -e NEWB_SKILLS_PATH \\
         ghcr.io/ywatanabe1989/newb-runner:VERSION \\
         "<prompt>"
 
-The agent's filesystem horizon is /work/skills (the staged copy of the
-package's docs). setting_sources=[] prevents auto-loading any
-~/.claude/ context. allowed_tools=["Read"] confines the agent to file
-reads. The container itself is the hard boundary — even if the agent
-tried to escape, it has no host paths.
+Container is the boundary, not the SDK options. The agent's filesystem
+horizon is /work/project (the staged copy of the project, including
+README, src/, tests/, _skills/, examples/). Inside the container the
+agent gets FULL agentic permissions — Read + Write + Edit + Bash +
+Glob + Grep — so it can actually install + try the package
+(``pip install -e .``, ``python -c "import pkg"``, ``<pkg> --help``,
+write a small example, run pytest). ``setting_sources=[]`` still
+prevents auto-loading any ~/.claude/ context.
 """
 
 from __future__ import annotations
@@ -33,10 +38,18 @@ async def _run(prompt: str, model: str) -> str:
 
     options = ClaudeAgentOptions(
         model=model,
-        cwd="/work/skills",
-        allowed_tools=["Read"],
+        # Container is the boundary, not the SDK options. Inside the
+        # container, the agent gets FULL agentic permissions — Read +
+        # Write + Edit + Bash + Glob + Grep — so it can actually try
+        # the package: pip install -e . / python -c "import pkg" /
+        # <pkg> --help / write an example. permission_mode acceptEdits
+        # auto-approves edits in this disposable context. Higher
+        # max_turns because real exploration is more than 1-3 reads.
+        cwd=os.environ.get("NEWB_CWD", "/work/project"),
+        allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        permission_mode="acceptEdits",
         setting_sources=[],
-        max_turns=8,
+        max_turns=15,
     )
 
     chunks: list[str] = []

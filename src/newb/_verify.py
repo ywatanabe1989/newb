@@ -165,12 +165,46 @@ def _stage_skills_mount(skills_src: Path, name: str) -> Path:
     return tmp
 
 
+_PROJECT_ROOT_MARKERS = (
+    ".git",
+    "pyproject.toml",
+    "setup.py",
+    "package.json",
+    "Cargo.toml",
+    "go.mod",
+)
+
+
+def _find_project_root(start: Path) -> Optional[Path]:
+    """Walk up from ``start`` looking for a project-root marker.
+
+    Returns the first ancestor (or ``start`` itself) that contains any
+    of ``.git``, ``pyproject.toml``, ``setup.py``, ``package.json``,
+    ``Cargo.toml``, or ``go.mod``. If nothing is found before reaching
+    the filesystem root, returns ``None`` (caller falls back to
+    ``start``).
+    """
+    p = start if start.is_dir() else start.parent
+    while True:
+        if any((p / m).exists() for m in _PROJECT_ROOT_MARKERS):
+            return p
+        if p.parent == p:
+            return None
+        p = p.parent
+
+
 def _validate_skills_dir(skills_dir: Path) -> Path:
+    """Sanity-check the docs/skills source.
+
+    Must be a directory containing at least one .md file (recursive).
+    The .md guard is a smoke-test, not a format restriction — the agent
+    will see every file in the eventual cwd via the Read tool.
+    """
     p = Path(skills_dir).expanduser().resolve()
     if not p.is_dir():
-        raise FileNotFoundError(f"skills_dir is not a directory: {p}")
+        raise FileNotFoundError(f"docs source is not a directory: {p}")
     if not any(p.rglob("*.md")):
-        raise FileNotFoundError(f"skills_dir contains no .md files: {p}")
+        raise FileNotFoundError(f"docs source contains no .md files: {p}")
     return p
 
 
@@ -181,9 +215,9 @@ def _is_url(spec: Any) -> bool:
 
 
 def _resolve_source(spec: Union[Path, str]) -> Tuple[Path, Optional[Path]]:
-    """Resolve a source spec to a local skills directory.
+    """Resolve a source spec to a local docs/skills directory.
 
-    Returns ``(skills_dir, cleanup_dir_or_None)``. The cleanup dir (the
+    Returns ``(docs_dir, cleanup_dir_or_None)``. The cleanup dir (the
     parent of a git clone) is the caller's responsibility to ``rmtree``.
 
     Local paths pass through. Git URLs (``http(s)://``, ``git@``, or
@@ -214,35 +248,48 @@ def _resolve_source(spec: Union[Path, str]) -> Tuple[Path, Optional[Path]]:
 def _make_runner(
     *,
     skills_dir: Path,
+    project_root: Path,
     model: str,
-    runtime: str = "host",
+    runtime: str = "docker",
 ) -> Any:
     """Build a runner.
 
-    ``runtime`` selects the isolation backend:
+    ``project_root`` is what the agent will see as cwd — the package's
+    install location (auto-detected from ``.git`` / ``pyproject.toml``
+    / ``setup.py`` markers). ``skills_dir`` is the focused docs/skills
+    subdir the prompts point at via the ``{skills_path}`` placeholder.
 
-    * ``host`` (default) — host subprocess via ``claude-agent-sdk``;
-      soft fence (the agent's Read tool can technically reach the host
-      filesystem). Fast (~10-15s/q).
-    * ``docker`` — run the SDK inside ``ghcr.io/.../newb-runner``;
-      hard isolation (only the staged skills are mounted). ~15-20s/q
-      after image pull.
-    * ``apptainer`` — same image via apptainer; HPC use case.
+    ``runtime`` selects the container isolation backend:
+
+    * ``docker`` (default) — run the SDK inside
+      ``ghcr.io/ywatanabe1989/newb-runner``; hard isolation (only the
+      staged project root is bind-mounted ro). ~15-20s/q after image
+      pull. The agent gets full agentic permissions inside (Read +
+      Write + Edit + Bash + Glob + Grep) — container is the boundary,
+      not the SDK options.
+    * ``apptainer`` — same image via ``apptainer run docker://...``;
+      HPC use case where docker isn't allowed.
+
+    The ``host`` runtime was removed in newb 0.9 — full agent
+    permissions on the host are unsafe (agent could ``rm -rf`` the
+    user's projects, ``pip install`` into the global env, …) and
+    "container is the boundary" only holds when there IS a container.
     """
-    if runtime == "host":
-        from ._sdk_runner import SdkRunner
-
-        return SdkRunner(skills_mount=skills_dir, model=model)
     if runtime == "docker":
         from ._container_runner import DockerRunner
 
-        return DockerRunner(skills_mount=skills_dir, model=model)
+        return DockerRunner(
+            skills_mount=skills_dir, project_root=project_root, model=model
+        )
     if runtime == "apptainer":
         from ._container_runner import ApptainerRunner
 
-        return ApptainerRunner(skills_mount=skills_dir, model=model)
+        return ApptainerRunner(
+            skills_mount=skills_dir, project_root=project_root, model=model
+        )
     raise ValueError(
-        f"unknown runtime: {runtime!r} (expected host / docker / apptainer)"
+        f"unknown runtime: {runtime!r} (expected docker / apptainer; "
+        "host removed in newb 0.9 — see CHANGELOG)"
     )
 
 
@@ -288,13 +335,22 @@ def run(
     skills_src = _validate_skills_dir(resolved)
     name = skills_src.name
 
+    # The agent's cwd should be the package's install location — the
+    # full project context (README, src/, tests/, _skills/, examples/),
+    # not just the focused docs subdir. Auto-detect via .git/pyproject
+    # markers; fall back to the docs dir itself if nothing found.
+    project_root = _find_project_root(skills_src) or skills_src
+
     runner = _runner
     cleanup_mount: Optional[Path] = None
     try:
         if runner is None:
-            # sac stages skills under its own workspace; we just point
-            # SacRunner at the skills source dir.
-            runner = _make_runner(skills_dir=skills_src, model=model, runtime=runtime)
+            runner = _make_runner(
+                skills_dir=skills_src,
+                project_root=project_root,
+                model=model,
+                runtime=runtime,
+            )
 
         # Resolve the skills path the agent will see inside the runner.
         # Docker mounts at /home/agent/.claude/skills/; LocalRunner uses
