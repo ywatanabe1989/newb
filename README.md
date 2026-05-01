@@ -39,12 +39,42 @@ Output: JSON (for CI) or markdown (for README injection).
 ## Library API
 
 ```python
-from pathlib import Path
 import newb
 
-result = newb.self_explain(Path("./src/mypkg/_skills/mypkg"))
-print(newb.render_markdown(result))
+# Module-callable shortcut — for quick scripts:
+report = newb("./src/mypkg/_skills/mypkg")
+
+# Explicit form — identical behaviour, clearer intent:
+report = newb.verify("./src/mypkg/_skills/mypkg")
+
+# Render the report as a README-ready markdown block:
+print(newb.render_markdown(report))
 ```
+
+`newb.self_explain` is kept as a backward-compat alias for `verify`
+(removed in 1.0).
+
+## Why no aggregate "score"?
+
+> **Principle #1: No verification without specification.**
+> If you want a score, you must define what counts as correct.
+
+Today `newb` returns the agent's actual answers (text) and per-test
+boundary results (boolean from `_red_tests.yaml`). It does **not**
+emit an aggregate "0.85" score because:
+
+- A single number invites gaming (people optimise for the score, not
+  for actually-better docs).
+- Different tasks (description, usage, boundary) measure different
+  things; averaging them is dishonest.
+- Without an explicit *expected answer* per question, the "score" is
+  whatever the LLM judge feels like that minute — non-reproducible.
+
+A scoring system based on author-provided expected answers (pytest-
+style discovery: `tests_newb.py` with `def test_X(agent): assert ...`)
+is planned for **v0.3.0**. Until then `newb` deliberately gives you
+the raw evidence and lets you decide what "good enough" means for
+your package.
 
 ## Aliases
 
