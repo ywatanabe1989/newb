@@ -15,11 +15,11 @@ pip install newb
 ## Use
 
 ```bash
-newb verify ./src/mypkg/_skills/mypkg
-newb verify ./_skills --format markdown >> README.md
+newb run ./src/mypkg/_skills/mypkg
+newb run ./_skills --format markdown >> README.md
 ```
 
-`newb verify` spins up a clean docker container with **only your skills**
+`newb run` spins up a clean docker container with **only your skills**
 mounted (no host `~/.claude` leak), then asks a fresh Claude agent four
 canonical questions:
 
@@ -45,14 +45,17 @@ import newb
 report = newb("./src/mypkg/_skills/mypkg")
 
 # Explicit form — identical behaviour, clearer intent:
-report = newb.verify("./src/mypkg/_skills/mypkg")
+report = newb.run("./src/mypkg/_skills/mypkg")
 
 # Render the report as a README-ready markdown block:
 print(newb.render_markdown(report))
 ```
 
-`newb.self_explain` is kept as a backward-compat alias for `verify`
-(removed in 1.0).
+`newb.verify` and `newb.self_explain` are backward-compat aliases for
+`newb.run` (kept through one minor release; removed in 1.0).
+
+The verb mirrors `pytest.main()` — neutral, importable, no implication
+that the agent's success "proves" anything beyond what the asserts say.
 
 ## Why no aggregate "score"?
 

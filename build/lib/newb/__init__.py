@@ -10,11 +10,14 @@ Quick start::
     report = newb("./src/mypkg/_skills/mypkg")   # 30-second form
     print(report["what_for"])
 
-    # Equivalent explicit form:
-    report = newb.verify("./src/mypkg/_skills/mypkg")
+    # Equivalent explicit form (mirrors `pytest.main()`):
+    report = newb.run("./src/mypkg/_skills/mypkg")
 
 Both call the same function. Use the bare-module form in scripts; use
-``newb.verify`` in code where the explicit verb makes intent clearer.
+``newb.run`` in code where the explicit verb mirrors pytest conventions.
+
+Aliases ``newb.verify`` and ``newb.self_explain`` are kept for
+backward compat (removed in 1.0).
 """
 
 from __future__ import annotations
@@ -22,17 +25,17 @@ from __future__ import annotations
 import sys
 import types
 
-from ._verify import render_markdown, self_explain, verify
+from ._verify import render_markdown, run, self_explain, verify
 
-__version__ = "0.2.0"
-__all__ = ["__version__", "render_markdown", "self_explain", "verify"]
+__version__ = "0.3.0"
+__all__ = ["__version__", "render_markdown", "run", "self_explain", "verify"]
 
 
 # Module-callable shortcut (PEP 562, Python 3.7+). Lets ``import newb;
-# newb("./skills")`` work as a one-liner alias for ``newb.verify``.
+# newb("./skills")`` work as a one-liner alias for ``newb.run``.
 class _NewbModule(types.ModuleType):
     def __call__(self, skills_dir, **kwargs):  # type: ignore[no-untyped-def]
-        return verify(skills_dir, **kwargs)
+        return run(skills_dir, **kwargs)
 
 
 sys.modules[__name__].__class__ = _NewbModule

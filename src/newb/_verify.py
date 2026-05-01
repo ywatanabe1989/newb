@@ -105,7 +105,7 @@ def _validate_skills_dir(skills_dir: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def verify(
+def run(
     skills_dir: Union[Path, str],
     *,
     model: str = "claude-haiku-4-5",
@@ -183,8 +183,13 @@ def verify(
                 pass
 
 
-# Backward-compat alias for the v0.1.0 name. Will be removed in 1.0.
-self_explain = verify
+# Backward-compat aliases. Removed in 1.0.
+#   self_explain — original v0.1.0 name
+#   verify       — v0.2.0 attempt; "verify" is too strong (implies "proves
+#                  correct"). v0.3.0 settles on "run" — neutral, importable,
+#                  matches pytest.main() semantics.
+verify = run
+self_explain = run
 
 
 def _extract_text(result: Any) -> str:
