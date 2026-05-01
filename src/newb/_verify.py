@@ -215,13 +215,12 @@ def _make_runner(
     *,
     skills_dir: Path,
     model: str,
-    host: str,
 ) -> Any:
-    """Build the sac-backed runner. Single backend in 0.6.x — sac handles
-    runtime/auth/isolation/lifecycle. newb only knows A2A."""
-    from ._sac_runner import SacRunner
+    """Build the SDK-backed runner. 0.7.x uses ``claude-agent-sdk``
+    directly — no docker, no multiplexer, no A2A wire format."""
+    from ._sdk_runner import SdkRunner
 
-    return SacRunner(skills_mount=skills_dir, model=model, host=host)
+    return SdkRunner(skills_mount=skills_dir, model=model)
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +233,6 @@ def run(
     *,
     model: str = "claude-haiku-4-5",
     runs_per_prompt: int = 1,
-    host: str = "ywata-note-win",
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -272,7 +270,7 @@ def run(
         if runner is None:
             # sac stages skills under its own workspace; we just point
             # SacRunner at the skills source dir.
-            runner = _make_runner(skills_dir=skills_src, model=model, host=host)
+            runner = _make_runner(skills_dir=skills_src, model=model)
 
         # Resolve the skills path the agent will see inside the runner.
         # Docker mounts at /home/agent/.claude/skills/; LocalRunner uses

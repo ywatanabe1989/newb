@@ -21,7 +21,7 @@ def test_module_imports_and_exports_callable():
     assert callable(newb)
     # Backward-compat: self_explain is now an alias for run.
     assert newb.self_explain is newb.run
-    assert newb.__version__ == "0.6.0"
+    assert newb.__version__ == "0.7.0"
     assert isinstance(_verify._PROMPT_WHAT_FOR, str)
     assert isinstance(_verify._PROMPT_PROBLEMS, str)
     assert isinstance(_verify._PROMPT_QUICK_START, str)

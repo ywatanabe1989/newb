@@ -27,15 +27,9 @@ from ._verify import run as _run_impl
     default="json",
     help="Output format.",
 )
-@click.option(
-    "--host",
-    default="ywata-note-win",
-    help="Host where sac will start the agent (per the agent YAML's spec.host). "
-    "Default matches the local fleet's primary host.",
-)
 @click.version_option()
 @click.pass_context
-def main(ctx, source, model, runs, out_format, host):
+def main(ctx, source, model, runs, out_format):
     """Run a fresh AI agent against a docs/skills directory or git URL.
 
     \b
@@ -45,10 +39,14 @@ def main(ctx, source, model, runs, out_format, host):
         _skills/, docs/, or repo root is auto-detected.
 
     \b
-    Backed by scitex-agent-container (sac):
-      sac handles runtime selection (local/docker/apptainer/remote),
-      auth, isolation, Claude Code session lifecycle. newb only knows
-      the A2A JSON-RPC protocol over which it sends prompts.
+    Backed by Anthropic's claude-agent-sdk:
+      No docker, no multiplexer, no wire format. The SDK handles the
+      Claude Code session; newb owns the test schema + grading.
+
+    \b
+    Auth:
+      $ export ANTHROPIC_API_KEY=sk-ant-api03-...   # canonical, ToS-clean
+      (or use your local ~/.claude/ login — also works on personal machines.)
 
     \b
     Example:
@@ -65,7 +63,6 @@ def main(ctx, source, model, runs, out_format, host):
         source,
         model=model,
         runs_per_prompt=runs,
-        host=host,
     )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: newb
-Version: 0.6.0
+Version: 0.7.0
 Summary: Test your package through the eyes of a newbie agent — a fresh AI agent reads only your docs/skills and tries to use your package.
 Author-email: Yusuke Watanabe <ywata1989@gmail.com>
 License-Expression: AGPL-3.0-only
@@ -13,7 +13,7 @@ Requires-Python: >=3.10
 Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: click>=8.0
-Requires-Dist: scitex-agent-container>=0.10.0
+Requires-Dist: claude-agent-sdk>=0.1.0
 Provides-Extra: yaml
 Requires-Dist: PyYAML>=6.0; extra == "yaml"
 Dynamic: license-file
