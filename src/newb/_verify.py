@@ -16,36 +16,20 @@ from typing import Any, Dict, Optional, Tuple, Union
 # Canonical prompts
 # ---------------------------------------------------------------------------
 
-_PROMPT_WHAT_FOR = (
-    "Use the Read tool to open every .md file under {skills_path} (there's exactly one package directory there). Then and answer in ONE sentence: "
-    "what is this package for?"
+# Prompt sets live in ``question_templates/`` so new templates
+# (api_sdk, cli_tool, scientific, …) can land alongside the
+# python_package default without touching this file.
+from .question_templates import (
+    PYTHON_PACKAGE as _PROMPTS_DEFAULT,
 )
 
-_PROMPT_PROBLEMS = (
-    "Use the Read tool to open every .md file under {skills_path} (there's exactly one package directory there). Then and list 3-5 problems this "
-    "package solves. Output as a markdown table with columns: "
-    "| # | Problem | Solution |. No prose around the table."
-)
-
-_PROMPT_QUICK_START = (
-    "Use the Read tool to open every .md file under {skills_path} (there's exactly one package directory there). Then and show the minimal working "
-    "example as a Python code block. Just the code, no commentary."
-)
-
-_PROMPT_WHEN_NOT_TO_USE = (
-    "Use the Read tool to open every .md file under {skills_path} (there's exactly one package directory there). Then and answer in 1-2 sentences: "
-    "when should someone NOT use this package? If the skills don't say, "
-    "answer 'not specified in the skills'."
-)
-
-_PROMPTS_DEFAULT = {
-    "what_for": _PROMPT_WHAT_FOR,
-    "problems_solved": _PROMPT_PROBLEMS,
-    "quick_start": _PROMPT_QUICK_START,
-    "when_not_to_use": _PROMPT_WHEN_NOT_TO_USE,
-}
-
-# Backward-compat alias.
+# Backward-compat aliases — older code (and tests) reference these
+# names directly. Kept as re-exports of the python-package template's
+# entries so the public surface doesn't shift.
+_PROMPT_WHAT_FOR = _PROMPTS_DEFAULT["what_for"]
+_PROMPT_PROBLEMS = _PROMPTS_DEFAULT["problems_solved"]
+_PROMPT_QUICK_START = _PROMPTS_DEFAULT["quick_start"]
+_PROMPT_WHEN_NOT_TO_USE = _PROMPTS_DEFAULT["when_not_to_use"]
 _PROMPTS = _PROMPTS_DEFAULT
 
 
