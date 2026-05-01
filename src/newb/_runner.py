@@ -278,21 +278,34 @@ class LocalRunner:
                     "LocalRunner with auth='api-key' needs $ANTHROPIC_API_KEY set."
                 )
         elif auth == "claude-code":
-            host_claude = Path.home() / ".claude"
-            if not host_claude.is_dir():
+            # Extract the OAuth subscription token from ~/.claude/.credentials.json
+            # and pass it as ANTHROPIC_API_KEY. Works with `claude --bare`
+            # because bare-mode accepts any token via that env var (it just
+            # doesn't read keychain/OAuth files itself). This routes calls
+            # through the user's subscription quota — no per-call API spend.
+            cred_file = Path.home() / ".claude" / ".credentials.json"
+            if not cred_file.is_file():
                 raise RuntimeError(
-                    "auth='claude-code' needs ~/.claude/ on host "
+                    "auth='claude-code' needs ~/.claude/.credentials.json "
                     "(run `claude` once to authenticate)."
                 )
-            copied_any = False
-            for cred in host_claude.glob(".credentials*"):
-                _sh.copy(cred, self.home / ".claude" / cred.name)
-                copied_any = True
-            if not copied_any:
+            try:
+                import ast as _ast
+                import json as _json
+
+                raw = _json.loads(cred_file.read_text(encoding="utf-8"))
+                oauth = raw.get("claudeAiOauth")
+                if isinstance(oauth, str):
+                    oauth = _ast.literal_eval(oauth)
+                token = (oauth or {}).get("accessToken")
+                if not token:
+                    raise KeyError("no accessToken in claudeAiOauth")
+            except Exception as e:
                 raise RuntimeError(
-                    "auth='claude-code' found no ~/.claude/.credentials* files. "
-                    "Authenticate with `claude` first, or use auth='api-key'."
-                )
+                    f"auth='claude-code' could not parse OAuth token from "
+                    f"{cred_file}: {e}. Try re-authenticating with `claude`."
+                ) from e
+            self.env["ANTHROPIC_API_KEY"] = token
         else:
             raise ValueError(
                 f"unknown auth: {auth!r} (expected 'api-key' or 'claude-code')"

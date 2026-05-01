@@ -63,10 +63,29 @@ Each test combines optional substring grading and an optional LLM judge.
 | `local`     | host subprocess with isolated `HOME`          |
 | `apptainer` | HPC (planned)                                 |
 
-| `--auth`      | what                                          |
-|---------------|-----------------------------------------------|
-| `api-key`     | default — uses `$ANTHROPIC_API_KEY`           |
-| `claude-code` | copies host `~/.claude/.credentials*`         |
+| `--auth`      | what                                                                              |
+|---------------|-----------------------------------------------------------------------------------|
+| `api-key`     | default — uses `$ANTHROPIC_API_KEY` (per-call API spend)                          |
+| `claude-code` | extracts OAuth token from `~/.claude/.credentials.json` → uses subscription quota |
+
+## Isolation — soft fence, not a sandbox
+
+`--runtime local` invokes `claude --bare`, which gives **soft isolation**:
+
+- ❌ no `~/.claude/.credentials*` reads (auth strictly via env var)
+- ❌ no CLAUDE.md auto-discovery, no plugin/skill auto-load, no keychain
+- ❌ no hooks, no LSP, no auto-memory, no background prefetches
+- ✅ explicit `--add-dir <skills>` grants read access to the staged dir
+
+But: **the agent's `Read` tool is NOT sandboxed.** If a prompt asks the
+agent to read `/home/<you>/.claude/skills/something/`, it can — `--bare`
+doesn't deny filesystem access, it just disables auto-discovery. Soft
+fence against accidental contamination from autoloaded context, not a
+security boundary.
+
+For hard isolation (multi-turn, "agent tries to use the package",
+adversarial prompts), use `--runtime docker` (real container, only
+`<skills>` mounted) once it's wired through.
 
 ## Library
 
