@@ -6,7 +6,7 @@ import json
 
 import click
 
-from ._verify import render_markdown, self_explain
+from ._verify import render_markdown, verify as _verify_impl
 
 
 @click.group()
@@ -40,7 +40,7 @@ def verify(skills_dir, model, runs, out_format, as_json):
         $ newb verify ./src/mypkg/_skills/mypkg
         $ newb verify ./_skills --format markdown >> README.md
     """
-    result = self_explain(skills_dir, model=model, runs_per_prompt=runs)
+    result = _verify_impl(skills_dir, model=model, runs_per_prompt=runs)
     effective = "json" if as_json else out_format
     if effective == "markdown":
         click.echo(render_markdown(result), nl=False)

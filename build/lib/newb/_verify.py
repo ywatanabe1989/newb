@@ -105,7 +105,7 @@ def _validate_skills_dir(skills_dir: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def self_explain(
+def verify(
     skills_dir: Union[Path, str],
     *,
     model: str = "claude-haiku-4-5",
@@ -181,6 +181,10 @@ def self_explain(
                 runner.close()
             except Exception:
                 pass
+
+
+# Backward-compat alias for the v0.1.0 name. Will be removed in 1.0.
+self_explain = verify
 
 
 def _extract_text(result: Any) -> str:
