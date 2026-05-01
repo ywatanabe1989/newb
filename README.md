@@ -1,9 +1,40 @@
 # newb
 
-<p align="center"><img src="./assets/newb-logo.png" width="220" alt="newb mascot"/></p>
+<!-- scitex-badges:start -->
+[![PyPI](https://img.shields.io/pypi/v/newb.svg)](https://pypi.org/project/newb/)
+[![Python](https://img.shields.io/pypi/pyversions/newb.svg)](https://pypi.org/project/newb/)
+[![Tests](https://github.com/ywatanabe1989/newb/actions/workflows/test.yml/badge.svg)](https://github.com/ywatanabe1989/newb/actions/workflows/test.yml)
+[![Coverage](https://codecov.io/gh/ywatanabe1989/newb/graph/badge.svg)](https://codecov.io/gh/ywatanabe1989/newb)
+[![Docs](https://readthedocs.org/projects/newb/badge/?version=latest)](https://newb.readthedocs.io/en/latest/)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+<!-- scitex-badges:end -->
 
-A fresh AI agent reads only your docs and tries to use your package. If it
-succeeds, your docs work.
+<p align="center">
+  <a href="https://scitex.ai">
+    <img src="docs/assets/images/scitex-logo-blue-cropped.png" alt="SciTeX" width="320">
+  </a>
+</p>
+
+<p align="center">
+  <img src="docs/assets/newb-logo.png" alt="newb mascot" width="200">
+</p>
+
+<p align="center"><b>Test your package through the eyes of a newbie agent — a fresh AI agent reads only your docs and tries to use your package. If it succeeds, your docs work.</b></p>
+
+<p align="center">
+  <a href="https://newb.readthedocs.io/">Full Documentation</a> · <code>pip install newb</code>
+</p>
+
+---
+
+## Problem and Solution
+
+| # | Problem | Solution |
+|---|---------|----------|
+| 1 | **What a package is for and how it works isn't obvious.** Authors know their own surface; readers don't. | newb asks four canonical questions automatically — *what for*, *problems solved*, *quick start*, *when not to use* — and reports back what a fresh reader actually understood. |
+| 2 | **In this era, the first-class reader of a package is an AI agent**, not a human scrolling through README hash-anchors. Docs that read well to humans can still be unusable to agents. | newb tests docs through the actual reader: a fresh `claude-agent-sdk` session with `setting_sources=[]`, `allowed_tools=["Read"]`, `cwd=<staged copy>` — no host CLAUDE.md, no Bash, no Write. |
+| 3 | **Learning a new package is hard for users.** No quick start, missing edge cases, undocumented "when not to use" — all silent failures. | A failing newb run names exactly which question the docs couldn't answer, with the agent's own response — surfacing gaps before users hit them. |
+| 4 | **Maintaining doc quality across many packages doesn't scale.** Manual review per release, per package, per branch is the bottleneck for ecosystem-wide quality. | One CLI per package; JSON output for CI; runs in isolation (`host` / `docker` / `apptainer`); pluggable graders (substring + LLM judge) via `tests_newb.yaml`. Plug into a CI matrix and quality scales with your portfolio. |
 
 ## How it works
 
@@ -28,15 +59,21 @@ newb owns the **test schema** (4 canonical questions + `tests_newb.yaml`
 lifecycle, transport, message structuring, tool execution. No docker, no
 multiplexer, no wire format — just a Python import.
 
-## Install
+## Installation
 
 ```bash
 pip install newb
+pip install newb[yaml]    # + tests_newb.yaml support
 ```
 
 `claude-agent-sdk` (Anthropic, MIT) is pulled in as a dependency.
 
-## Use
+## 2 Interfaces
+
+<details open>
+<summary><strong>CLI</strong></summary>
+
+<br>
 
 ```bash
 newb ./docs                                # any dir of .md files
@@ -45,29 +82,43 @@ newb https://github.com/user/repo.git      # git URL — shallow-clones
 newb ./docs --format markdown >> README.md
 newb ./docs --runtime docker               # hard isolation in container
 newb ./docs --runtime apptainer            # HPC variant
+```
 
-# newb verifying its own docs in a fresh container — first self-verification:
+Self-verification example (newb verifying its own docs in a fresh container):
+
+```bash
 newb https://github.com/ywatanabe1989/newb.git --runtime docker \
   > .history/$(date +%F)-self-verification.txt 2>&1
 ```
 
+</details>
+
+<details>
+<summary><strong>Python API</strong></summary>
+
+<br>
+
+```python
+import newb
+report = newb("./docs")
+print(newb.render_markdown(report))
+```
+
+</details>
+
 ## Isolation runtimes (`--runtime`)
 
-| Value       | Where the agent runs                                          | Isolation             | Speed         |
-|-------------|---------------------------------------------------------------|-----------------------|---------------|
-| `host`      | host subprocess via `claude-agent-sdk`                        | soft (Read tool can technically reach host fs) | ~10-15s/q     |
-| `docker`    | `ghcr.io/ywatanabe1989/newb-runner` container, only `<staged>` mounted ro | hard (real fs + network ns)             | ~15-20s/q     |
-| `apptainer` | same image via `apptainer run docker://...` (HPC)             | hard (rootless)       | ~20-30s/q     |
+| Value       | Where the agent runs                                          | Isolation                                      | Speed     |
+|-------------|---------------------------------------------------------------|------------------------------------------------|-----------|
+| `host`      | host subprocess via `claude-agent-sdk`                        | soft (Read tool can technically reach host fs) | ~10-15s/q |
+| `docker`    | `ghcr.io/ywatanabe1989/newb-runner`, only `<staged>` mounted ro | hard (real fs + network ns)                    | ~15-20s/q |
+| `apptainer` | same image via `apptainer run docker://...` (HPC)             | hard (rootless)                                | ~20-30s/q |
 
-The container image is published from `containers/Dockerfile` in this
-repo via `.github/workflows/publish-image.yml`. Override the image
-with `NEWB_DOCKER_IMAGE=...`.
+Image is published from `containers/Dockerfile` via
+`.github/workflows/publish-image.yml`. Override with
+`NEWB_DOCKER_IMAGE=...`.
 
-Asks a fresh Claude agent four canonical questions (what for / problems
-solved / quick start / when not to use), plus any author-defined tests
-in `tests_newb.yaml`. Output: JSON (for CI) or markdown.
-
-### Author tests (`tests_newb.yaml`)
+## Author tests (`tests_newb.yaml`)
 
 ```yaml
 - name: redirects_parallel
@@ -90,20 +141,20 @@ personal machine where you've run `claude` to authenticate, an existing
 `~/.claude/` OAuth login also works (the SDK's bundled CLI inherits it),
 but Anthropic doesn't sanction this for redistributed products.
 
-## Isolation
+## Part of SciTeX
 
-`setting_sources=[]` skips your host `CLAUDE.md` / `.claude/` settings.
-`allowed_tools=["Read"]` limits the agent to file reads. `cwd` is set to
-a tmp copy of your skills dir, so the agent's filesystem horizon is the
-package's own content. No Bash, no Write, no WebFetch.
+`newb` is part of [**SciTeX**](https://scitex.ai). It is the docs-quality
+verifier for the ecosystem — every `scitex-*` package's `_skills/<pkg>/`
+can be re-run through `newb` in CI to catch doc drift before users do.
 
-## Library
-
-```python
-import newb
-report = newb("./docs")
-print(newb.render_markdown(report))
-```
+>Four Freedoms for Research
+>
+>0. The freedom to **run** your research anywhere — your machine, your terms.
+>1. The freedom to **study** how every step works — from raw data to final manuscript.
+>2. The freedom to **redistribute** your workflows, not just your papers.
+>3. The freedom to **modify** any module and share improvements with the community.
+>
+>AGPL-3.0 — because we believe research infrastructure deserves the same freedoms as the software it runs on.
 
 ## Requirements
 
@@ -113,6 +164,11 @@ print(newb.render_markdown(report))
 
 ## License
 
-newb itself: AGPL-3.0-only.
-The bundled `claude-agent-sdk`: MIT, governed by
-[Anthropic's Commercial Terms of Service](https://www.anthropic.com/legal/commercial-terms).
+newb itself: AGPL-3.0-only. The bundled `claude-agent-sdk`: MIT,
+governed by [Anthropic's Commercial Terms of Service](https://www.anthropic.com/legal/commercial-terms).
+
+---
+
+<p align="center">
+  <a href="https://scitex.ai" target="_blank"><img src="docs/assets/images/scitex-icon-navy-inverted.png" alt="SciTeX" width="40"/></a>
+</p>
