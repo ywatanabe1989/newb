@@ -15,11 +15,7 @@ from ._verify import run as _run_impl
 
 
 @click.command()
-@click.argument(
-    "skills_dir",
-    required=False,
-    type=click.Path(exists=True, file_okay=False),
-)
+@click.argument("source", required=False)
 @click.option("--model", default="claude-haiku-4-5", help="Claude model id.")
 @click.option("--runs", default=1, type=int, help="Runs per prompt.")
 @click.option(
@@ -29,21 +25,56 @@ from ._verify import run as _run_impl
     default="json",
     help="Output format.",
 )
+@click.option(
+    "--runtime",
+    type=click.Choice(["docker", "local", "apptainer"]),
+    default="docker",
+    help="Where to run the agent. local=host subprocess, docker=container, "
+    "apptainer=HPC (planned).",
+)
+@click.option(
+    "--auth",
+    type=click.Choice(["api-key", "claude-code"]),
+    default="api-key",
+    help="api-key uses $ANTHROPIC_API_KEY; claude-code copies your "
+    "~/.claude/.credentials* into the isolated session.",
+)
+@click.option(
+    "--config-dir",
+    type=click.Path(file_okay=False),
+    default=None,
+    help="Explicit isolation HOME for --runtime=local (default: fresh tmp).",
+)
 @click.version_option()
 @click.pass_context
-def main(ctx, skills_dir, model, runs, out_format):
-    """Run a fresh AI agent against your package's skills.
+def main(ctx, source, model, runs, out_format, runtime, auth, config_dir):
+    """Run a fresh AI agent against a docs/skills directory or git URL.
+
+    \b
+    SOURCE may be:
+      - a local directory containing .md files (any layout)
+      - a git URL (https://, git@, or *.git) — shallow-cloned, then
+        _skills/, docs/, or repo root is auto-detected.
 
     \b
     Example:
+        $ newb ./docs
         $ newb ./src/mypkg/_skills/mypkg
-        $ newb ./_skills --format markdown >> README.md
+        $ newb https://github.com/user/repo.git
+        $ newb ./docs --runtime local --auth claude-code
     """
-    if skills_dir is None:
+    if source is None:
         click.echo(ctx.get_help())
         ctx.exit(0)
-    click.echo(f"\U0001f41d newb: probing {skills_dir} ...", err=True)
-    result = _run_impl(skills_dir, model=model, runs_per_prompt=runs)
+    click.echo(f"\U0001f41d newb: probing {source} ...", err=True)
+    result = _run_impl(
+        source,
+        model=model,
+        runs_per_prompt=runs,
+        runtime=runtime,
+        auth=auth,
+        config_dir=config_dir,
+    )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)
     else:

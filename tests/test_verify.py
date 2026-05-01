@@ -16,12 +16,12 @@ def test_module_imports_and_exports_callable():
 
     assert callable(newb.self_explain)
     assert callable(newb.render_markdown)
-    assert callable(newb.verify)
-    # Module is callable as a shortcut for newb.verify (PEP 562 trick).
+    assert callable(newb.run)
+    # Module is callable as a shortcut for newb.run (PEP 562 trick).
     assert callable(newb)
-    # Backward-compat: self_explain is now an alias for verify.
-    assert newb.self_explain is newb.verify
-    assert newb.__version__ == "0.4.0"
+    # Backward-compat: self_explain is now an alias for run.
+    assert newb.self_explain is newb.run
+    assert newb.__version__ == "0.5.0"
     assert isinstance(_verify._PROMPT_WHAT_FOR, str)
     assert isinstance(_verify._PROMPT_PROBLEMS, str)
     assert isinstance(_verify._PROMPT_QUICK_START, str)

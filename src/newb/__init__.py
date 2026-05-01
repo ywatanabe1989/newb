@@ -16,8 +16,7 @@ Quick start::
 Both call the same function. Use the bare-module form in scripts; use
 ``newb.run`` in code where the explicit verb mirrors pytest conventions.
 
-Aliases ``newb.verify`` and ``newb.self_explain`` are kept for
-backward compat (removed in 1.0).
+Alias ``newb.self_explain`` is kept for backward compat (removed in 1.0).
 """
 
 from __future__ import annotations
@@ -25,10 +24,10 @@ from __future__ import annotations
 import sys
 import types
 
-from ._verify import render_markdown, run, self_explain, verify
+from ._verify import render_markdown, run, self_explain
 
-__version__ = "0.4.0"
-__all__ = ["__version__", "render_markdown", "run", "self_explain", "verify"]
+__version__ = "0.5.0"
+__all__ = ["__version__", "render_markdown", "run", "self_explain"]
 
 
 # Module-callable shortcut (PEP 562, Python 3.7+). Lets ``import newb;

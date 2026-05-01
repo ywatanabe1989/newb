@@ -7,9 +7,10 @@ Decoupled from scitex-dev's ECOSYSTEM registry — public API takes a
 from __future__ import annotations
 
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 # ---------------------------------------------------------------------------
 # Canonical prompts
@@ -173,6 +174,67 @@ def _validate_skills_dir(skills_dir: Path) -> Path:
     return p
 
 
+def _is_url(spec: Any) -> bool:
+    return isinstance(spec, str) and (
+        spec.startswith(("http://", "https://", "git@")) or spec.endswith(".git")
+    )
+
+
+def _resolve_source(spec: Union[Path, str]) -> Tuple[Path, Optional[Path]]:
+    """Resolve a source spec to a local skills directory.
+
+    Returns ``(skills_dir, cleanup_dir_or_None)``. The cleanup dir (the
+    parent of a git clone) is the caller's responsibility to ``rmtree``.
+
+    Local paths pass through. Git URLs (``http(s)://``, ``git@``, or
+    ``*.git``) are shallow-cloned to a temp dir; we then prefer
+    ``_skills/``, then ``docs/``, then the repo root.
+    """
+    if not _is_url(spec):
+        return Path(spec).expanduser().resolve(), None
+    tmp = Path(tempfile.mkdtemp(prefix="newb-clone-"))
+    repo = tmp / "repo"
+    proc = subprocess.run(
+        ["git", "clone", "--depth=1", str(spec), str(repo)],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise RuntimeError(
+            f"git clone failed for {spec!r}: {proc.stderr[:300] or proc.stdout[:300]}"
+        )
+    for cand in [repo / "_skills", repo / "docs", repo]:
+        if cand.is_dir() and any(cand.rglob("*.md")):
+            return cand, tmp
+    shutil.rmtree(tmp, ignore_errors=True)
+    raise FileNotFoundError(f"No .md files found in cloned repo: {spec}")
+
+
+def _make_runner(
+    *,
+    runtime: str,
+    auth: str,
+    skills_mount: Path,
+    config_dir: Optional[Path],
+) -> Any:
+    """Build a runner for the chosen runtime + auth combination."""
+    if runtime == "docker":
+        from ._runner import NewbieDockerRunner
+
+        return NewbieDockerRunner(skills_mount=skills_mount)
+    if runtime == "local":
+        from ._runner import LocalRunner
+
+        return LocalRunner(skills_mount=skills_mount, auth=auth, config_dir=config_dir)
+    if runtime == "apptainer":
+        raise NotImplementedError(
+            "runtime='apptainer' is planned for v0.6.0 (HPC use case). "
+            "Contributions welcome: https://github.com/ywatanabe1989/newb"
+        )
+    raise ValueError(f"unknown runtime: {runtime!r}")
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -183,6 +245,9 @@ def run(
     *,
     model: str = "claude-haiku-4-5",
     runs_per_prompt: int = 1,
+    runtime: str = "docker",
+    auth: str = "api-key",
+    config_dir: Optional[Union[Path, str]] = None,
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -207,18 +272,25 @@ def run(
         ``{"package", "what_for", "problems_solved", "quick_start",
         "when_not_to_use"[, "red_tests"]}``.
     """
-    skills_src = _validate_skills_dir(Path(skills_dir))
+    if _runner is None:
+        resolved, cleanup_clone = _resolve_source(skills_dir)
+    else:
+        resolved, cleanup_clone = Path(skills_dir), None
+    skills_src = _validate_skills_dir(resolved)
     name = skills_src.name
 
     runner = _runner
     cleanup_mount: Optional[Path] = None
     try:
         if runner is None:
-            from ._runner import NewbieDockerRunner
-
             mount = _stage_skills_mount(skills_src, name)
             cleanup_mount = mount
-            runner = NewbieDockerRunner(skills_mount=mount)
+            runner = _make_runner(
+                runtime=runtime,
+                auth=auth,
+                skills_mount=mount,
+                config_dir=Path(config_dir) if config_dir else None,
+            )
 
         out: Dict[str, Any] = {"package": name}
         for key, prompt in _PROMPTS.items():
@@ -244,6 +316,8 @@ def run(
     finally:
         if cleanup_mount is not None and cleanup_mount.exists():
             shutil.rmtree(cleanup_mount, ignore_errors=True)
+        if cleanup_clone is not None and cleanup_clone.exists():
+            shutil.rmtree(cleanup_clone, ignore_errors=True)
         if runner is not None and hasattr(runner, "close") and _runner is None:
             try:
                 runner.close()
@@ -251,12 +325,7 @@ def run(
                 pass
 
 
-# Backward-compat aliases. Removed in 1.0.
-#   self_explain — original v0.1.0 name
-#   verify       — v0.2.0 attempt; "verify" is too strong (implies "proves
-#                  correct"). v0.3.0 settles on "run" — neutral, importable,
-#                  matches pytest.main() semantics.
-verify = run
+# Backward-compat alias. Removed in 1.0.
 self_explain = run
 
 

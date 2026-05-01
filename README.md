@@ -2,8 +2,8 @@
 
 <p align="center"><img src="./assets/newb-logo.png" width="220" alt="newb mascot"/></p>
 
-A fresh AI agent reads only your `_skills/` (or equivalent docs) and tries
-to use your package. If it succeeds, your docs work.
+A fresh AI agent reads only your docs and tries to use your package. If it
+succeeds, your docs work.
 
 ## Install
 
@@ -14,29 +14,52 @@ pip install newb
 ## Use
 
 ```bash
-newb ./src/mypkg/_skills/mypkg
-newb ./_skills --format markdown >> README.md
+newb ./docs                                     # any dir of .md files
+newb https://github.com/user/repo.git           # git URL — auto-clones
+newb ./docs --format markdown >> README.md
+newb ./docs --runtime local --auth claude-code  # host subprocess
 ```
 
-Spins up a clean docker container with **only your skills** mounted, then
-asks a fresh Claude agent four canonical questions (what for / problems /
-quick start / when not to use), plus optional red tests from
-`_red_tests.yaml`.
+Asks a fresh Claude agent four canonical questions (what for / problems
+solved / quick start / when not to use), plus any author-defined tests in
+`tests_newb.yaml`. Output: JSON (for CI) or markdown.
 
-Output: JSON (for CI) or markdown (for README injection).
+### Author tests (`tests_newb.yaml`)
+
+```yaml
+- name: redirects_parallel
+  prompt: How do I run things in parallel?
+  expect_contains: ["does not"]
+  judge: "Must redirect to an alternative tool, not hallucinate."
+```
+
+Each test combines optional substring grading and an optional LLM judge.
+
+## Runtime · Auth
+
+| `--runtime` | what                                          |
+|-------------|-----------------------------------------------|
+| `docker`    | default — clean container, no host leakage    |
+| `local`     | host subprocess with isolated `HOME`          |
+| `apptainer` | HPC (planned)                                 |
+
+| `--auth`      | what                                          |
+|---------------|-----------------------------------------------|
+| `api-key`     | default — uses `$ANTHROPIC_API_KEY`           |
+| `claude-code` | copies host `~/.claude/.credentials*`         |
 
 ## Library
 
 ```python
 import newb
-report = newb("./src/mypkg/_skills/mypkg")
+report = newb("./docs")
 print(newb.render_markdown(report))
 ```
 
 ## Requirements
 
-- Docker on PATH
-- `ANTHROPIC_API_KEY` in env
+- `docker` on PATH (or `claude` CLI if `--runtime local`)
+- `$ANTHROPIC_API_KEY` (or `--auth claude-code`)
 - Python 3.10+
 
 ## License

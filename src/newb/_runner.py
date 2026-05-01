@@ -221,4 +221,130 @@ class NewbieDockerRunner:
         self._started = False
 
 
+class LocalRunner:
+    """Run ``claude -p`` directly on the host with an isolated HOME.
+
+    Unlike :class:`NewbieDockerRunner`, no docker. Subprocess uses an
+    isolated ``HOME`` (default: a fresh tmp dir) so the agent only sees
+    the staged ``.claude/skills/`` and never the user's real session.
+
+    Auth modes:
+      * ``api-key`` (default) — relies on ``ANTHROPIC_API_KEY`` env.
+      * ``claude-code`` — copies host's ``~/.claude/.credentials*`` into
+        the isolated HOME so a subscribed user can run without an API key.
+    """
+
+    def __init__(
+        self,
+        *,
+        skills_mount: Path | None = None,
+        auth: str = "api-key",
+        config_dir: Path | None = None,
+    ):
+        import shutil as _sh
+        import tempfile as _tmp
+
+        if not _sh.which("claude"):
+            raise RuntimeError("LocalRunner requires `claude` CLI on PATH.")
+
+        self._owns_home = config_dir is None
+        self.home = (
+            Path(config_dir).expanduser().resolve()
+            if config_dir
+            else Path(_tmp.mkdtemp(prefix="newb-local-home-"))
+        )
+        self.home.mkdir(parents=True, exist_ok=True)
+        (self.home / ".claude" / "skills").mkdir(parents=True, exist_ok=True)
+
+        if skills_mount is not None:
+            src = Path(skills_mount) / ".claude" / "skills"
+            if src.is_dir():
+                for child in src.iterdir():
+                    dst = self.home / ".claude" / "skills" / child.name
+                    if dst.exists():
+                        _sh.rmtree(dst, ignore_errors=True)
+                    _sh.copytree(child, dst)
+
+        self.env = os.environ.copy()
+        self.env["HOME"] = str(self.home)
+        self.env["CLAUDE_DISABLE_AUTO_UPDATE"] = "1"
+
+        if auth == "api-key":
+            if not self.env.get("ANTHROPIC_API_KEY"):
+                raise RuntimeError(
+                    "LocalRunner with auth='api-key' needs $ANTHROPIC_API_KEY set."
+                )
+        elif auth == "claude-code":
+            host_claude = Path.home() / ".claude"
+            if not host_claude.is_dir():
+                raise RuntimeError(
+                    "auth='claude-code' needs ~/.claude/ on host "
+                    "(run `claude` once to authenticate)."
+                )
+            copied_any = False
+            for cred in host_claude.glob(".credentials*"):
+                _sh.copy(cred, self.home / ".claude" / cred.name)
+                copied_any = True
+            if not copied_any:
+                raise RuntimeError(
+                    "auth='claude-code' found no ~/.claude/.credentials* files. "
+                    "Authenticate with `claude` first, or use auth='api-key'."
+                )
+        else:
+            raise ValueError(
+                f"unknown auth: {auth!r} (expected 'api-key' or 'claude-code')"
+            )
+        atexit.register(self.close)
+
+    def run(
+        self,
+        prompt: str,
+        *,
+        model: str = DEFAULT_MODEL,
+        timeout: int = DEFAULT_TIMEOUT,
+    ) -> dict:
+        proc = subprocess.run(
+            [
+                "claude",
+                "-p",
+                prompt,
+                "--output-format",
+                "stream-json",
+                "--verbose",
+                "--model",
+                model,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=self.env,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"local claude -p failed (rc={proc.returncode}): "
+                f"{proc.stderr[:500] or proc.stdout[:500]}"
+            )
+        events: list[dict] = []
+        final: dict = {}
+        for line in proc.stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            events.append(obj)
+            if isinstance(obj, dict) and obj.get("type") == "result":
+                final = dict(obj)
+        final["events"] = events
+        return final
+
+    def close(self) -> None:
+        if self._owns_home and self.home.exists():
+            import shutil as _sh
+
+            _sh.rmtree(self.home, ignore_errors=True)
+
+
 # EOF
