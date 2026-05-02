@@ -38,7 +38,7 @@ is itself a useful signal.
 
 ## Prompt shape
 
-The actual prompt template lives in `_verify._PROMPTS_DEFAULT`. Each
+The actual prompt template lives in `_try._PROMPTS_DEFAULT`. Each
 template:
 
 - Tells the agent to use the `Read` tool to open every `.md` under the

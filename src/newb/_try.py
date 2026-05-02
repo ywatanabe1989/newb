@@ -178,19 +178,26 @@ def _find_project_root(start: Path) -> Optional[Path]:
         p = p.parent
 
 
-def _validate_skills_dir(skills_dir: Path) -> Path:
-    """Sanity-check the docs/skills source.
+def _validate_source(source_dir: Path) -> Path:
+    """Sanity-check the source directory.
 
-    Must be a directory containing at least one .md file (recursive).
-    The .md guard is a smoke-test, not a format restriction — the agent
-    will see every file in the eventual cwd via the Read tool.
+    Must be a directory and non-empty. Any file type is acceptable —
+    README, .py, .ipynb, .pdf, .yaml, scratch notes, anything. The
+    agent's Read tool sees every file inside the staged cwd; newb
+    doesn't filter by extension. (Earlier versions required at least
+    one .md file as a smoke test; lifted in 0.10 — pip-installable
+    packages without ANY .md still benefit from a try-run.)
     """
-    p = Path(skills_dir).expanduser().resolve()
+    p = Path(source_dir).expanduser().resolve()
     if not p.is_dir():
-        raise FileNotFoundError(f"docs source is not a directory: {p}")
-    if not any(p.rglob("*.md")):
-        raise FileNotFoundError(f"docs source contains no .md files: {p}")
+        raise FileNotFoundError(f"source is not a directory: {p}")
+    if not any(p.iterdir()):
+        raise FileNotFoundError(f"source directory is empty: {p}")
     return p
+
+
+# Back-compat alias for the renamed validator.
+_validate_skills_dir = _validate_source
 
 
 def _is_url(spec: Any) -> bool:
@@ -223,11 +230,12 @@ def _resolve_source(spec: Union[Path, str]) -> Tuple[Path, Optional[Path]]:
         raise RuntimeError(
             f"git clone failed for {spec!r}: {proc.stderr[:300] or proc.stdout[:300]}"
         )
-    for cand in [repo / "_skills", repo / "docs", repo]:
-        if cand.is_dir() and any(cand.rglob("*.md")):
-            return cand, tmp
+    # No .md filter — clone-root always wins. The agent decides what
+    # to read once cwd is the staged project root.
+    if repo.is_dir() and any(repo.iterdir()):
+        return repo, tmp
     shutil.rmtree(tmp, ignore_errors=True)
-    raise FileNotFoundError(f"No .md files found in cloned repo: {spec}")
+    raise FileNotFoundError(f"cloned repo is empty: {spec}")
 
 
 def _make_runner(

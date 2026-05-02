@@ -1,4 +1,4 @@
-"""Tests for newb._verify (docker / claude API are mocked)."""
+"""Tests for newb._try (docker / claude API are mocked)."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import pytest
 
 def test_module_imports_and_exports_callable():
     import newb
-    from newb import _verify
+    from newb import _try
 
     assert callable(newb.self_explain)
     assert callable(newb.render_markdown)
@@ -25,10 +25,10 @@ def test_module_imports_and_exports_callable():
     # __init__.py, so just check the shape — not pin to a literal that
     # would drift with every release.
     assert isinstance(newb.__version__, str) and newb.__version__
-    assert isinstance(_verify._PROMPT_WHAT_FOR, str)
-    assert isinstance(_verify._PROMPT_PROBLEMS, str)
-    assert isinstance(_verify._PROMPT_QUICK_START, str)
-    assert isinstance(_verify._PROMPT_WHEN_NOT_TO_USE, str)
+    assert isinstance(_try._PROMPT_WHAT_FOR, str)
+    assert isinstance(_try._PROMPT_PROBLEMS, str)
+    assert isinstance(_try._PROMPT_QUICK_START, str)
+    assert isinstance(_try._PROMPT_WHEN_NOT_TO_USE, str)
 
 
 # ---------------------------------------------------------------------------
@@ -158,14 +158,14 @@ def test_render_markdown_shape(tmp_path):
 
 
 def test_load_red_tests_missing_file_returns_empty(tmp_path):
-    from newb._verify import _load_red_tests
+    from newb._try import _load_red_tests
 
     assert _load_red_tests(tmp_path) == []
 
 
 def test_load_red_tests_parses_valid_yaml(tmp_path):
     pytest.importorskip("yaml")
-    from newb._verify import _load_red_tests
+    from newb._try import _load_red_tests
 
     (tmp_path / "_red_tests.yaml").write_text(
         "- question: Can this do parallel execution?\n"
@@ -180,7 +180,7 @@ def test_load_red_tests_parses_valid_yaml(tmp_path):
 
 def test_load_red_tests_invalid_yaml_returns_empty(tmp_path):
     pytest.importorskip("yaml")
-    from newb._verify import _load_red_tests
+    from newb._try import _load_red_tests
 
     (tmp_path / "_red_tests.yaml").write_text("not: a list: just: garbage:")
     assert _load_red_tests(tmp_path) == []
@@ -193,7 +193,7 @@ def test_load_red_tests_invalid_yaml_returns_empty(tmp_path):
 
 def test_load_tests_prefers_tests_newb_over_red(tmp_path):
     pytest.importorskip("yaml")
-    from newb._verify import _load_tests
+    from newb._try import _load_tests
 
     (tmp_path / "_red_tests.yaml").write_text("- question: legacy\n")
     (tmp_path / "tests_newb.yaml").write_text(
@@ -207,7 +207,7 @@ def test_load_tests_prefers_tests_newb_over_red(tmp_path):
 
 def test_load_tests_accepts_judge_field(tmp_path):
     pytest.importorskip("yaml")
-    from newb._verify import _load_tests
+    from newb._try import _load_tests
 
     (tmp_path / "tests_newb.yaml").write_text(
         "- name: redirect_check\n"
@@ -284,7 +284,7 @@ def test_run_judge_fail_reflected_in_summary(tmp_path):
 def test_stage_skills_mount_contains_only_target(tmp_path):
     import shutil
 
-    from newb._verify import _stage_skills_mount
+    from newb._try import _stage_skills_mount
 
     src = tmp_path / "src"
     src.mkdir()

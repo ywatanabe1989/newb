@@ -59,7 +59,7 @@ async def newb_verify(
     runs_per_prompt
         Repeat each prompt N times for stability measurement.
     """
-    from ._verify import run as _run
+    from ._try import run as _run
 
     report = _run(
         source,
@@ -136,7 +136,7 @@ async def newb_skills_get(name: str) -> str:
 @mcp.tool()
 async def newb_render_markdown(report: dict) -> str:
     """Render a `newb_verify` report dict as a README-ready markdown block."""
-    from ._verify import render_markdown
+    from ._try import render_markdown
 
     return render_markdown(report)
 

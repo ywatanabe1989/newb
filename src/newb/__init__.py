@@ -31,7 +31,7 @@ try:
 except ImportError:  # pragma: no cover — stdlib module is always present
     types = None  # type: ignore[assignment]
 
-from ._verify import render_markdown, run, self_explain
+from ._try import render_markdown, run, self_explain
 
 # Resolve version from installed metadata so source edits don't drift
 # the in-tree string. Fallback uses a PEP 440 local segment so an

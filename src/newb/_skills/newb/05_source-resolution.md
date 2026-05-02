@@ -14,7 +14,7 @@ tags: [newb, scitex-package]
 | `./src/<pkg>/_skills/<pkg>` (local dir) | Used as-is. |
 | `https://github.com/u/r.git` / `git@…` / anything `*.git` | Shallow-cloned (`git clone --depth=1`) into a tmp dir. |
 
-Detection of "URL-ness" (`_verify._is_url`):
+Detection of "URL-ness" (`_try._is_url`):
 
 ```python
 spec.startswith(("http://", "https://", "git@")) or spec.endswith(".git")

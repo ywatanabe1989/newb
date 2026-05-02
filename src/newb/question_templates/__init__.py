@@ -7,7 +7,7 @@ where the focused docs subdir lives).
 
 Templates live as plain Python modules so they can grow assertions
 or compute prompts dynamically; user-defined YAML overrides land in
-a separate loader (see ``newb._verify._load_tests``).
+a separate loader (see ``newb._try._load_tests``).
 
 Built-in templates so far:
 

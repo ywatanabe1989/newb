@@ -21,8 +21,8 @@ import json
 
 import click
 
-from ._verify import render_markdown
-from ._verify import run as _run_impl
+from ._try import render_markdown
+from ._try import run as _run_impl
 from .question_templates import DEFAULT_TEMPLATE, TEMPLATES
 
 

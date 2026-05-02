@@ -1,5 +1,0 @@
-click>=8.0
-claude-agent-sdk>=0.1.0
-
-[yaml]
-PyYAML>=6.0
