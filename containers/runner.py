@@ -10,24 +10,18 @@ newb's DockerRunner / ApptainerRunner spawns this script with:
         ghcr.io/ywatanabe1989/newb-runner:VERSION \\
         "<prompt>"
 
-Auth: ONE env var, ``NEWB_ANTHROPIC_API_KEY``. This script auto-detects
-whether it's a real API key (``sk-ant-api*``) or a Claude Code OAuth
-token (``sk-ant-oat*``) by prefix:
-
-  * ``sk-ant-api*`` → exported as ``ANTHROPIC_API_KEY`` (the SDK / CLI
-    pick it up directly).
-  * ``sk-ant-oat*`` → written to ``~/.claude/.credentials.json`` in
-    the ``claudeAiOauth`` shape so the bundled Claude CLI's OAuth code
-    path resolves it (passing OAuth tokens as ``ANTHROPIC_API_KEY``
-    directly does NOT work — the CLI tries to use them as API keys
-    and fails).
+Auth: ONE env var, ``NEWB_ANTHROPIC_API_KEY``. This script promotes it
+to ``ANTHROPIC_API_KEY`` for the bundled CLI. The Anthropic backend
+accepts both real API keys (``sk-ant-api*``) and Claude Code OAuth
+access tokens (``sk-ant-oat*``) in the same Authorization header — no
+host-side dispatch or credentials-file translation needed.
 
 Container is the boundary, not the SDK options. The agent's filesystem
 horizon is /work/project (the staged copy of the project). Inside the
 container the agent gets FULL agentic permissions — Read + Write +
 Edit + Bash + Glob + Grep — so it can actually install + try the
 package. ``setting_sources=[]`` still prevents auto-loading any
-~/.claude/ context beyond the materialized credentials.
+~/.claude/ context (the host's CLAUDE.md never reaches the agent).
 """
 
 from __future__ import annotations

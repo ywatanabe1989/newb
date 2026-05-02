@@ -105,19 +105,22 @@ pip install newb[all]      # everything above
 <br>
 
 newb owns its own env namespace and never silently inherits the
-upstream `ANTHROPIC_API_KEY`. Two opt-in vars (set whichever you have):
+upstream `ANTHROPIC_API_KEY`. One opt-in var, opaque to newb:
 
 ```bash
-# Canonical API key — sk-ant-api03-... (production / CI / redistributed use)
+# Real Anthropic API key (production / CI / redistributed use)
 export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...
 
-# OR: Claude Code subscription (Pro / Max) — sk-ant-oat01-...
-# Extract from ~/.claude/.credentials.json:
-export NEWB_ANTHROPIC_API_KEY_OAUTH=$(jq -r .claudeAiOauth.accessToken ~/.claude/.credentials.json)
+# OR: a Claude Code Pro / Max OAuth access token. Extract from
+# ~/.claude/.credentials.json:
+export NEWB_ANTHROPIC_API_KEY=$(jq -r .claudeAiOauth.accessToken ~/.claude/.credentials.json)
 ```
 
-Whichever is set is forwarded to the container as `ANTHROPIC_API_KEY`
-(the SDK inside reads the canonical name). Per
+The Anthropic backend accepts both `sk-ant-api*` (API keys) and
+`sk-ant-oat*` (Claude Code OAuth access tokens) on the same
+Authorization header — newb forwards the value verbatim into the
+container, where the bundled CLI promotes it to `ANTHROPIC_API_KEY`.
+Per
 [Anthropic's commercial ToS](https://www.anthropic.com/legal/commercial-terms),
 redistributed / CI use should prefer the API-key form.
 

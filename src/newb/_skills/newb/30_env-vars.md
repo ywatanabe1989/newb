@@ -12,14 +12,18 @@ host runtime actively masks it for the duration of the SDK call so
 the bundled CLI cleanly falls through to OAuth or fails. Container
 runtimes hard-fail without a NEWB_-prefixed key.
 
-## Auth (one of these — opt-in)
+## Auth (one var, opt-in)
 
 | Variable | Purpose | Default | Type |
 |---|---|---|---|
-| `NEWB_ANTHROPIC_API_KEY` | Canonical Claude API key (`sk-ant-api03-…`). Forwarded to the container as `ANTHROPIC_API_KEY`. | unset | secret |
-| `NEWB_ANTHROPIC_API_KEY_OAUTH` | Claude Code subscription token (`sk-ant-oat01-…`) for Pro / Max users. Extract from `~/.claude/.credentials.json` via `jq -r .claudeAiOauth.accessToken`. Same forwarding. | unset | secret |
+| `NEWB_ANTHROPIC_API_KEY` | Opaque token. Forwarded verbatim into the container, where the in-container runner promotes it to `ANTHROPIC_API_KEY` for the bundled CLI. The Anthropic backend accepts both `sk-ant-api03-…` (real API keys) and `sk-ant-oat01-…` (Claude Code Pro / Max OAuth access tokens) on the same Authorization header — newb does not dispatch on prefix. | unset | secret |
 
-If both are set, `NEWB_ANTHROPIC_API_KEY` wins.
+OAuth users on Claude Code Pro / Max can extract the access token
+from the local credentials file:
+
+```bash
+export NEWB_ANTHROPIC_API_KEY=$(jq -r .claudeAiOauth.accessToken ~/.claude/.credentials.json)
+```
 
 ## Runtime (image + model overrides)
 

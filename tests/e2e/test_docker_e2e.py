@@ -7,7 +7,7 @@ in ``tests/newb/test__container_runner.py`` can't (e.g. host expects
 Auto-skip when:
 
 - ``docker`` isn't on PATH
-- ``NEWB_ANTHROPIC_API_KEY`` (or NEWB_ANTHROPIC_API_KEY_OAUTH) isn't set
+- ``NEWB_ANTHROPIC_API_KEY`` (the single opt-in flag) isn't set
 - explicitly opted-out via ``NEWB_SKIP_E2E=1``
 
 Triggered manually with ``pytest tests/e2e/`` or by setting
@@ -26,17 +26,15 @@ from pathlib import Path
 import pytest
 
 _HAS_DOCKER = shutil.which("docker") is not None
-_HAS_KEY = bool(
-    os.environ.get("NEWB_ANTHROPIC_API_KEY")
-    or os.environ.get("NEWB_ANTHROPIC_API_KEY_OAUTH")
-)
+_HAS_KEY = bool(os.environ.get("NEWB_ANTHROPIC_API_KEY"))
+_HAS_CREDS = (Path.home() / ".claude" / ".credentials.json").is_file()
 _OPT_OUT = os.environ.get("NEWB_SKIP_E2E") == "1"
 
 requires_docker_and_key = pytest.mark.skipif(
-    _OPT_OUT or not (_HAS_DOCKER and _HAS_KEY),
+    _OPT_OUT or not (_HAS_DOCKER and _HAS_KEY and _HAS_CREDS),
     reason=(
-        "e2e: needs docker on PATH AND NEWB_ANTHROPIC_API_KEY (or _OAUTH); "
-        "skip via NEWB_SKIP_E2E=1"
+        "e2e: needs docker on PATH, NEWB_ANTHROPIC_API_KEY set, AND "
+        "~/.claude/.credentials.json present; skip via NEWB_SKIP_E2E=1"
     ),
 )
 
