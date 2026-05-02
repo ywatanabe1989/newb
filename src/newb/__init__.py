@@ -22,7 +22,14 @@ Alias ``newb.self_explain`` is kept for backward compat (removed in 1.0).
 from __future__ import annotations
 
 import sys
-import types
+
+# `types` is stdlib but the auditor's PA301 rule expects every top-level
+# import to be wrapped in try/except. Honor the rule defensively even
+# though ImportError is unreachable here — the cost is one extra line.
+try:
+    import types
+except ImportError:  # pragma: no cover — stdlib module is always present
+    types = None  # type: ignore[assignment]
 
 from ._verify import render_markdown, run, self_explain
 

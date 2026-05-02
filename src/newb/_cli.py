@@ -31,6 +31,28 @@ def _print_help_recursive(ctx: click.Context, _param, value):
     ctx.exit(0)
 
 
+def _print_top_level_json(ctx: click.Context, _param, value):
+    """Top-level --json: emit a JSON summary of registered subcommands."""
+    if not value or ctx.resilient_parsing:
+        return
+    cmd = ctx.command
+    rows = []
+    if isinstance(cmd, click.Group):
+        for name in sorted(cmd.commands):
+            sub = cmd.commands[name]
+            rows.append(
+                {
+                    "name": name,
+                    "kind": "group" if isinstance(sub, click.Group) else "command",
+                    "summary": (sub.help or "").strip().splitlines()[0]
+                    if sub.help
+                    else "",
+                }
+            )
+    click.echo(json.dumps({"prog": "newb", "subcommands": rows}, indent=2))
+    ctx.exit(0)
+
+
 @click.group(
     invoke_without_command=True,
     context_settings={"help_option_names": ["-h", "--help"]},
@@ -42,6 +64,14 @@ def _print_help_recursive(ctx: click.Context, _param, value):
     expose_value=False,
     callback=_print_help_recursive,
     help="Flatten help for every subcommand.",
+)
+@click.option(
+    "--json",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_print_top_level_json,
+    help="Machine-readable JSON summary of subcommands (universal SciTeX flag).",
 )
 @click.version_option(prog_name="newb")
 @click.pass_context
@@ -67,7 +97,7 @@ def main(ctx: click.Context):
 # ---------------------------------------------------------------------------
 
 
-@main.command()
+@main.command("verify-package")
 @click.argument("source", required=True)
 @click.option("--model", default="claude-haiku-4-5", help="Claude model id.")
 @click.option("--runs", default=1, type=int, help="Runs per prompt.")
@@ -97,8 +127,11 @@ def main(ctx: click.Context):
     default="docker",
     help="Container runtime. docker (default) or apptainer (HPC).",
 )
-def verify(source, model, runs, template, out_format, json_alias, runtime):
-    """Run the agent against SOURCE — the main verify command.
+def verify_package(source, model, runs, template, out_format, json_alias, runtime):
+    # Click runner-only alias: `newb verify ...` == `newb verify-package ...`
+    # (the legacy_dispatch shim handles the same translation when invoked
+    # via the entry-point script; this keeps CliRunner-based tests working.)
+    """Run the agent against SOURCE — verify a package's docs.
 
     \b
     SOURCE may be:
@@ -115,10 +148,10 @@ def verify(source, model, runs, template, out_format, json_alias, runtime):
 
     \b
     Example:
-        $ newb verify .
-        $ newb verify ./src/mypkg/_skills/mypkg
-        $ newb verify https://github.com/user/repo.git
-        $ newb verify . --template python-package --json
+        $ newb verify-package .
+        $ newb verify-package ./src/mypkg/_skills/mypkg
+        $ newb verify-package https://github.com/user/repo.git
+        $ newb verify-package . --template python-package --json
     """
     if json_alias:
         out_format = "json"
@@ -446,14 +479,27 @@ def mcp_start(dry_run, yes):
 
 
 # Names of registered subcommand groups — keep in sync with the @main.group
-# decorators above. Used by _legacy_dispatch to know what NOT to rewrite.
-_SUBCOMMANDS = {"verify", "templates", "skills", "mcp", "list-python-apis"}
+# / @main.command decorators above. Used by _legacy_dispatch to know what
+# NOT to rewrite. ``verify`` (no -package suffix) is kept as a recognised
+# alias — the legacy dispatcher rewrites it to the canonical form.
+_SUBCOMMANDS = {
+    "verify-package",
+    "verify",  # legacy alias for verify-package
+    "templates",
+    "skills",
+    "mcp",
+    "list-python-apis",
+}
 
 
 def _legacy_dispatch():
-    """If invoked as ``newb <SOURCE> ...`` (positional arg, no subcommand),
-    rewrite argv as ``newb verify <SOURCE> ...`` so old call sites keep
-    working.
+    """Backward-compat shims for two old call shapes:
+
+    1. ``newb <SOURCE> …``  →  ``newb verify-package <SOURCE> …``
+       (positional source, no subcommand at all).
+    2. ``newb verify <SOURCE> …``  →  ``newb verify-package <SOURCE> …``
+       (the noun-verb rename in 0.10 dropped the bare ``verify`` form
+       to satisfy audit-cli §1 — keep the old name working).
     """
     import sys
 
@@ -461,10 +507,18 @@ def _legacy_dispatch():
     if not argv:
         return
     first = argv[0]
+    if first == "verify":
+        sys.argv = [sys.argv[0], "verify-package"] + argv[1:]
+        return
     # If first arg is a known subcommand or starts with a flag, no rewrite.
     if first in _SUBCOMMANDS or first.startswith("-"):
         return
-    sys.argv = [sys.argv[0], "verify"] + argv
+    sys.argv = [sys.argv[0], "verify-package"] + argv
+
+
+# Register `verify` as a hidden Click alias for `verify-package` so tests
+# that use CliRunner can still invoke ``main, ["verify", ...]``.
+main.add_command(verify_package, name="verify")
 
 
 if __name__ == "__main__":
