@@ -37,61 +37,94 @@
 ## How it works
 
 ```
-HOST                                                      DOCKER CONTAINER (ghcr.io/.../newb-runner)
-┌──────────────────────────────────┐                      ┌─────────────────────────────────────────────┐
-│   Your package                   │                      │                                             │
-│                                  │   docker run --rm    │   claude-agent-sdk (Anthropic, MIT)         │
-│   docs (any tree of .md files —  │   --network bridge   │     ClaudeAgentOptions(                     │
-│      README, scratch notes,      │   -v <staged>:ro     │       cwd="/work/docs",                     │
-│      agent skills, …)            │                      │                                             │
-│   tests_newb.yaml (optional)     │ ───────────────────► │       setting_sources=[],   # no host CLAUDE│
-│                                  │   -e ANTHROPIC_…     │       allowed_tools=["Read"], # NO Bash/Write│
-│                                  │                      │       max_turns=8,                          │
-│   ├── shutil.copytree            │                      │     )                                       │
-│   │   to /tmp/newb-stage-XXX/    │                      │                                             │
-│   │   docs/   (read-only mount)  │   stdout = answer    │   for each canonical question:              │
-│   └── 1 prompt per canonical Q   │ ◄─────────────────── │     async for msg in query(prompt, options):│
-│       + 1 per tests_newb.yaml    │                      │       collect AssistantMessage text         │
-│       entry                      │                      │     return ResultMessage.result             │
-└──────────────────────────────────┘                      └─────────────────────────────────────────────┘
+HOST                                                       DOCKER CONTAINER (ghcr.io/.../newb-runner)
+┌──────────────────────────────────┐                       ┌──────────────────────────────────────────────┐
+│  Your project root               │                       │  /work/project   (rw bind-mount)             │
+│  (auto-detected — dir with       │                       │    ├── README.md, src/, tests/, examples/    │
+│   .git / pyproject.toml /        │                       │    ├── _skills/<pkg>/   ← prompt focus       │
+│   setup.py / package.json /      │                       │    └── tests_newb.yaml   (optional)          │
+│   Cargo.toml / go.mod)           │                       │                                              │
+│                                  │   docker run --rm     │  claude-agent-sdk (Anthropic, MIT)           │
+│  ├── stage to                    │   --network bridge    │    ClaudeAgentOptions(                       │
+│  │   /tmp/newb-stage-XXX/        │   -v <staged>:rw      │      cwd="/work/project",                    │
+│  │   project/   (rw — agent      │   -e ANTHROPIC_API…   │      allowed_tools=["Read","Write","Edit",   │
+│  │   needs to pip install)       │   -e NEWB_MODEL       │                     "Bash","Glob","Grep"],   │
+│  │                               │   -e NEWB_SKILLS_PATH │      permission_mode="acceptEdits",          │
+│  ├── filter via                  │ ────────────────────► │      setting_sources=[],   # no host CLAUDE  │
+│  │   `git ls-files --cached      │                       │      max_turns=15,                           │
+│  │     --others                  │                       │    )                                         │
+│  │     --exclude-standard`       │                       │                                              │
+│  │   (or hardcoded ignore        │   stdout = answer     │  agent can ACTUALLY try the package:         │
+│  │   list for non-git dirs;      │ ◄──────────────────── │    pip install -e .                          │
+│  │   broken symlinks dropped)    │                       │    python -c "import <pkg>"                  │
+│  │                               │                       │    <pkg> --help                              │
+│  └── one prompt per question     │                       │    write a small example, run a test         │
+│      from the chosen template    │                       │  Returns ResultMessage.result per query.     │
+│      + one per tests_newb.yaml   │                       │                                              │
+│      (questions sent in fresh    │                       │                                              │
+│       sessions — no shared       │                       │                                              │
+│       conversation state)        │                       │                                              │
+└──────────────────────────────────┘                       └──────────────────────────────────────────────┘
                 │
                 ▼
-        ┌──────────────────────┐
-        │   Report             │
-        │   what_for           │
-        │   problems_solved    │
-        │   quick_start        │
-        │   when_not_to_use    │
-        │   tests[] (pass/fail)│
-        │   tests_summary      │
-        └──────────────────────┘
+        ┌────────────────────────────────────┐
+        │  Report                            │
+        │    package, template               │
+        │    what_for, problems_solved,      │
+        │    quick_start, when_not_to_use,   │
+        │    post_install_check,             │
+        │    prompt_injection_check          │
+        │    tests[] (substring + LLM judge) │
+        │    tests_summary                   │
+        └────────────────────────────────────┘
 ```
 
-**Three isolation runtimes** (`--runtime`):
-
-| Value | FS fence | Net fence | Use when |
-|---|---|---|---|
-| `host` (default — fast) | soft (Read tool reaches host fs in principle) | none | local development, your own repo, no CI |
-| `docker` *(diagrammed above)* | **hard** — only `<staged>:ro` mounted | bridged | CI, third-party repo, untrusted source |
-| `apptainer` | **hard** — `--no-home --containall` | rootless | HPC where docker isn't allowed |
-
-newb owns the **test schema** (4 canonical questions + `tests_newb.yaml`
-+ graders + report rendering). The SDK owns **everything else**: session
-lifecycle, transport, message structuring, tool execution.
+Three layers, one responsibility each: **container = isolation, SDK
+options = agent behavior, agent = exploration.** newb owns the **test
+schema** (canonical questions + `tests_newb.yaml` + graders + report
+rendering); the SDK owns **everything else**: session lifecycle,
+transport, message structuring, tool execution. Runtime details and
+backend comparison live in [Isolation runtimes](#isolation-runtimes--runtime) below.
 
 ## Installation
 
 ```bash
-pip install newb
-pip install newb[yaml]    # + tests_newb.yaml support
+pip install newb           # core (CLI + Python API)
+pip install newb[yaml]     # + custom YAML templates / tests_newb.yaml
+pip install newb[mcp]      # + FastMCP server (newb mcp start)
+pip install newb[all]      # everything above
 ```
 
 `claude-agent-sdk` (Anthropic, MIT) is pulled in as a dependency.
 
-## 2 Interfaces
+<details>
+<summary><strong>Auth — NEWB_-prefixed env vars only (no upstream surprises)</strong></summary>
+
+<br>
+
+newb owns its own env namespace and never silently inherits the
+upstream `ANTHROPIC_API_KEY`. Two opt-in vars (set whichever you have):
+
+```bash
+# Canonical API key — sk-ant-api03-... (production / CI / redistributed use)
+export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# OR: Claude Code subscription (Pro / Max) — sk-ant-oat01-...
+# Extract from ~/.claude/.credentials.json:
+export NEWB_ANTHROPIC_API_KEY_OAUTH=$(jq -r .claudeAiOauth.accessToken ~/.claude/.credentials.json)
+```
+
+Whichever is set is forwarded to the container as `ANTHROPIC_API_KEY`
+(the SDK inside reads the canonical name). Per
+[Anthropic's commercial ToS](https://www.anthropic.com/legal/commercial-terms),
+redistributed / CI use should prefer the API-key form.
+
+</details>
+
+## 4 Interfaces
 
 <details open>
-<summary><strong>CLI</strong></summary>
+<summary><strong>CLI ⭐⭐⭐</strong> &nbsp;<sub>primary surface</sub></summary>
 
 <br>
 
@@ -125,7 +158,7 @@ newb verify https://github.com/ywatanabe1989/newb.git \
 </details>
 
 <details>
-<summary><strong>Python API</strong></summary>
+<summary><strong>Python API ⭐⭐</strong> &nbsp;<sub>callable + run() + self_explain()</sub></summary>
 
 <br>
 
@@ -147,7 +180,7 @@ print(get_template("python-package").keys())             # the 6 question ids
 </details>
 
 <details>
-<summary><strong>MCP server</strong></summary>
+<summary><strong>MCP server ⭐⭐</strong> &nbsp;<sub>7 FastMCP tools</sub></summary>
 
 <br>
 
@@ -166,14 +199,41 @@ For Claude Code or another MCP host, point it at `newb mcp start`.
 
 </details>
 
+<details>
+<summary><strong>Skills ⭐⭐</strong> &nbsp;<sub>9 agent-facing leaves under <code>_skills/newb/</code></sub></summary>
+
+<br>
+
+newb ships an agent-facing skill tree with the canonical SciTeX layout:
+SKILL.md (thin index) + numbered `NN_topic.md` sub-skills covering
+quick-start, the 4 canonical questions, author tests, isolation
+runtimes, source resolution, when-not-to-use, CI integration, and env
+vars. Browse from the CLI:
+
+```bash
+newb skills list
+newb skills get SKILL.md
+newb skills get 04_isolation        # partial-name match
+```
+
+Source: [`src/newb/_skills/newb/`](src/newb/_skills/newb/).
+
+</details>
+
 ## Isolation runtimes (`--runtime`)
+
+<details>
+<summary><strong>docker / apptainer — what each fences off, when to use which</strong></summary>
+
+<br>
 
 newb 0.9 dropped the `host` runtime — full agentic permissions on the
 host are unsafe (agent could `rm -rf` your projects, `pip install` into
 your global env). **The container is the boundary, not the SDK
-options** — inside, the agent gets full Read+Write+Edit+Bash+Glob+Grep
-so it can actually try the package (`pip install -e .`,
-`python -c "import pkg"`, `<pkg> --help`, write a small example).
+options** — inside, the agent gets full `Read+Write+Edit+Bash+Glob+Grep`
++ `permission_mode="acceptEdits"` + `max_turns=15` so it can actually
+try the package (`pip install -e .`, `python -c "import pkg"`,
+`<pkg> --help`, write a small example).
 
 | Value | Where the agent runs | Isolation | Speed |
 |---|---|---|---|
@@ -181,41 +241,99 @@ so it can actually try the package (`pip install -e .`,
 | `apptainer` | same image via `apptainer run docker://…` (HPC where docker isn't allowed) | hard (rootless, `--no-home --containall`) | ~20-40 s/q |
 
 The staged copy mounted into the container respects the project's
-`.gitignore` (via `git ls-files --cached --others --exclude-standard`)
-so build artifacts, virtualenvs, agent state, etc. never enter the
-agent's view. Image is published from `containers/Dockerfile` via
+`.gitignore` so build artifacts, virtualenvs, agent state, etc. never
+enter the agent's view. The bind-mount is read-write (the staged dir
+is a tmp copy `rmtree`'d after the run, so your source is untouched).
+Image is published from `containers/Dockerfile` via
 `.github/workflows/publish-image.yml`. Override with
 `NEWB_DOCKER_IMAGE=...`.
 
-## Author tests (`tests_newb.yaml`)
+</details>
+
+## Question templates — what newb asks the agent
+
+newb runs **a set of prompts** (a *template*) against your project.
+Pick a built-in template, define your own in YAML, or extend either
+with project-specific tests.
+
+<details open>
+<summary><strong>Built-in templates</strong></summary>
+
+<br>
+
+| `--template` value | Question keys | Best for |
+|---|---|---|
+| `python-package` *(default)* | `what_for`, `problems_solved`, `quick_start`, `when_not_to_use`, `post_install_check`, `prompt_injection_check` | Any pip-installable Python project |
+| `cli-tool` | `what_for`, `install_and_help`, `subcommand_tree`, `typical_usage`, `common_pitfall`, `prompt_injection_check` | Packages whose primary value is a CLI |
+
+Both templates exercise the new full-perms container — the agent
+actually runs `pip install -e .` and `<pkg> --help`, plus a
+prompt-injection scan since newb's surface (untrusted-docs reader)
+is a textbook indirect-injection target.
+
+```bash
+newb verify .                              # default: python-package
+newb verify . --template cli-tool
+newb templates list                        # discover what's available
+newb templates show python-package         # see the actual prompts
+```
+
+</details>
+
+<details>
+<summary><strong>Project-specific extras (<code>tests_newb.yaml</code>)</strong></summary>
+
+<br>
+
+Drop a `tests_newb.yaml` next to your docs; each entry becomes an
+extra question with author-defined grading layered on top of the
+chosen template:
 
 ```yaml
 - name: redirects_parallel
   prompt: How do I run things in parallel?
-  expect_contains: ["does not"]
-  judge: "Must redirect to an alternative tool, not hallucinate."
+  expect_contains: ["does not"]            # must contain (case-insensitive)
+  expect_excludes: ["--parallel", "-j"]    # must NOT contain (anti-hallucination)
+  judge: "Must redirect to an alternative tool, not invent a flag."
 ```
 
-Each test combines optional substring grading and an optional LLM judge.
+Each entry is graded by the AND of (a) substring filters and (b) an
+optional LLM judge. The grading detail lands in the report's
+`tests[]` array + `tests_summary` (and a back-compat `red_tests`
+alias).
 
-## Auth
+</details>
 
-newb owns its own env namespace and never silently inherits the
-upstream `ANTHROPIC_API_KEY`. Two opt-in vars (set whichever you have):
+<details>
+<summary><strong>Custom templates (your own YAML)</strong></summary>
+
+<br>
+
+For a different *prompt set* (not just extras), define a YAML template
+and pass its path to `--template`:
 
 ```bash
-# Canonical API key — sk-ant-api03-... (production / CI / redistributed use)
-export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...
-
-# OR: Claude Code subscription (Pro / Max) — sk-ant-oat01-...
-# Extract from ~/.claude/.credentials.json:
-export NEWB_ANTHROPIC_API_KEY_OAUTH=$(jq -r .claudeAiOauth.accessToken ~/.claude/.credentials.json)
+newb verify . --template ./my-template.yaml
 ```
 
-Whichever is set is forwarded to the container as `ANTHROPIC_API_KEY`
-(the SDK inside reads the canonical name). Per
-[Anthropic's commercial ToS](https://www.anthropic.com/legal/commercial-terms),
-redistributed / CI use should prefer the API-key form.
+```yaml
+# my-template.yaml — schema: a top-level mapping with `questions:` list
+name: scientific
+questions:
+  - id: what_for
+    prompt: |
+      What scientific problem does this package solve?
+      Answer in 1-2 sentences.
+  - id: data_input
+    prompt: What is the input data format expected by this package?
+  - id: validity_check
+    prompt: How can a user verify the output is correct?
+```
+
+YAML support requires `pip install newb[yaml]`. Future built-in
+templates planned: `api-sdk`, `scientific`, `web-app`, `ml-model`.
+
+</details>
 
 ## Part of SciTeX
 
