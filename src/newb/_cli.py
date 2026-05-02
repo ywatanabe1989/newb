@@ -195,9 +195,9 @@ def _print_top_level_json(ctx: click.Context, _param, value):
 )
 @click.option(
     "--runtime",
-    type=click.Choice(["docker", "apptainer"]),
+    type=click.Choice(["docker", "podman", "apptainer"]),
     default="docker",
-    help="Container runtime. docker (default) or apptainer (HPC).",
+    help="Container runtime. docker (default), podman (rootless), or apptainer (HPC).",
 )
 @click.option(
     "--scope",

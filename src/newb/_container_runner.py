@@ -170,6 +170,27 @@ class DockerRunner(_BaseContainerRunner):
         return argv
 
 
+class PodmanRunner(DockerRunner):
+    """Drop-in podman replacement for ``DockerRunner``.
+
+    Podman's ``run`` subcommand is argv-compatible with docker's
+    (cap-drop, security-opt, network, memory, cpus, pids-limit, tmpfs,
+    -v, -e — all behave the same). Swap only the leading binary name;
+    everything else inherits from ``DockerRunner``.
+
+    Use cases: rootless container without a docker daemon, RHEL/Fedora
+    hosts, or environments where docker isn't installed but podman is.
+    """
+
+    runtime_bin = "podman"
+
+    def _build_argv(self, prompt: str) -> list[str]:
+        argv = super()._build_argv(prompt)
+        # First element is "docker"; replace with "podman".
+        argv[0] = "podman"
+        return argv
+
+
 class ApptainerRunner(_BaseContainerRunner):
     """Runs the SDK call inside an apptainer/singularity container.
 

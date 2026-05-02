@@ -151,6 +151,23 @@ def test_docker_argv_no_network_via_env(monkeypatch, fake_runtime):
     r.close()
 
 
+def test_podman_argv_swaps_only_the_binary(fake_runtime):
+    """PodmanRunner inherits everything from DockerRunner; only the
+    leading ``docker`` token becomes ``podman``."""
+    from newb._container_runner import PodmanRunner
+
+    podman = PodmanRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    argv = podman._build_argv("x")
+
+    assert argv[0] == "podman"
+    # Same flag shape as docker — same hardening + same env-var forwarding.
+    assert "--cap-drop=ALL" in argv
+    assert "--security-opt=no-new-privileges" in argv
+    assert "--network=bridge" in argv
+    assert any(a == "NEWB_ANTHROPIC_API_KEY=sk-ant-api03-TEST" for a in argv)
+    podman.close()
+
+
 def test_apptainer_argv_mounts_project_and_forwards_token(fake_runtime):
     """ApptainerRunner mirrors DockerRunner: project bind-mount
     read-write, token forwarded as NEWB_ANTHROPIC_API_KEY env."""

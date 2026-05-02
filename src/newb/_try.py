@@ -167,6 +167,16 @@ def _make_runner(
             hardening=hardening,
             scope=scope,
         )
+    if runtime == "podman":
+        from ._container_runner import PodmanRunner
+
+        return PodmanRunner(
+            skills_mount=skills_dir,
+            project_root=project_root,
+            model=model,
+            hardening=hardening,
+            scope=scope,
+        )
     if runtime == "apptainer":
         from ._container_runner import ApptainerRunner
 
@@ -177,7 +187,7 @@ def _make_runner(
             scope=scope,
         )
     raise ValueError(
-        f"unknown runtime: {runtime!r} (expected docker / apptainer; "
+        f"unknown runtime: {runtime!r} (expected docker / podman / apptainer; "
         "host removed in newb 0.9 — see CHANGELOG)"
     )
 
