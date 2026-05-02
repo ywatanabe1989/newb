@@ -10,7 +10,7 @@
 # Run (manual):
 #   docker run --rm \
 #     -v <staged-project>:/work/project \
-#     -e ANTHROPIC_API_KEY \
+#     -e NEWB_ANTHROPIC_API_KEY \
 #     ghcr.io/ywatanabe1989/newb-runner:VERSION \
 #     "<prompt>"
 #
@@ -44,7 +44,7 @@ COPY runner.py /opt/newb/runner.py
 # The agent's CWD inside the container; the project is bind-mounted here.
 WORKDIR /work
 
-# Default to non-root for hardening. ANTHROPIC_API_KEY is passed via -e.
+# Default to non-root for hardening. NEWB_ANTHROPIC_API_KEY is passed via -e.
 # The agent needs write access to /work/project for `pip install -e .`,
 # so make the staged copy owned by the runtime user.
 RUN useradd -m -u 1000 newb && mkdir -p /work && chown -R newb:newb /work

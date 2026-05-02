@@ -4,20 +4,30 @@ newb's DockerRunner / ApptainerRunner spawns this script with:
 
     <runtime> run --rm \\
         -v <staged-project>:/work/project \\
-        -e ANTHROPIC_API_KEY \\
+        -e NEWB_ANTHROPIC_API_KEY \\
         -e NEWB_MODEL \\
         -e NEWB_SKILLS_PATH \\
         ghcr.io/ywatanabe1989/newb-runner:VERSION \\
         "<prompt>"
 
+Auth: ONE env var, ``NEWB_ANTHROPIC_API_KEY``. This script auto-detects
+whether it's a real API key (``sk-ant-api*``) or a Claude Code OAuth
+token (``sk-ant-oat*``) by prefix:
+
+  * ``sk-ant-api*`` → exported as ``ANTHROPIC_API_KEY`` (the SDK / CLI
+    pick it up directly).
+  * ``sk-ant-oat*`` → written to ``~/.claude/.credentials.json`` in
+    the ``claudeAiOauth`` shape so the bundled Claude CLI's OAuth code
+    path resolves it (passing OAuth tokens as ``ANTHROPIC_API_KEY``
+    directly does NOT work — the CLI tries to use them as API keys
+    and fails).
+
 Container is the boundary, not the SDK options. The agent's filesystem
-horizon is /work/project (the staged copy of the project, including
-README, src/, tests/, _skills/, examples/). Inside the container the
-agent gets FULL agentic permissions — Read + Write + Edit + Bash +
-Glob + Grep — so it can actually install + try the package
-(``pip install -e .``, ``python -c "import pkg"``, ``<pkg> --help``,
-write a small example, run pytest). ``setting_sources=[]`` still
-prevents auto-loading any ~/.claude/ context.
+horizon is /work/project (the staged copy of the project). Inside the
+container the agent gets FULL agentic permissions — Read + Write +
+Edit + Bash + Glob + Grep — so it can actually install + try the
+package. ``setting_sources=[]`` still prevents auto-loading any
+~/.claude/ context beyond the materialized credentials.
 """
 
 from __future__ import annotations
@@ -25,6 +35,21 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+
+
+def _provision_auth() -> bool:
+    """Promote NEWB_ANTHROPIC_API_KEY to ANTHROPIC_API_KEY for the
+    bundled CLI. The Anthropic backend accepts both real API keys
+    (sk-ant-api*) and Claude Code OAuth access tokens (sk-ant-oat*)
+    in the same Authorization header — no prefix detection needed.
+
+    Returns True on success, False if no token was supplied.
+    """
+    token = os.environ.get("NEWB_ANTHROPIC_API_KEY", "").strip()
+    if not token:
+        return False
+    os.environ["ANTHROPIC_API_KEY"] = token
+    return True
 
 
 async def _run(prompt: str, model: str) -> str:
@@ -38,13 +63,6 @@ async def _run(prompt: str, model: str) -> str:
 
     options = ClaudeAgentOptions(
         model=model,
-        # Container is the boundary, not the SDK options. Inside the
-        # container, the agent gets FULL agentic permissions — Read +
-        # Write + Edit + Bash + Glob + Grep — so it can actually try
-        # the package: pip install -e . / python -c "import pkg" /
-        # <pkg> --help / write an example. permission_mode acceptEdits
-        # auto-approves edits in this disposable context. Higher
-        # max_turns because real exploration is more than 1-3 reads.
         cwd=os.environ.get("NEWB_CWD", "/work/project"),
         allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
         permission_mode="acceptEdits",
@@ -71,20 +89,11 @@ def main() -> int:
         return 2
     prompt = sys.argv[1]
     model = os.environ.get("NEWB_MODEL", "claude-haiku-4-5")
-    # Two auth shapes the host runner can hand us:
-    #   1. ANTHROPIC_API_KEY=sk-ant-api03-...  (real API key)
-    #   2. NEWB_AUTH_MODE=oauth + ~/.claude/.credentials.json mounted
-    # Reject ONLY when neither is set (the bundled Claude CLI handles
-    # both transparently — it reads ANTHROPIC_API_KEY first, falls
-    # through to the credentials file for OAuth).
-    if (
-        not os.environ.get("ANTHROPIC_API_KEY")
-        and os.environ.get("NEWB_AUTH_MODE") != "oauth"
-    ):
+    if not _provision_auth():
         print(
-            "auth not set in container — host runner must pass "
-            "ANTHROPIC_API_KEY (API key) or NEWB_AUTH_MODE=oauth + "
-            "/home/newb/.claude/.credentials.json bind-mount",
+            "NEWB_ANTHROPIC_API_KEY not set in container env — host "
+            "runner must forward it (the value is opaque: API key "
+            "sk-ant-api* or Claude Code OAuth token sk-ant-oat*).",
             file=sys.stderr,
         )
         return 3

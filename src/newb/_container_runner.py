@@ -67,24 +67,17 @@ class _BaseContainerRunner:
             raise RuntimeError(
                 f"{type(self).__name__} requires `{self.runtime_bin}` on PATH."
             )
-        # Two opt-in env vars (NEWB_ prefix only — never silently picks
-        # up the upstream ANTHROPIC_API_KEY):
-        #   NEWB_ANTHROPIC_API_KEY        sk-ant-api03-...  (canonical)
-        #   NEWB_ANTHROPIC_API_KEY_OAUTH  sk-ant-oat01-...  (Pro/Max
-        #                                  users — extract from
-        #                                  ~/.claude/.credentials.json)
-        # Whichever is set gets forwarded to the container as
-        # ANTHROPIC_API_KEY so the SDK inside picks it up.
-        api_key = os.environ.get("NEWB_ANTHROPIC_API_KEY") or os.environ.get(
-            "NEWB_ANTHROPIC_API_KEY_OAUTH"
-        )
+        # ONE opt-in env var (NEWB_ prefix only — never silently picks
+        # up the upstream ANTHROPIC_API_KEY). The value is opaque from
+        # newb's POV: container's runner.py decides whether it's a
+        # real API key (sk-ant-api*) or a Claude Code OAuth token
+        # (sk-ant-oat*) by prefix.
+        api_key = os.environ.get("NEWB_ANTHROPIC_API_KEY")
         if not api_key:
             raise RuntimeError(
-                f"{type(self).__name__} needs $NEWB_ANTHROPIC_API_KEY "
-                "(API key) or $NEWB_ANTHROPIC_API_KEY_OAUTH (Claude Code "
-                "subscription, extracted from ~/.claude/.credentials.json) "
-                "set. newb never reads the upstream ANTHROPIC_API_KEY env "
-                "var — set the NEWB_-prefixed var explicitly to opt in."
+                f"{type(self).__name__} needs $NEWB_ANTHROPIC_API_KEY set. "
+                "newb never reads the upstream ANTHROPIC_API_KEY env var — "
+                "set the NEWB_-prefixed var explicitly to opt in."
             )
         self._api_key = api_key
         self.skills_mount = Path(skills_mount).resolve()
@@ -142,11 +135,13 @@ class DockerRunner(_BaseContainerRunner):
 
     def _build_argv(self, prompt: str) -> list[str]:
         project_host = str(self._stage_target)
-        # bind-mount is read-write (no `:ro`) so the agent can
-        # `pip install -e .` and write small example files. The staged
-        # dir is a tmp copy that gets rmtree'd after the run, so the
-        # user's source is untouched.
-        argv = [
+        # Forward NEWB_ANTHROPIC_API_KEY into the container; the
+        # in-container runner.py promotes it to ANTHROPIC_API_KEY for
+        # the bundled CLI. The Anthropic backend accepts both real
+        # API keys (sk-ant-api*) and Claude Code OAuth access tokens
+        # (sk-ant-oat*) on the same code path — no host-side dispatch
+        # needed.
+        return [
             "docker",
             "run",
             "--rm",
@@ -155,30 +150,14 @@ class DockerRunner(_BaseContainerRunner):
             "-v",
             f"{project_host}:/work/project",
             "-e",
+            f"NEWB_ANTHROPIC_API_KEY={self._api_key}",
+            "-e",
             f"NEWB_MODEL={self.model}",
             "-e",
             f"NEWB_SKILLS_PATH={self.skills_path}",
+            self.image,
+            prompt,
         ]
-        creds = Path.home() / ".claude" / ".credentials.json"
-        if self._is_oauth_token(self._api_key) and creds.is_file():
-            # OAuth (Claude Code Pro/Max) — the bundled CLI needs the
-            # .credentials.json file shape; setting the OAuth token as
-            # ANTHROPIC_API_KEY makes the CLI try-and-fail to use it as
-            # an API key. Mount the file instead, do NOT pass the env.
-            argv += [
-                "-v",
-                f"{creds}:/home/newb/.claude/.credentials.json:ro",
-                "-e",
-                "NEWB_AUTH_MODE=oauth",
-            ]
-        else:
-            argv += ["-e", f"ANTHROPIC_API_KEY={self._api_key}"]
-        argv += [self.image, prompt]
-        return argv
-
-    @staticmethod
-    def _is_oauth_token(token: str) -> bool:
-        return token.startswith("sk-ant-oat") if token else False
 
 
 class ApptainerRunner(_BaseContainerRunner):
@@ -193,9 +172,6 @@ class ApptainerRunner(_BaseContainerRunner):
 
     def _build_argv(self, prompt: str) -> list[str]:
         project_host = str(self._stage_target)
-        # bind-mount is read-write (default — no `:ro`) so the agent
-        # can `pip install -e .` and write small example files inside.
-        # The staged dir is tmp; user's source is untouched.
         return [
             "apptainer",
             "run",
@@ -204,7 +180,7 @@ class ApptainerRunner(_BaseContainerRunner):
             "--bind",
             f"{project_host}:/work/project",
             "--env",
-            f"ANTHROPIC_API_KEY={self._api_key}",
+            f"NEWB_ANTHROPIC_API_KEY={self._api_key}",
             "--env",
             f"NEWB_MODEL={self.model}",
             "--env",
