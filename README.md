@@ -12,7 +12,7 @@
   <a href="https://newb.readthedocs.io/">Full Documentation</a> · <code>pip install newb</code>
 </p>
 
-<p align="center"><sub>Python 3.10+ · bundles <a href="https://github.com/anthropics/claude-agent-sdk-python"><code>claude-agent-sdk</code></a> (Anthropic, MIT) · newb itself AGPL-3.0-only · auth: <code>NEWB_ANTHROPIC_API_KEY</code> or local <code>~/.claude/</code> OAuth</sub></p>
+> Python 3.10+ · bundles [`claude-agent-sdk`](https://github.com/anthropics/claude-agent-sdk-python) (Anthropic, MIT) · newb itself AGPL-3.0-only · auth: `NEWB_ANTHROPIC_API_KEY` or local `~/.claude/` OAuth
 
 <!-- scitex-badges:start -->
 [![PyPI](https://img.shields.io/pypi/v/newb.svg)](https://pypi.org/project/newb/)
