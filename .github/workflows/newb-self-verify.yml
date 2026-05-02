@@ -24,9 +24,15 @@ jobs:
           python-version: "3.11"
 
       - name: Login to ghcr.io (so docker can pull the runner image)
+        # GITHUB_TOKEN works only when the package is linked to this
+        # repo. ywatanabe1989/newb-runner is currently a user-scoped
+        # private package not auto-linked, so GITHUB_TOKEN gets
+        # "denied". Use the existing GHCR_PAT (the same secret
+        # publish-image.yml uses for pushes) — it has owner-level
+        # package read scope.
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          echo "${{ secrets.GHCR_PAT }}" \
+            | docker login ghcr.io -u ywatanabe1989 --password-stdin
 
       - name: Install newb (this checkout, not PyPI)
         run: |
