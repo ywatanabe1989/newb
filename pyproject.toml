@@ -19,6 +19,8 @@ classifiers = [
 
 [project.optional-dependencies]
 yaml = ["PyYAML>=6.0"]
+mcp  = ["fastmcp>=2.0"]
+all  = ["PyYAML>=6.0", "fastmcp>=2.0"]
 
 [project.scripts]
 newb = "newb._cli:main"

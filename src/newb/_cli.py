@@ -207,20 +207,75 @@ def templates_show(name, as_json):
 
 
 # ---------------------------------------------------------------------------
+# skills — list / get newb's own _skills/<pkg>/ tree (introspection parity
+# with scitex packages' `<pkg> skills list/get`)
+# ---------------------------------------------------------------------------
+
+
+@main.group()
+def skills():
+    """newb's own agent-facing skill leaves (under src/newb/_skills/newb/)."""
+
+
+def _skills_dir():
+    from pathlib import Path
+
+    import newb as _newb
+
+    return Path(_newb.__file__).parent / "_skills" / "newb"
+
+
+@skills.command("list")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Machine-readable JSON output.",
+)
+def skills_list(as_json):
+    """List newb's skill leaves (SKILL.md + NN_*.md sub-skills)."""
+    d = _skills_dir()
+    if not d.is_dir():
+        raise click.ClickException(f"skills dir missing: {d}")
+    leaves = sorted(p.name for p in d.glob("*.md"))
+    if as_json:
+        click.echo(json.dumps({"skills_dir": str(d), "leaves": leaves}, indent=2))
+        return
+    click.echo(f"# {d}")
+    for name in leaves:
+        click.echo(f"  - {name}")
+
+
+@skills.command("get")
+@click.argument("name")
+def skills_get(name):
+    """Print one skill leaf's content (e.g. `newb skills get SKILL.md`)."""
+    d = _skills_dir()
+    p = d / name
+    # also accept partial-name lookup
+    if not p.is_file():
+        candidates = [c for c in d.glob("*.md") if name in c.name]
+        if len(candidates) == 1:
+            p = candidates[0]
+        elif len(candidates) > 1:
+            raise click.ClickException(
+                f"ambiguous skill name {name!r}; matches: "
+                + ", ".join(c.name for c in candidates)
+            )
+        else:
+            raise click.ClickException(f"unknown skill: {name!r}")
+    click.echo(p.read_text(encoding="utf-8"), nl=False)
+
+
+# ---------------------------------------------------------------------------
 # Backward-compat shim — `newb <source>` (without `verify`) → `newb verify <source>`
 # ---------------------------------------------------------------------------
 
 
-_LEGACY_FLAGS = {
-    "--model",
-    "--runs",
-    "--format",
-    "--runtime",
-    "--template",
-    "--json",
-    "-h",
-    "--help",
-}
+# Names of registered subcommand groups — keep in sync with the @main.group
+# decorators above. Used by _legacy_dispatch to know what NOT to rewrite.
+_SUBCOMMANDS = {"verify", "templates", "skills"}
 
 
 def _legacy_dispatch():
@@ -234,8 +289,8 @@ def _legacy_dispatch():
     if not argv:
         return
     first = argv[0]
-    # If first arg is a known subcommand or starts with a flag/help, no rewrite.
-    if first in {"verify", "templates"} or first.startswith("-"):
+    # If first arg is a known subcommand or starts with a flag, no rewrite.
+    if first in _SUBCOMMANDS or first.startswith("-"):
         return
     sys.argv = [sys.argv[0], "verify"] + argv
 
