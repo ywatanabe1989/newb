@@ -197,6 +197,13 @@ def _make_runner(
 # ---------------------------------------------------------------------------
 
 
+_INSTALL_MODE_CMD = {
+    "editable": "pip install -e .",
+    "wheel": "pip wheel --no-deps -w /tmp/newb-wheel . && pip install /tmp/newb-wheel/*.whl",
+    "pypi": "pip install $(grep -oP '(?<=^name = \")[^\"]+' pyproject.toml | head -1)",
+}
+
+
 def run(
     skills_dir: Union[Path, str],
     *,
@@ -206,6 +213,7 @@ def run(
     template: str = "python-package",
     hardening=None,
     scope: str = "all",
+    install_mode: str = "editable",
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -278,11 +286,16 @@ def run(
                 model=model,
                 template=template,
                 scope=scope,
+                install_mode=install_mode,
             ),
         }
+        install_cmd = _INSTALL_MODE_CMD.get(install_mode, _INSTALL_MODE_CMD["editable"])
         for key, prompt in prompts.items():
             answers = []
-            rendered = prompt.format(skills_path=skills_path)
+            rendered = prompt.format(
+                skills_path=skills_path,
+                install_cmd=install_cmd,
+            )
             for _ in range(max(1, int(runs_per_prompt))):
                 result = runner.run(rendered, model=model)
                 answers.append(_extract_text(result))

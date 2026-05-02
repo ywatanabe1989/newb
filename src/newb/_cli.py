@@ -210,6 +210,17 @@ def _print_top_level_json(ctx: click.Context, _param, value):
     ),
 )
 @click.option(
+    "--install-mode",
+    type=click.Choice(["editable", "wheel", "pypi"]),
+    default="editable",
+    help=(
+        "How the agent installs the package for post_install_check. "
+        "'editable' (default): pip install -e . (dev loop). "
+        "'wheel': build a wheel and install it (release sanity). "
+        "'pypi': pip install <pkg-name> from PyPI (real-user reproduction)."
+    ),
+)
+@click.option(
     "--harden-memory",
     default=None,
     metavar="SIZE",
@@ -259,6 +270,7 @@ def main(
     md_alias,
     runtime,
     scope,
+    install_mode,
     harden_memory,
     harden_cpus,
     harden_pids_limit,
@@ -346,6 +358,7 @@ def main(
         template=template,
         hardening=hardening,
         scope=scope,
+        install_mode=install_mode,
     )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)

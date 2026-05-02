@@ -51,7 +51,7 @@ _PROMPT_WHEN_NOT_TO_USE = (
 )
 
 _PROMPT_POST_INSTALL_CHECK = (
-    "Your cwd is the project root. Run `pip install -e .` (use Bash). "
+    "Your cwd is the project root. Run `{install_cmd}` (use Bash). "
     'Then run `python -c "import <pkg>"` for whatever the package\'s '
     "import name is (look at src/ or pyproject.toml [project] name to "
     "find it). If the project exposes a console script (look for "

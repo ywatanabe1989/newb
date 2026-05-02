@@ -10,7 +10,13 @@ from __future__ import annotations
 
 
 def _build_runtime_info(
-    *, runtime: str, runner, model: str, template: str, scope: str = "all"
+    *,
+    runtime: str,
+    runner,
+    model: str,
+    template: str,
+    scope: str = "all",
+    install_mode: str = "editable",
 ) -> dict:
     info: dict = {
         "newb_version": _newb_version(),
@@ -18,6 +24,7 @@ def _build_runtime_info(
         "model": model,
         "template": template,
         "scope": scope,
+        "install_mode": install_mode,
     }
     image = getattr(runner, "image", None)
     if image:
