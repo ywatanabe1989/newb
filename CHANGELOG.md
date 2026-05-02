@@ -6,6 +6,17 @@ that minor bumps may break.
 
 ## [0.18.0] — 2026-05-02
 
+### Decided not to do
+
+- **Hooks injection via `[tool.newb]`** — considered as a sibling to
+  `mcp_servers` and dropped from scope. Inside `--scope all` the
+  agent already has full Bash, so a `[tool.newb] hooks` table adds
+  no capability the agent doesn't already have; it only adds a
+  second config surface to maintain. If a future use case actually
+  needs lifecycle hooks (e.g. capturing `PostToolUse` for
+  auditing), revisit then with the same validator pattern as
+  `mcp_servers`.
+
 ### Added
 
 - `mcp_servers` is now a recognized `[tool.newb]` key. The table is
