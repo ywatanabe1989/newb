@@ -17,9 +17,9 @@ jobs:
       contents: read
       packages: read       # pull ghcr.io/ywatanabe1989/newb-runner
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -47,6 +47,14 @@ jobs:
       - name: Run newb against newb
         env:
           NEWB_ANTHROPIC_API_KEY: ${{ secrets.NEWB_ANTHROPIC_API_KEY }}
+          # Resource caps — auditor flagged that cap-drop=ALL handles
+          # capabilities but unconstrained memory/pids opens a DoS lane
+          # if an attacker hijacks the agent. Generous-but-bounded is
+          # the right shape for a docs verifier: pip wheel-building is
+          # the peak workload, ~1-2GB transient.
+          NEWB_HARDEN_MEMORY: 4g
+          NEWB_HARDEN_PIDS_LIMIT: 512
+          NEWB_HARDEN_CPUS: "2"
         run: |
           if [ -z "${NEWB_ANTHROPIC_API_KEY}" ]; then
             echo "::error::secrets.NEWB_ANTHROPIC_API_KEY is not set on this repo." >&2
@@ -56,7 +64,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: newb-self-report
           path: newb-self-report.json
