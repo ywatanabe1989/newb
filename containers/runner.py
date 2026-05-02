@@ -55,14 +55,23 @@ async def _run(prompt: str, model: str) -> str:
         query,
     )
 
-    options = ClaudeAgentOptions(
-        model=model,
-        cwd=os.environ.get("NEWB_CWD", "/work/project"),
-        allowed_tools=["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
-        permission_mode="acceptEdits",
-        setting_sources=[],
-        max_turns=15,
-    )
+    # Scope policy:
+    #   - "all"  (default) — let permission_mode="acceptEdits" carry the
+    #     policy. No allowed_tools restriction; agent can install + run
+    #     + test the package (newb's core value).
+    #   - "docs" — read-only audit mode. Agent gets just Read/Glob/Grep
+    #     so it can scan the project but not modify it or shell out.
+    scope = os.environ.get("NEWB_SCOPE", "all").lower()
+    sdk_kwargs = {
+        "model": model,
+        "cwd": os.environ.get("NEWB_CWD", "/work/project"),
+        "permission_mode": "acceptEdits",
+        "setting_sources": [],
+        "max_turns": 15,
+    }
+    if scope == "docs":
+        sdk_kwargs["allowed_tools"] = ["Read", "Glob", "Grep"]
+    options = ClaudeAgentOptions(**sdk_kwargs)
 
     chunks: list[str] = []
     final_text: str | None = None

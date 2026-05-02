@@ -200,6 +200,16 @@ def _print_top_level_json(ctx: click.Context, _param, value):
     help="Container runtime. docker (default) or apptainer (HPC).",
 )
 @click.option(
+    "--scope",
+    type=click.Choice(["all", "docs"]),
+    default="all",
+    help=(
+        "Agent scope. 'all' (default): full agentic permissions — agent "
+        "can install/run/test the package. 'docs': read-only audit mode "
+        "— Read/Glob/Grep only, no Bash/Write/Edit."
+    ),
+)
+@click.option(
     "--harden-memory",
     default=None,
     metavar="SIZE",
@@ -248,6 +258,7 @@ def main(
     json_alias,
     md_alias,
     runtime,
+    scope,
     harden_memory,
     harden_cpus,
     harden_pids_limit,
@@ -311,6 +322,7 @@ def main(
         runtime=runtime,
         template=template,
         hardening=hardening,
+        scope=scope,
     )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)

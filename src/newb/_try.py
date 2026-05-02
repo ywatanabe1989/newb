@@ -27,94 +27,9 @@ from .question_templates import get_template
 # ---------------------------------------------------------------------------
 
 
-def _load_tests(skills_src: Path) -> list[dict]:
-    """Load author tests from ``tests_newb.yaml``.
-
-    Schema per entry::
-
-        - name: optional human label
-          prompt: "the question to ask the agent"
-          expect_contains: [substrings that MUST appear]   # optional
-          expect_excludes: [substrings that MUST NOT appear] # optional
-          judge: "criteria text for an LLM judge"          # optional
-    """
-    test_file = Path(skills_src) / "tests_newb.yaml"
-    if not test_file.is_file():
-        return []
-    try:
-        import yaml  # type: ignore[import-untyped]
-    except ImportError:
-        return []
-    try:
-        data = yaml.safe_load(test_file.read_text(encoding="utf-8"))
-    except Exception:
-        return []
-    if not isinstance(data, list):
-        return []
-    out = []
-    for i, entry in enumerate(data):
-        if not isinstance(entry, dict):
-            continue
-        prompt = entry.get("prompt")
-        if not prompt:
-            continue
-        out.append(
-            {
-                "name": str(entry.get("name") or f"test_{i}"),
-                "prompt": str(prompt),
-                "expect_contains": list(entry.get("expect_contains") or []),
-                "expect_excludes": list(entry.get("expect_excludes") or []),
-                "judge": entry.get("judge"),
-            }
-        )
-    return out
-
-
-_JUDGE_PROMPT = (
-    "You are an objective test judge. The CRITERIA describes what a "
-    "correct answer must include or do. The ANSWER is the candidate's "
-    "response. Reply with exactly one line: 'PASS: <reason>' or "
-    "'FAIL: <reason>'. Be strict.\n\n"
-    "CRITERIA:\n{criteria}\n\nANSWER:\n{answer}"
-)
-
-
-def _judge(criteria: str, answer: str, runner, model: str) -> tuple[bool, str]:
-    res = runner.run(
-        _JUDGE_PROMPT.format(criteria=criteria, answer=answer), model=model
-    )
-    text = _extract_text(res).strip()
-    return text.upper().startswith("PASS"), text
-
-
-def _grade(test: dict, answer: str, runner, model: str) -> dict:
-    low = answer.lower()
-    has_substring = bool(test["expect_contains"] or test["expect_excludes"])
-    contains_ok = all(s.lower() in low for s in test["expect_contains"])
-    excludes_ok = all(s.lower() not in low for s in test["expect_excludes"])
-    substring_passed = contains_ok and excludes_ok
-    out: Dict[str, Any] = {
-        "name": test["name"],
-        "prompt": test["prompt"],
-        "question": test["prompt"],  # back-compat
-        "answer": answer,
-    }
-    passed = True
-    if has_substring:
-        out["substring"] = {
-            "contains_ok": contains_ok,
-            "excludes_ok": excludes_ok,
-            "passed": substring_passed,
-        }
-        passed = passed and substring_passed
-    if test.get("judge"):
-        j_passed, j_reason = _judge(test["judge"], answer, runner, model)
-        out["judge"] = {"passed": j_passed, "reason": j_reason}
-        passed = passed and j_passed
-    if not (has_substring or test.get("judge")):
-        passed = True
-    out["passed"] = bool(passed)
-    return out
+# Grading helpers extracted to ._grading; runtime-info to ._runtime_info.
+from ._grading import _grade, _judge, _JUDGE_PROMPT, _load_tests  # noqa: F401, E402
+from ._runtime_info import _build_runtime_info, _newb_version  # noqa: F401, E402
 
 
 def _stage_skills_mount(skills_src: Path, name: str) -> Path:
@@ -217,6 +132,7 @@ def _make_runner(
     model: str,
     runtime: str = "docker",
     hardening=None,
+    scope: str = "all",
 ) -> Any:
     """Build a runner.
 
@@ -249,6 +165,7 @@ def _make_runner(
             project_root=project_root,
             model=model,
             hardening=hardening,
+            scope=scope,
         )
     if runtime == "apptainer":
         from ._container_runner import ApptainerRunner
@@ -257,6 +174,7 @@ def _make_runner(
             skills_mount=skills_dir,
             project_root=project_root,
             model=model,
+            scope=scope,
         )
     raise ValueError(
         f"unknown runtime: {runtime!r} (expected docker / apptainer; "
@@ -277,6 +195,7 @@ def run(
     runtime: str = "docker",
     template: str = "python-package",
     hardening=None,
+    scope: str = "all",
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -330,6 +249,7 @@ def run(
                 model=model,
                 runtime=runtime,
                 hardening=hardening,
+                scope=scope,
             )
 
         # Resolve the skills path the agent will see inside the runner.
@@ -339,7 +259,17 @@ def run(
         # the agent reads from the right place.
         skills_path = getattr(runner, "skills_path", "/home/agent/.claude/skills/")
 
-        out: Dict[str, Any] = {"package": name, "template": template}
+        out: Dict[str, Any] = {
+            "package": name,
+            "template": template,
+            "runtime_info": _build_runtime_info(
+                runtime=runtime,
+                runner=runner,
+                model=model,
+                template=template,
+                scope=scope,
+            ),
+        }
         for key, prompt in prompts.items():
             answers = []
             rendered = prompt.format(skills_path=skills_path)
@@ -401,6 +331,29 @@ def render_markdown(payload: Dict[str, Any]) -> str:
         f"> Package: `{pkg}`. Last verified: {today} (UTC).",
         "",
     ]
+    info = payload.get("runtime_info")
+    if isinstance(info, dict) and info:
+        parts += ["```yaml", "# runtime_info"]
+        for key in (
+            "newb_version",
+            "runtime",
+            "image",
+            "model",
+            "template",
+            "scope",
+            "skills_path",
+            "agent_resources",
+        ):
+            if key in info:
+                parts.append(f"{key}: {info[key]}")
+        if "setting_sources" in info:
+            parts.append(f"setting_sources: {info['setting_sources']}")
+        hardening = info.get("hardening")
+        if isinstance(hardening, dict) and hardening:
+            parts.append("hardening:")
+            for k, v in hardening.items():
+                parts.append(f"  {k}: {v}")
+        parts += ["```", ""]
 
     def _block(value: Any) -> str:
         if isinstance(value, list):

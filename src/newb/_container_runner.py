@@ -64,6 +64,7 @@ class _BaseContainerRunner:
         model: str = "claude-haiku-4-5",
         image: str | None = None,
         hardening: HardeningOptions | None = None,
+        scope: str = "all",
     ):
         if not shutil.which(self.runtime_bin):
             raise RuntimeError(
@@ -88,6 +89,7 @@ class _BaseContainerRunner:
                 "set the NEWB_-prefixed var explicitly to opt in."
             )
         self._api_key = api_key
+        self.scope = scope if scope in {"all", "docs"} else "all"
         self.skills_mount = Path(skills_mount).resolve()
         self.project_root = (
             Path(project_root).resolve() if project_root else self.skills_mount
@@ -160,6 +162,8 @@ class DockerRunner(_BaseContainerRunner):
             f"NEWB_MODEL={self.model}",
             "-e",
             f"NEWB_SKILLS_PATH={self.skills_path}",
+            "-e",
+            f"NEWB_SCOPE={self.scope}",
             self.image,
             prompt,
         ]
@@ -191,6 +195,8 @@ class ApptainerRunner(_BaseContainerRunner):
             f"NEWB_MODEL={self.model}",
             "--env",
             f"NEWB_SKILLS_PATH={self.skills_path}",
+            "--env",
+            f"NEWB_SCOPE={self.scope}",
             f"docker://{self.image}",
             prompt,
         ]
