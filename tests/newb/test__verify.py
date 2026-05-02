@@ -84,7 +84,11 @@ def test_self_explain_returns_expected_keys(tmp_path):
     assert "30+ formats" in result["what_for"]
     assert "| # | Problem | Solution |" in result["problems_solved"]
     assert "import mypkg" in result["quick_start"]
-    assert len(runner.calls) == 4
+    # python-package template now has 6 prompts (added post_install_check
+    # + prompt_injection_check that leverage the full-perms container).
+    from newb.question_templates import PYTHON_PACKAGE
+
+    assert len(runner.calls) == len(PYTHON_PACKAGE)
     assert all(call[1] == "claude-haiku-4-5" for call in runner.calls)
 
 
@@ -97,7 +101,9 @@ def test_self_explain_runs_per_prompt_returns_lists(tmp_path):
 
     assert isinstance(result["what_for"], list)
     assert len(result["what_for"]) == 2
-    assert len(runner.calls) == 8
+    from newb.question_templates import PYTHON_PACKAGE
+
+    assert len(runner.calls) == len(PYTHON_PACKAGE) * 2
 
 
 def test_self_explain_accepts_string_path(tmp_path):

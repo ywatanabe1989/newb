@@ -22,6 +22,7 @@ module here that exposes a ``PROMPTS`` dict.
 
 from __future__ import annotations
 
+from .cli_tool import PROMPTS as CLI_TOOL
 from .python_package import PROMPTS as PYTHON_PACKAGE
 
 # Registry — name → prompts mapping. ``--template`` on the CLI looks
@@ -29,6 +30,7 @@ from .python_package import PROMPTS as PYTHON_PACKAGE
 # templates so users see e.g. ``--template python-package``.
 TEMPLATES: dict[str, dict[str, str]] = {
     "python-package": PYTHON_PACKAGE,
+    "cli-tool": CLI_TOOL,
 }
 
 DEFAULT_TEMPLATE = "python-package"
@@ -42,6 +44,7 @@ def get_template(name: str) -> dict[str, str]:
 
 
 __all__ = [
+    "CLI_TOOL",
     "DEFAULT_TEMPLATE",
     "PYTHON_PACKAGE",
     "TEMPLATES",
