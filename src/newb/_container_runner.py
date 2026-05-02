@@ -20,6 +20,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from ._hardening import HardeningOptions, hardening_argv
 from ._stage import stage_project
 
 
@@ -62,11 +63,18 @@ class _BaseContainerRunner:
         project_root: Path | None = None,
         model: str = "claude-haiku-4-5",
         image: str | None = None,
+        hardening: HardeningOptions | None = None,
     ):
         if not shutil.which(self.runtime_bin):
             raise RuntimeError(
                 f"{type(self).__name__} requires `{self.runtime_bin}` on PATH."
             )
+        # Hardening defaults: boundary-only (cap-drop=ALL, no-new-privs,
+        # bridge network). Resource caps stay off so the agent can
+        # actually exercise the package. CLI / library callers can pass
+        # ``hardening=HardeningOptions(...)`` to opt in to stricter caps,
+        # or set ``NEWB_HARDEN_*`` env vars (read via from_env).
+        self.hardening = hardening or HardeningOptions.from_env()
         # ONE opt-in env var (NEWB_ prefix only — never silently picks
         # up the upstream ANTHROPIC_API_KEY). The value is opaque from
         # newb's POV: container's runner.py decides whether it's a
@@ -141,12 +149,9 @@ class DockerRunner(_BaseContainerRunner):
         # API keys (sk-ant-api*) and Claude Code OAuth access tokens
         # (sk-ant-oat*) on the same code path — no host-side dispatch
         # needed.
-        return [
-            "docker",
-            "run",
-            "--rm",
-            "--network",
-            "bridge",
+        argv = ["docker", "run", "--rm"]
+        argv += hardening_argv(self.hardening)
+        argv += [
             "-v",
             f"{project_host}:/work/project",
             "-e",
@@ -158,6 +163,7 @@ class DockerRunner(_BaseContainerRunner):
             self.image,
             prompt,
         ]
+        return argv
 
 
 class ApptainerRunner(_BaseContainerRunner):
