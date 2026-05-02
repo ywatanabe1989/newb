@@ -71,6 +71,17 @@ async def _run(prompt: str, model: str) -> str:
     }
     if scope == "docs":
         sdk_kwargs["allowed_tools"] = ["Read", "Glob", "Grep"]
+    mcp_blob = os.environ.get("NEWB_MCP_SERVERS_JSON", "").strip()
+    if mcp_blob:
+        import json
+
+        try:
+            sdk_kwargs["mcp_servers"] = json.loads(mcp_blob)
+        except json.JSONDecodeError as e:
+            print(
+                f"NEWB_MCP_SERVERS_JSON decode failed: {e}",
+                file=sys.stderr,
+            )
     options = ClaudeAgentOptions(**sdk_kwargs)
 
     chunks: list[str] = []

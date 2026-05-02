@@ -133,6 +133,7 @@ def _make_runner(
     runtime: str = "docker",
     hardening=None,
     scope: str = "all",
+    mcp_servers: Optional[Dict[str, Any]] = None,
 ) -> Any:
     """Build a runner.
 
@@ -166,6 +167,7 @@ def _make_runner(
             model=model,
             hardening=hardening,
             scope=scope,
+            mcp_servers=mcp_servers,
         )
     if runtime == "podman":
         from ._container_runner import PodmanRunner
@@ -176,6 +178,7 @@ def _make_runner(
             model=model,
             hardening=hardening,
             scope=scope,
+            mcp_servers=mcp_servers,
         )
     if runtime == "apptainer":
         from ._container_runner import ApptainerRunner
@@ -185,6 +188,7 @@ def _make_runner(
             project_root=project_root,
             model=model,
             scope=scope,
+            mcp_servers=mcp_servers,
         )
     raise ValueError(
         f"unknown runtime: {runtime!r} (expected docker / podman / apptainer; "
@@ -214,6 +218,7 @@ def run(
     hardening=None,
     scope: str = "all",
     install_mode: str = "editable",
+    mcp_servers: Optional[Dict[str, Any]] = None,
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -268,6 +273,7 @@ def run(
                 runtime=runtime,
                 hardening=hardening,
                 scope=scope,
+                mcp_servers=mcp_servers,
             )
 
         # Resolve the skills path the agent will see inside the runner.

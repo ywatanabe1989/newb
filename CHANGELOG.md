@@ -4,6 +4,26 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.18.0] — 2026-05-02
+
+### Added
+
+- `mcp_servers` is now a recognized `[tool.newb]` key. The table is
+  validated host-side (`_mcp_inject.validate`) and JSON-encoded into
+  `NEWB_MCP_SERVERS_JSON`, which the in-container `runner.py` decodes
+  and feeds to `ClaudeAgentOptions(mcp_servers=...)`. Lets a project
+  pin its preferred MCP servers (filesystem, scitex, etc.) so the
+  newb agent has the same tool surface as a normal Claude Code
+  session.
+- Validation rules: identifier-shaped keys; `type` ∈
+  `stdio | http | sse`; for `stdio`, `command` must be a basename
+  (resolved on the container's PATH) or an absolute path beginning
+  with `/usr/`, `/bin/`, `/sbin/`, `/work/`, `/opt/`, `/etc/`.
+  Host-relative paths are rejected because they won't resolve inside
+  the container.
+- New module: `newb._mcp_inject` (`validate`, `encode_env`,
+  `McpInjectError`).
+
 ## [0.17.1] — 2026-05-02
 
 ### Added

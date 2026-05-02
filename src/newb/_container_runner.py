@@ -65,6 +65,7 @@ class _BaseContainerRunner:
         image: str | None = None,
         hardening: HardeningOptions | None = None,
         scope: str = "all",
+        mcp_servers: dict | None = None,
     ):
         if not shutil.which(self.runtime_bin):
             raise RuntimeError(
@@ -90,6 +91,12 @@ class _BaseContainerRunner:
             )
         self._api_key = api_key
         self.scope = scope if scope in {"all", "docs"} else "all"
+        # Validated host-side; container-side runner trusts the encoded
+        # JSON. Empty / None → no NEWB_MCP_SERVERS_JSON env var, container
+        # gets the SDK default (no MCP servers).
+        from ._mcp_inject import encode_env as _mcp_encode_env
+
+        self._mcp_servers_env = _mcp_encode_env(mcp_servers)
         self.skills_mount = Path(skills_mount).resolve()
         self.project_root = (
             Path(project_root).resolve() if project_root else self.skills_mount
@@ -164,9 +171,10 @@ class DockerRunner(_BaseContainerRunner):
             f"NEWB_SKILLS_PATH={self.skills_path}",
             "-e",
             f"NEWB_SCOPE={self.scope}",
-            self.image,
-            prompt,
         ]
+        if self._mcp_servers_env:
+            argv += ["-e", f"NEWB_MCP_SERVERS_JSON={self._mcp_servers_env}"]
+        argv += [self.image, prompt]
         return argv
 
 
@@ -216,7 +224,11 @@ class ApptainerRunner(_BaseContainerRunner):
             f"NEWB_SKILLS_PATH={self.skills_path}",
             "--env",
             f"NEWB_SCOPE={self.scope}",
-            f"docker://{self.image}",
-            prompt,
         ]
+        if self._mcp_servers_env:
+            argv += [
+                "--env",
+                f"NEWB_MCP_SERVERS_JSON={self._mcp_servers_env}",
+            ]
+        argv += [f"docker://{self.image}", prompt]
         return argv

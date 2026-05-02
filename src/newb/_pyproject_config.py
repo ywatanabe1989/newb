@@ -8,6 +8,10 @@ Recognized section: ``[tool.newb]``. Currently supported keys:
 - ``model`` — default Claude model id
 - ``runs`` — default ``--runs`` value (int)
 - ``install_mode`` — default install mode (``editable`` | ``wheel`` | ``pypi``)
+- ``mcp_servers`` — table of MCP servers passed through to the
+  in-container agent's ``ClaudeAgentOptions(mcp_servers=...)``.
+  Validated host-side (see ``_mcp_validate``); JSON-encoded into
+  ``NEWB_MCP_SERVERS_JSON`` for the container runner to consume.
 
 Any unknown keys are ignored (forward-compat). CLI flags + env vars
 take precedence over pyproject defaults; pyproject takes precedence
@@ -55,7 +59,15 @@ def _read_tool_newb(path: Path) -> dict:
 # Allowlist of keys the rest of newb knows how to consume. Unknown keys
 # in [tool.newb] are silently ignored (forward-compat — future newb
 # versions may add new keys; older versions shouldn't crash on them).
-_RECOGNIZED_KEYS = {"template", "runtime", "scope", "model", "runs", "install_mode"}
+_RECOGNIZED_KEYS = {
+    "template",
+    "runtime",
+    "scope",
+    "model",
+    "runs",
+    "install_mode",
+    "mcp_servers",
+}
 
 
 def merged_defaults(pyproject_dir: Path | str, **cli_overrides) -> dict:

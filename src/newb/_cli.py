@@ -369,6 +369,15 @@ def main(
         runs = int(project_cfg["runs"])
     if install_mode == "editable" and project_cfg.get("install_mode"):
         install_mode = project_cfg["install_mode"]
+    mcp_servers_cfg: dict | None = project_cfg.get("mcp_servers") or None
+    if mcp_servers_cfg:
+        from ._mcp_inject import McpInjectError, validate as _mcp_validate
+
+        try:
+            mcp_servers_cfg = _mcp_validate(mcp_servers_cfg)
+        except McpInjectError as e:
+            click.echo(f"\u26a0\ufe0f  [tool.newb] mcp_servers: {e}", err=True)
+            ctx.exit(2)
 
     # Resolve hardening: env vars first (NEWB_HARDEN_*), then CLI flags
     # override (None = absent flag, leaves env-supplied value untouched).
@@ -392,6 +401,7 @@ def main(
         hardening=hardening,
         scope=scope,
         install_mode=install_mode,
+        mcp_servers=mcp_servers_cfg,
     )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)
