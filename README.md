@@ -8,20 +8,22 @@
 
 <p align="center"><b>Test your package through the eyes of a newbie agent — a fresh AI agent reads only your docs and tries to use your package. If it succeeds, your docs work.</b></p>
 
+<!-- scitex-badges:start -->
+<p align="center">
+  <a href="https://pypi.org/project/newb/"><img src="https://img.shields.io/pypi/v/newb.svg" alt="PyPI"></a>
+  <a href="https://pypi.org/project/newb/"><img src="https://img.shields.io/pypi/pyversions/newb.svg" alt="Python"></a>
+  <a href="https://github.com/ywatanabe1989/newb/actions/workflows/test.yml"><img src="https://github.com/ywatanabe1989/newb/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
+  <a href="https://codecov.io/gh/ywatanabe1989/newb"><img src="https://codecov.io/gh/ywatanabe1989/newb/graph/badge.svg" alt="Coverage"></a>
+  <a href="https://newb.readthedocs.io/en/latest/"><img src="https://readthedocs.org/projects/newb/badge/?version=latest" alt="Docs"></a>
+  <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/license-AGPL_v3-blue.svg" alt="License: AGPL v3"></a>
+</p>
+<!-- scitex-badges:end -->
+
 <p align="center">
   <a href="https://newb.readthedocs.io/">Full Documentation</a> · <code>pip install newb</code>
 </p>
 
 > Python 3.10+ · bundles [`claude-agent-sdk`](https://github.com/anthropics/claude-agent-sdk-python) (Anthropic, MIT) · newb itself AGPL-3.0-only · auth: `NEWB_ANTHROPIC_API_KEY` or local `~/.claude/` OAuth
-
-<!-- scitex-badges:start -->
-[![PyPI](https://img.shields.io/pypi/v/newb.svg)](https://pypi.org/project/newb/)
-[![Python](https://img.shields.io/pypi/pyversions/newb.svg)](https://pypi.org/project/newb/)
-[![Tests](https://github.com/ywatanabe1989/newb/actions/workflows/test.yml/badge.svg)](https://github.com/ywatanabe1989/newb/actions/workflows/test.yml)
-[![Coverage](https://codecov.io/gh/ywatanabe1989/newb/graph/badge.svg)](https://codecov.io/gh/ywatanabe1989/newb)
-[![Docs](https://readthedocs.org/projects/newb/badge/?version=latest)](https://newb.readthedocs.io/en/latest/)
-[![License: AGPL v3](https://img.shields.io/badge/license-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-<!-- scitex-badges:end -->
 
 ---
 
