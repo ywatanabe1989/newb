@@ -94,6 +94,95 @@ async def newb_templates_show(name: str) -> str:
     return _json({"name": name, "prompts": TEMPLATES[name]})
 
 
+def _newb_skills_dir():
+    from pathlib import Path
+
+    import newb as _newb
+
+    return Path(_newb.__file__).parent / "_skills" / "newb"
+
+
+@mcp.tool()
+async def newb_skills_list() -> str:
+    """List newb's own agent-facing skill leaves."""
+    d = _newb_skills_dir()
+    if not d.is_dir():
+        return _json({"error": f"skills dir missing: {d}"})
+    leaves = sorted(p.name for p in d.glob("*.md"))
+    return _json({"skills_dir": str(d), "leaves": leaves})
+
+
+@mcp.tool()
+async def newb_skills_get(name: str) -> str:
+    """Print one skill leaf's content (partial-name match supported)."""
+    d = _newb_skills_dir()
+    p = d / name
+    if not p.is_file():
+        candidates = [c for c in d.glob("*.md") if name in c.name]
+        if len(candidates) == 1:
+            p = candidates[0]
+        elif len(candidates) > 1:
+            return _json(
+                {
+                    "error": f"ambiguous {name!r}",
+                    "matches": [c.name for c in candidates],
+                }
+            )
+        else:
+            return _json({"error": f"unknown skill: {name!r}"})
+    return _json({"path": str(p), "content": p.read_text(encoding="utf-8")})
+
+
+@mcp.tool()
+async def newb_render_markdown(report: dict) -> str:
+    """Render a `newb_verify` report dict as a README-ready markdown block."""
+    from ._verify import render_markdown
+
+    return render_markdown(report)
+
+
+# Public Python API parity (audit-mcp-tools §6) — `newb.run` /
+# `newb.self_explain` exist on the Python side; mirror them here so a
+# tool-using agent has the same vocabulary as the import-using one.
+# Both delegate to newb_verify.
+
+
+@mcp.tool()
+async def newb_run(
+    source: str,
+    template: str = DEFAULT_TEMPLATE,
+    runtime: str = "docker",
+    model: str = "claude-haiku-4-5",
+    runs_per_prompt: int = 1,
+) -> str:
+    """Alias for ``newb_verify`` — mirrors the ``newb.run`` Python API."""
+    return await newb_verify(  # type: ignore[func-returns-value]
+        source=source,
+        template=template,
+        runtime=runtime,
+        model=model,
+        runs_per_prompt=runs_per_prompt,
+    )
+
+
+@mcp.tool()
+async def newb_self_explain(
+    source: str,
+    template: str = DEFAULT_TEMPLATE,
+    runtime: str = "docker",
+    model: str = "claude-haiku-4-5",
+    runs_per_prompt: int = 1,
+) -> str:
+    """Alias for ``newb_verify`` — mirrors the deprecated ``newb.self_explain``."""
+    return await newb_verify(  # type: ignore[func-returns-value]
+        source=source,
+        template=template,
+        runtime=runtime,
+        model=model,
+        runs_per_prompt=runs_per_prompt,
+    )
+
+
 def run_server(transport: Optional[str] = None) -> None:
     """Run the MCP server (defaults to stdio transport)."""
     if transport:

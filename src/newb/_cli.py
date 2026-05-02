@@ -168,7 +168,13 @@ def templates():
     help="Machine-readable JSON output.",
 )
 def templates_list(as_json):
-    """List all built-in question templates."""
+    """List all built-in question templates.
+
+    \b
+    Example:
+      $ newb templates list
+      $ newb templates list --json
+    """
     rows = [
         {"name": n, "questions": list(p.keys())} for n, p in sorted(TEMPLATES.items())
     ]
@@ -191,7 +197,13 @@ def templates_list(as_json):
     help="Machine-readable JSON output.",
 )
 def templates_show(name, as_json):
-    """Show the prompts in a template."""
+    """Show the prompts in a template.
+
+    \b
+    Example:
+      $ newb templates show python-package
+      $ newb templates show cli-tool --json
+    """
     if name not in TEMPLATES:
         raise click.ClickException(
             f"unknown template {name!r}; available: {sorted(TEMPLATES)}"
@@ -234,7 +246,13 @@ def _skills_dir():
     help="Machine-readable JSON output.",
 )
 def skills_list(as_json):
-    """List newb's skill leaves (SKILL.md + NN_*.md sub-skills)."""
+    """List newb's skill leaves (SKILL.md + NN_*.md sub-skills).
+
+    \b
+    Example:
+      $ newb skills list
+      $ newb skills list --json
+    """
     d = _skills_dir()
     if not d.is_dir():
         raise click.ClickException(f"skills dir missing: {d}")
@@ -249,8 +267,22 @@ def skills_list(as_json):
 
 @skills.command("get")
 @click.argument("name")
-def skills_get(name):
-    """Print one skill leaf's content (e.g. `newb skills get SKILL.md`)."""
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Machine-readable JSON output (path + content fields).",
+)
+def skills_get(name, as_json):
+    """Print one skill leaf's content (e.g. `newb skills get SKILL.md`).
+
+    \b
+    Example:
+      $ newb skills get SKILL.md
+      $ newb skills get 04_isolation
+      $ newb skills get 01_quick-start --json
+    """
     d = _skills_dir()
     p = d / name
     # also accept partial-name lookup
@@ -265,7 +297,147 @@ def skills_get(name):
             )
         else:
             raise click.ClickException(f"unknown skill: {name!r}")
-    click.echo(p.read_text(encoding="utf-8"), nl=False)
+    content = p.read_text(encoding="utf-8")
+    if as_json:
+        click.echo(json.dumps({"path": str(p), "content": content}, indent=2))
+        return
+    click.echo(content, nl=False)
+
+
+# ---------------------------------------------------------------------------
+# list-python-apis — required top-level command per scitex audit-cli §1a
+# ---------------------------------------------------------------------------
+
+
+@main.command("list-python-apis")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Machine-readable JSON output.",
+)
+def list_python_apis(as_json):
+    """List newb's public Python API surface (callables in `import newb`).
+
+    \b
+    Example:
+      $ newb list-python-apis
+      $ newb list-python-apis --json
+    """
+    import inspect
+
+    import newb as _newb
+
+    rows = []
+    for name in sorted(getattr(_newb, "__all__", []) or dir(_newb)):
+        if name.startswith("_"):
+            continue
+        obj = getattr(_newb, name, None)
+        if obj is None:
+            continue
+        kind = "callable" if callable(obj) else type(obj).__name__
+        try:
+            sig = str(inspect.signature(obj)) if callable(obj) else ""
+        except (TypeError, ValueError):
+            sig = ""
+        rows.append({"name": name, "kind": kind, "signature": sig})
+    if as_json:
+        click.echo(json.dumps(rows, indent=2))
+        return
+    for r in rows:
+        click.echo(f"{r['name']}{r['signature']}  [{r['kind']}]")
+
+
+# ---------------------------------------------------------------------------
+# mcp — server lifecycle + tool listing (parity with scitex-* convention)
+# ---------------------------------------------------------------------------
+
+
+@main.group()
+def mcp():
+    """MCP server commands (start, list-tools)."""
+
+
+@mcp.command("list-tools")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Machine-readable JSON output.",
+)
+def mcp_list_tools(as_json):
+    """List MCP tools exposed by newb's server.
+
+    \b
+    Example:
+      $ newb mcp list-tools
+      $ newb mcp list-tools --json
+    """
+    try:
+        from ._server import mcp as _mcp_server
+    except ImportError as e:
+        raise click.ClickException(
+            f"MCP support requires the [mcp] extra: pip install 'newb[mcp]' ({e})"
+        ) from e
+    # FastMCP exposes tools via _tool_manager._tools (versioned across releases).
+    tool_mgr = getattr(_mcp_server, "_tool_manager", None) or getattr(
+        _mcp_server, "tool_manager", None
+    )
+    if tool_mgr and hasattr(tool_mgr, "_tools"):
+        tools = list(tool_mgr._tools.values())
+    else:
+        tools = []
+    rows = [
+        {
+            "name": getattr(t, "name", "?"),
+            "description": (getattr(t, "description", "") or "").strip().splitlines()[0]
+            if getattr(t, "description", None)
+            else "",
+        }
+        for t in tools
+    ]
+    if as_json:
+        click.echo(json.dumps(rows, indent=2))
+        return
+    for r in rows:
+        click.echo(f"{r['name']}  — {r['description']}")
+
+
+@mcp.command("start")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Print the planned action and exit (don't bind / serve).",
+)
+@click.option(
+    "--yes",
+    "-y",
+    is_flag=True,
+    default=False,
+    help="Bypass any TTY confirm (no-op here; present for SciTeX CLI parity).",
+)
+def mcp_start(dry_run, yes):
+    """Start the newb MCP server (stdio transport).
+
+    \b
+    Example:
+      $ newb mcp start
+      $ newb mcp start --dry-run
+    """
+    if dry_run:
+        click.echo("would start: newb MCP server on stdio transport (3 tools)")
+        return
+    _ = yes  # consumed for SciTeX CLI parity
+    try:
+        from ._server import run_server
+    except ImportError as e:
+        raise click.ClickException(
+            f"MCP support requires the [mcp] extra: pip install 'newb[mcp]' ({e})"
+        ) from e
+    run_server()
 
 
 # ---------------------------------------------------------------------------
@@ -275,7 +447,7 @@ def skills_get(name):
 
 # Names of registered subcommand groups — keep in sync with the @main.group
 # decorators above. Used by _legacy_dispatch to know what NOT to rewrite.
-_SUBCOMMANDS = {"verify", "templates", "skills"}
+_SUBCOMMANDS = {"verify", "templates", "skills", "mcp", "list-python-apis"}
 
 
 def _legacy_dispatch():
