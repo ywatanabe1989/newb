@@ -96,17 +96,29 @@ pip install newb[yaml]    # + tests_newb.yaml support
 <br>
 
 ```bash
-newb .                                     # current project — uses docker by default
-newb ./src/mypkg/_skills/mypkg             # focused docs subdir
-newb https://github.com/user/repo.git      # git URL — shallow-clones
-newb . --format markdown >> README.md
-newb . --runtime apptainer                 # HPC variant
+newb verify .                              # current project — docker by default
+newb verify ./src/mypkg/_skills/mypkg      # focused docs subdir
+newb verify https://github.com/u/r.git     # git URL — shallow-clones
+newb verify . --format markdown >> README.md
+newb verify . --runtime apptainer          # HPC variant
+newb verify . --template cli-tool          # CLI-focused question set
+
+# Introspection
+newb templates list                        # built-in question templates
+newb templates show python-package
+newb skills list                           # newb's own _skills/ leaves
+newb skills get SKILL.md
+newb list-python-apis                      # public Python surface
+newb mcp list-tools                        # FastMCP tools exposed
+newb mcp start                             # serve over stdio (for IDEs)
+newb --help-recursive                      # flatten help across subcommands
 ```
 
-Self-verification example (newb verifying its own docs in a fresh container):
+For backward compat, `newb <source>` (positional, no subcommand) is
+auto-rewritten to `newb verify <source>`. Self-verification example:
 
 ```bash
-newb https://github.com/ywatanabe1989/newb.git \
+newb verify https://github.com/ywatanabe1989/newb.git \
   > .history/$(date +%F)-self-verification.txt 2>&1
 ```
 
@@ -119,9 +131,38 @@ newb https://github.com/ywatanabe1989/newb.git \
 
 ```python
 import newb
-report = newb(".")              # cwd as the project root
+report = newb(".")                                       # bare-module callable
 print(newb.render_markdown(report))
+
+# Equivalent explicit forms (mirror pytest.main):
+report = newb.run(".", template="cli-tool", runtime="docker")
+report = newb.self_explain(".")                          # deprecated alias
+
+# Discover what newb can ask:
+from newb.question_templates import TEMPLATES, get_template
+print(list(TEMPLATES))                                   # ['python-package', 'cli-tool']
+print(get_template("python-package").keys())             # the 6 question ids
 ```
+
+</details>
+
+<details>
+<summary><strong>MCP server</strong></summary>
+
+<br>
+
+newb ships a FastMCP server with 7 tools (`newb_verify`, `newb_run`,
+`newb_self_explain`, `newb_render_markdown`, `newb_templates_list`,
+`newb_templates_show`, `newb_skills_list`, `newb_skills_get`). Install
+the optional extra and start over stdio:
+
+```bash
+pip install newb[mcp]
+newb mcp start
+newb mcp list-tools             # introspect
+```
+
+For Claude Code or another MCP host, point it at `newb mcp start`.
 
 </details>
 
