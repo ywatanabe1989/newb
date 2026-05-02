@@ -23,8 +23,8 @@ mcp  = ["fastmcp>=2.0"]
 all  = ["PyYAML>=6.0", "fastmcp>=2.0"]
 
 [project.scripts]
-newb = "newb._cli:main"
-scitex-newb = "newb._cli:main"   # SciTeX-namespaced alias
+newb = "newb._cli:cli_entrypoint"
+scitex-newb = "newb._cli:cli_entrypoint"   # SciTeX-namespaced alias
 
 [project.urls]
 Homepage = "https://github.com/ywatanabe1989/newb"
