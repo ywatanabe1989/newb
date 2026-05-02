@@ -281,6 +281,18 @@ class _NewbGroup(click.Group):
     help="Mount /tmp with noexec,nosuid. Default: off (pip/pytest sometimes write+exec wheels in /tmp).",
 )
 @click.option(
+    "--pip-cache",
+    "pip_cache",
+    default=None,
+    metavar="PATH",
+    help=(
+        "Mount a host pip cache into the container at "
+        "~/.cache/pip. Speeds up local-dev iteration on repeated "
+        "runs. Leave unset for CI (cold install is the honest "
+        "newbie test). Falls back to NEWB_PIP_CACHE_DIR."
+    ),
+)
+@click.option(
     "--help-recursive",
     is_flag=True,
     is_eager=True,
@@ -307,6 +319,7 @@ def main(
     harden_pids_limit,
     harden_no_network,
     harden_tmpfs_noexec,
+    pip_cache,
 ):
     """A fresh AI agent tries to use your package — pytest-style.
 
@@ -402,6 +415,7 @@ def main(
         scope=scope,
         install_mode=install_mode,
         mcp_servers=mcp_servers_cfg,
+        pip_cache_dir=pip_cache,
     )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)

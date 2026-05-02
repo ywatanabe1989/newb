@@ -4,6 +4,29 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.19.1] — 2026-05-02
+
+### Added
+
+- `--pip-cache PATH` flag (also `NEWB_PIP_CACHE_DIR` env var). When
+  set, the host directory is mounted into the container at
+  `/home/newb/.cache/pip` so repeated local-dev `newb` runs don't
+  re-download every wheel. Created on demand. **Leave unset for
+  CI** — cold install is the honest newbie test, and a warm
+  cache would hide "package can't be installed from scratch"
+  failures.
+- `_BaseContainerRunner.__init__` gains `pip_cache_dir=None`; CLI
+  flag, env var, and host pip cache mount go through the same path
+  in DockerRunner / PodmanRunner / ApptainerRunner.
+
+### Why
+
+Reframing: newb mimics a newbie *user*, not a docs reader. The
+container exercises install + import + use as one whole. For local
+dev you want the iteration loop tight; for CI you want the cold
+truth. The flag explicitly distinguishes the two modes instead of
+silently caching.
+
 ## [0.19.0] — 2026-05-02
 
 ### Changed (BREAKING for forks of `containers/runner.py`)

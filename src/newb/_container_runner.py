@@ -71,6 +71,7 @@ class _BaseContainerRunner:
         hardening: HardeningOptions | None = None,
         scope: str = "all",
         mcp_servers: dict | None = None,
+        pip_cache_dir: str | None = None,
     ):
         if not shutil.which(self.runtime_bin):
             raise RuntimeError(
@@ -102,6 +103,19 @@ class _BaseContainerRunner:
         from ._mcp_inject import encode_env as _mcp_encode_env
 
         self._mcp_servers_env = _mcp_encode_env(mcp_servers)
+        # Optional host-side pip cache; mounted into the container as
+        # the agent's `~/.cache/pip` so repeated `newb` runs in local
+        # dev don't re-download every wheel. Created on demand. Leave
+        # unset (the default) for CI — cold install is the honest
+        # newbie test.
+        cache_env = os.environ.get("NEWB_PIP_CACHE_DIR", "").strip()
+        chosen = pip_cache_dir if pip_cache_dir is not None else cache_env
+        if chosen:
+            cache_path = Path(chosen).expanduser()
+            cache_path.mkdir(parents=True, exist_ok=True)
+            self._pip_cache_host = str(cache_path)
+        else:
+            self._pip_cache_host = None
         self.skills_mount = Path(skills_mount).resolve()
         self.project_root = (
             Path(project_root).resolve() if project_root else self.skills_mount
@@ -218,6 +232,8 @@ class DockerRunner(_BaseContainerRunner):
         ]
         if self._mcp_servers_env:
             argv += ["-e", f"NEWB_MCP_SERVERS_JSON={self._mcp_servers_env}"]
+        if self._pip_cache_host:
+            argv += ["-v", f"{self._pip_cache_host}:/home/newb/.cache/pip"]
         argv += [self.image]
         return argv
 
@@ -274,5 +290,7 @@ class ApptainerRunner(_BaseContainerRunner):
                 "--env",
                 f"NEWB_MCP_SERVERS_JSON={self._mcp_servers_env}",
             ]
+        if self._pip_cache_host:
+            argv += ["--bind", f"{self._pip_cache_host}:/home/newb/.cache/pip"]
         argv += [f"docker://{self.image}"]
         return argv

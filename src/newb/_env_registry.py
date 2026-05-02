@@ -135,6 +135,18 @@ REGISTRY: list[EnvVar] = [
     ),
     # --- meta ---
     EnvVar(
+        name="NEWB_PIP_CACHE_DIR",
+        category="meta",
+        description=(
+            "Host directory mounted into the container as the agent's "
+            "pip cache (~/.cache/pip). Speeds up local-dev iteration "
+            "by skipping wheel re-downloads on repeated `newb` runs. "
+            "Leave unset for CI — cold install is the honest newbie "
+            "test."
+        ),
+        example="~/.cache/newb-pip",
+    ),
+    EnvVar(
         name="NEWB_ENV_SRC",
         category="meta",
         description=(

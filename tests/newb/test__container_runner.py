@@ -205,3 +205,32 @@ def test_apptainer_argv_mounts_project_and_forwards_token(fake_runtime):
     assert any(a == "NEWB_ANTHROPIC_API_KEY=sk-ant-api03-TEST" for a in argv), argv
     assert not any(a.startswith("ANTHROPIC_API_KEY=") for a in argv), argv
     r.close()
+
+
+def test_docker_argv_mounts_pip_cache_when_configured(fake_runtime, tmp_path):
+    """When NEWB_PIP_CACHE_DIR or pip_cache_dir is set, the docker argv
+    mounts the host cache at /home/newb/.cache/pip (the runtime user's
+    pip cache path)."""
+    from newb._container_runner import DockerRunner
+
+    cache = tmp_path / "newb-pip"
+    r = DockerRunner(
+        skills_mount=fake_runtime,
+        project_root=fake_runtime,
+        pip_cache_dir=str(cache),
+    )
+    argv = r._build_argv()
+    assert cache.is_dir(), "runner should mkdir the cache dir"
+    assert any(
+        f"{cache}:/home/newb/.cache/pip" == a for a in argv
+    ), argv
+    r.close()
+
+
+def test_docker_argv_no_pip_cache_when_unset(fake_runtime):
+    from newb._container_runner import DockerRunner
+
+    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    argv = r._build_argv()
+    assert not any("/home/newb/.cache/pip" in a for a in argv), argv
+    r.close()
