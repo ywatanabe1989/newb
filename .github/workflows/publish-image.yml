@@ -35,7 +35,12 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # Classic PAT with packages:write — the auto-generated
+          # GITHUB_TOKEN gets 403 on the existing newb-runner package
+          # because the package's "Manage Actions access" is opt-in
+          # per repo. Fall back to GHCR_PAT first; the bot token still
+          # works for newly-created packages.
+          password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Resolve image tag
         id: tag
