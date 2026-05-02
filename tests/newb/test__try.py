@@ -192,6 +192,48 @@ def test_load_tests_invalid_yaml_returns_empty(tmp_path):
     assert _load_tests(tmp_path) == []
 
 
+def test_load_tests_python_module(tmp_path):
+    """tests_newb.py with TESTS list is discovered alongside YAML."""
+    from newb._try import _load_tests
+
+    (tmp_path / "tests_newb.py").write_text(
+        "TESTS = [\n"
+        '    {"name": "py_one", "prompt": "What does it do?",\n'
+        '     "expect_contains": ["foo"]},\n'
+        '    {"prompt": "Edge case?", "judge": "Must mention X"},\n'
+        "]\n"
+    )
+    rs = _load_tests(tmp_path)
+    assert len(rs) == 2
+    assert rs[0]["name"] == "py_one"
+    assert rs[0]["expect_contains"] == ["foo"]
+    assert rs[1]["name"] == "tests_newb_1"  # auto-named
+    assert rs[1]["judge"] == "Must mention X"
+
+
+def test_load_tests_pytest_style_glob(tmp_path):
+    """test_newb_*.py files are also picked up; YAML + .py concat."""
+    pytest.importorskip("yaml")
+    from newb._try import _load_tests
+
+    (tmp_path / "tests_newb.yaml").write_text("- name: yaml_one\n  prompt: From YAML\n")
+    (tmp_path / "test_newb_extra.py").write_text(
+        'TESTS = [{"name": "py_extra", "prompt": "From extra .py"}]\n'
+    )
+    rs = _load_tests(tmp_path)
+    names = {r["name"] for r in rs}
+    assert "yaml_one" in names
+    assert "py_extra" in names
+
+
+def test_load_tests_python_missing_TESTS_returns_empty(tmp_path):
+    """A test_newb_*.py without a TESTS list contributes zero entries."""
+    from newb._try import _load_tests
+
+    (tmp_path / "tests_newb.py").write_text("# no TESTS defined\nx = 1\n")
+    assert _load_tests(tmp_path) == []
+
+
 def test_load_tests_accepts_judge_field(tmp_path):
     pytest.importorskip("yaml")
     from newb._try import _load_tests

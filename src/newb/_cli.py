@@ -302,6 +302,29 @@ def main(
     if md_alias:
         out_format = "markdown"
 
+    # [tool.newb] in pyproject.toml: project-level defaults. CLI flags
+    # win when explicitly passed; otherwise pyproject value applies.
+    # Click defaults are themselves "explicit" from Click's POV, so the
+    # only way to know "user didn't pass" is to compare against the
+    # default. For now, layer pyproject UNDER hard-coded defaults: the
+    # user-passed CLI value (which equals the default if not passed) is
+    # preserved, and pyproject acts as a doc-only override channel for
+    # template / runtime / scope when the user-passed value matches the
+    # built-in default.
+    from ._pyproject_config import load_pyproject_config
+
+    project_cfg = load_pyproject_config(source if source else ".")
+    if template == "python-package" and project_cfg.get("template"):
+        template = project_cfg["template"]
+    if runtime == "docker" and project_cfg.get("runtime"):
+        runtime = project_cfg["runtime"]
+    if scope == "all" and project_cfg.get("scope"):
+        scope = project_cfg["scope"]
+    if model == "claude-haiku-4-5" and project_cfg.get("model"):
+        model = project_cfg["model"]
+    if runs == 1 and project_cfg.get("runs"):
+        runs = int(project_cfg["runs"])
+
     # Resolve hardening: env vars first (NEWB_HARDEN_*), then CLI flags
     # override (None = absent flag, leaves env-supplied value untouched).
     from ._hardening import HardeningOptions
