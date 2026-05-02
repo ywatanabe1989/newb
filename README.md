@@ -6,7 +6,7 @@
   </a>
 </p>
 
-<p align="center"><b>Test your package through the eyes of a newbie agent — a fresh AI agent reads only your docs and tries to use your package. If it succeeds, your docs work.</b></p>
+<p align="center"><b>Test your package through the eyes of a newbie agent — because that's who's reading your docs now.</b></p>
 
 <p align="center">
   <a href="https://newb.readthedocs.io/">Full Documentation</a> · <code>pip install newb</code>
@@ -30,8 +30,6 @@
 ## Problem and Solution
 
 | # | Problem | Solution |
-|---|---------|----------|
-| # | Problem | Solution |
 |---|---|---|
 | 1 | **The first-class reader of a modern package is an AI agent**, not a human scrolling through README hash-anchors. Docs that read well to humans can still be unusable to agents — and "unusable to an agent" increasingly means "unusable, period". | newb tests docs through that exact reader. A fresh `claude-agent-sdk` session inside a hardened container, with `setting_sources=[]` (no host CLAUDE.md leaking) and full agentic tools, actually tries to install + import + use the package. The verdict comes from the agent's own success, not heuristic linting. |
 | 2 | **Manual review across many packages doesn't scale.** For an ecosystem with N packages × M releases × K branches, "is the README still good?" is a question nobody has time to answer by hand. | One CLI per package, JSON output for CI, container-isolated (`docker` / `podman` / `apptainer`), pluggable graders (substring + LLM judge) via `tests_newb.yaml`. Plug into a CI matrix and doc quality scales with your portfolio. |
@@ -39,6 +37,26 @@
 | 4 | **Untrusted docs are an injection surface.** A docs-reading agent is a textbook indirect-prompt-injection target. | Container is the boundary (`--cap-drop=ALL`, `--network=bridge`, `--rm`), `NEWB_ANTHROPIC_API_KEY`-only auth namespace, `prompt_injection_check` consistency probe in every run, optional `newb[security]` for Protect AI's pre-flight scanner. Full threat model: [`SECURITY.md`](SECURITY.md). |
 
 ## How it works
+
+```
+HOST                                            CONTAINER
+┌────────────────────────┐                      ┌────────────────────────┐
+│  Your project root     │  docker run --rm -i  │  /work/project (rw)    │
+│  staged → tmp dir      │ ────────────────────►│  claude-agent-sdk      │
+│  (respects .gitignore) │  stdin: prompts      │    full agentic tools  │
+│                        │ ◄──────────────────  │    setting_sources=[]  │
+│  Report (JSON / md)    │  stdout: results     │  → tries the package   │
+└────────────────────────┘                      └────────────────────────┘
+```
+
+Three layers, one responsibility each: **container = isolation, SDK
+options = agent behavior, agent = exploration.** newb owns the **test
+schema** (canonical questions + `tests_newb.yaml` + graders + report
+rendering); the SDK owns **everything else**: session lifecycle,
+transport, message structuring, tool execution.
+
+<details>
+<summary><strong>Detailed architecture diagram</strong> — staging, SDK options, batched-prompt envelope</summary>
 
 ```
 HOST                                                       CONTAINER (ghcr.io/ywatanabe1989/newb-runner:<v>)
@@ -82,12 +100,9 @@ HOST                                                       CONTAINER (ghcr.io/yw
         └────────────────────────────────────┘
 ```
 
-Three layers, one responsibility each: **container = isolation, SDK
-options = agent behavior, agent = exploration.** newb owns the **test
-schema** (canonical questions + `tests_newb.yaml` + graders + report
-rendering); the SDK owns **everything else**: session lifecycle,
-transport, message structuring, tool execution. Runtime details and
-backend comparison live in [Isolation runtimes](#isolation-runtimes--runtime) below.
+Runtime details + backend comparison live in [Isolation runtimes](#isolation-runtimes--runtime).
+
+</details>
 
 ### Architecture invariants (verified empirically)
 
