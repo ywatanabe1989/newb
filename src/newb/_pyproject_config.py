@@ -7,6 +7,7 @@ Recognized section: ``[tool.newb]``. Currently supported keys:
 - ``scope`` — default agent scope (``all`` | ``docs``)
 - ``model`` — default Claude model id
 - ``runs`` — default ``--runs`` value (int)
+- ``install_mode`` — default install mode (``editable`` | ``wheel`` | ``pypi``)
 
 Any unknown keys are ignored (forward-compat). CLI flags + env vars
 take precedence over pyproject defaults; pyproject takes precedence
@@ -54,7 +55,7 @@ def _read_tool_newb(path: Path) -> dict:
 # Allowlist of keys the rest of newb knows how to consume. Unknown keys
 # in [tool.newb] are silently ignored (forward-compat — future newb
 # versions may add new keys; older versions shouldn't crash on them).
-_RECOGNIZED_KEYS = {"template", "runtime", "scope", "model", "runs"}
+_RECOGNIZED_KEYS = {"template", "runtime", "scope", "model", "runs", "install_mode"}
 
 
 def merged_defaults(pyproject_dir: Path | str, **cli_overrides) -> dict:

@@ -4,6 +4,16 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.17.1] — 2026-05-02
+
+### Added
+
+- `install_mode` is now a recognized `[tool.newb]` key in
+  `pyproject.toml`. Default-resolution order matches the other keys:
+  CLI flag > pyproject value > built-in default (`editable`). Lets a
+  package pin `install_mode = "wheel"` for release-sanity verification
+  without per-invocation flags.
+
 ## [0.17.0] — 2026-05-02
 
 ### Added

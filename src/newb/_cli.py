@@ -367,6 +367,8 @@ def main(
         model = project_cfg["model"]
     if runs == 1 and project_cfg.get("runs"):
         runs = int(project_cfg["runs"])
+    if install_mode == "editable" and project_cfg.get("install_mode"):
+        install_mode = project_cfg["install_mode"]
 
     # Resolve hardening: env vars first (NEWB_HARDEN_*), then CLI flags
     # override (None = absent flag, leaves env-supplied value untouched).
