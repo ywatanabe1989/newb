@@ -22,7 +22,24 @@ from pathlib import Path
 
 from ._stage import stage_project
 
-DEFAULT_IMAGE = "ghcr.io/ywatanabe1989/newb-runner:latest"
+
+def _default_image() -> str:
+    """Pin the container image tag to *this* newb's version.
+
+    Returns ``ghcr.io/ywatanabe1989/newb-runner:<newb-version>``. This
+    means a stale local ``:latest`` from an earlier newb install can
+    never silently mismatch the host code (e.g. host expects
+    /work/project but the cached image still has /work/skills).
+
+    Override with ``NEWB_DOCKER_IMAGE=...`` for forks / dev images.
+    """
+    try:
+        from newb import __version__ as _v
+    except Exception:
+        _v = "latest"
+    return f"ghcr.io/ywatanabe1989/newb-runner:{_v}"
+
+
 DEFAULT_TIMEOUT_S = 240
 
 
@@ -75,7 +92,7 @@ class _BaseContainerRunner:
             Path(project_root).resolve() if project_root else self.skills_mount
         )
         self.model = model
-        self.image = image or os.environ.get("NEWB_DOCKER_IMAGE") or DEFAULT_IMAGE
+        self.image = image or os.environ.get("NEWB_DOCKER_IMAGE") or _default_image()
         # Stage the whole project root (with cache/build/venv ignored).
         # The container mounts this read-only as /work/project so the
         # agent has the full post-install package shape — README,
@@ -125,11 +142,11 @@ class DockerRunner(_BaseContainerRunner):
 
     def _build_argv(self, prompt: str) -> list[str]:
         project_host = str(self._stage_target)
-        # NOTE: bind-mount is read-write (no `:ro`) so the agent can
+        # bind-mount is read-write (no `:ro`) so the agent can
         # `pip install -e .` and write small example files. The staged
         # dir is a tmp copy that gets rmtree'd after the run, so the
         # user's source is untouched.
-        return [
+        argv = [
             "docker",
             "run",
             "--rm",
@@ -138,14 +155,30 @@ class DockerRunner(_BaseContainerRunner):
             "-v",
             f"{project_host}:/work/project",
             "-e",
-            f"ANTHROPIC_API_KEY={self._api_key}",
-            "-e",
             f"NEWB_MODEL={self.model}",
             "-e",
             f"NEWB_SKILLS_PATH={self.skills_path}",
-            self.image,
-            prompt,
         ]
+        creds = Path.home() / ".claude" / ".credentials.json"
+        if self._is_oauth_token(self._api_key) and creds.is_file():
+            # OAuth (Claude Code Pro/Max) — the bundled CLI needs the
+            # .credentials.json file shape; setting the OAuth token as
+            # ANTHROPIC_API_KEY makes the CLI try-and-fail to use it as
+            # an API key. Mount the file instead, do NOT pass the env.
+            argv += [
+                "-v",
+                f"{creds}:/home/newb/.claude/.credentials.json:ro",
+                "-e",
+                "NEWB_AUTH_MODE=oauth",
+            ]
+        else:
+            argv += ["-e", f"ANTHROPIC_API_KEY={self._api_key}"]
+        argv += [self.image, prompt]
+        return argv
+
+    @staticmethod
+    def _is_oauth_token(token: str) -> bool:
+        return token.startswith("sk-ant-oat") if token else False
 
 
 class ApptainerRunner(_BaseContainerRunner):

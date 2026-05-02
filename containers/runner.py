@@ -71,8 +71,22 @@ def main() -> int:
         return 2
     prompt = sys.argv[1]
     model = os.environ.get("NEWB_MODEL", "claude-haiku-4-5")
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        print("ANTHROPIC_API_KEY not set in container env", file=sys.stderr)
+    # Two auth shapes the host runner can hand us:
+    #   1. ANTHROPIC_API_KEY=sk-ant-api03-...  (real API key)
+    #   2. NEWB_AUTH_MODE=oauth + ~/.claude/.credentials.json mounted
+    # Reject ONLY when neither is set (the bundled Claude CLI handles
+    # both transparently — it reads ANTHROPIC_API_KEY first, falls
+    # through to the credentials file for OAuth).
+    if (
+        not os.environ.get("ANTHROPIC_API_KEY")
+        and os.environ.get("NEWB_AUTH_MODE") != "oauth"
+    ):
+        print(
+            "auth not set in container — host runner must pass "
+            "ANTHROPIC_API_KEY (API key) or NEWB_AUTH_MODE=oauth + "
+            "/home/newb/.claude/.credentials.json bind-mount",
+            file=sys.stderr,
+        )
         return 3
     try:
         text = asyncio.run(_run(prompt, model))
