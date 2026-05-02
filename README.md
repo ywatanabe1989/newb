@@ -343,6 +343,36 @@ templates planned: `api-sdk`, `scientific`, `web-app`, `ml-model`.
 
 </details>
 
+## Security disclaimer
+
+newb runs an AI agent against arbitrary package documentation, which
+is an unsolved-by-default attack surface. Read this before using.
+
+**Threats we recognize:**
+
+- Indirect prompt injection via package READMEs, docstrings, and `tests_newb.yaml`
+- API key exfiltration via agent output (`/proc/self/environ`, encoded leaks)
+- Container escape attempts (kernel CVEs, capability misconfiguration)
+- Network exfiltration to attacker-controlled hosts
+- Resource exhaustion (fork bombs, memory hogs)
+
+**What we implement:**
+
+- Container as the boundary — Docker / Apptainer with `--cap-drop=ALL`, `--security-opt=no-new-privileges`, default `--network=bridge`
+- Configurable hardening — opt-in resource caps, `--network=none`, etc., via `NEWB_HARDEN_*` env vars or CLI flags
+- Bundled CLI runs with `setting_sources=[]` — host `~/.claude/CLAUDE.md` never reaches the agent
+- Optional `newb[security]` extra — Protect AI's `deberta-v3-base-prompt-injection-v2` for pre-flight scanning
+- Self-check question — agent reports any adversarial content it noticed
+- See `docs/security/threat-model.md` for the full Rule-of-Two analysis
+
+**What we cannot promise:**
+
+- Prompt injection is unsolved at the model level (per Meta's *[Agents Rule of Two](https://ai.meta.com/blog/practical-ai-agent-security/)*, OWASP LLM01) — research consensus reports >85% attack success against state-of-the-art defenses with adaptive attacks
+- Sophisticated, novel, or encoded injection attempts may bypass every layer above
+- We cannot accept responsibility for any consequence of running newb against untrusted package documentation
+
+**Use at your own risk.** Pin a specific newb version and image digest in CI, treat verdicts on adversarially-authored packages as heuristic only, and never run newb with credentials beyond what a single dev-loop verification needs.
+
 ## Part of SciTeX
 
 `newb` is part of [**SciTeX**](https://scitex.ai). It is the
