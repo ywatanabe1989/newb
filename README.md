@@ -31,10 +31,12 @@
 
 | # | Problem | Solution |
 |---|---------|----------|
-| 1 | **What a package is for and how it works isn't obvious.** Authors know their own surface; readers don't. | newb asks six canonical questions automatically — *what for*, *problems solved*, *quick start*, *when not to use*, *post-install check*, *prompt-injection sweep* — and reports back what a fresh reader actually understood (and whether install + import + smoke-run actually work). |
-| 2 | **In this era, the first-class reader of a package is an AI agent**, not a human scrolling through README hash-anchors. Docs that read well to humans can still be unusable to agents. | newb mimics a newbie *user*, not a docs reader. A fresh `claude-agent-sdk` session inside a hardened container with `setting_sources=[]` (no host CLAUDE.md), full agentic tools (Read/Write/Edit/Bash/Glob/Grep), and `cwd=<staged copy>` — install, import, run, report. |
-| 3 | **Learning a new package is hard for users.** No quick start, missing edge cases, undocumented "when not to use" — all silent failures. | A failing newb run names exactly which question the docs couldn't answer, with the agent's own response — surfacing gaps before users hit them. |
-| 4 | **Maintaining doc quality across many packages doesn't scale.** Manual review per release, per package, per branch is the bottleneck for ecosystem-wide quality. | One CLI per package; JSON output for CI; runs in container isolation (`docker` / `podman` / `apptainer`); pluggable graders (substring + LLM judge) via `tests_newb.yaml`. Plug into a CI matrix and quality scales with your portfolio. |
+| # | Problem | Solution |
+|---|---|---|
+| 1 | **The first-class reader of a modern package is an AI agent**, not a human scrolling through README hash-anchors. Docs that read well to humans can still be unusable to agents — and "unusable to an agent" increasingly means "unusable, period". | newb tests docs through that exact reader. A fresh `claude-agent-sdk` session inside a hardened container, with `setting_sources=[]` (no host CLAUDE.md leaking) and full agentic tools, actually tries to install + import + use the package. The verdict comes from the agent's own success, not heuristic linting. |
+| 2 | **Manual review across many packages doesn't scale.** For an ecosystem with N packages × M releases × K branches, "is the README still good?" is a question nobody has time to answer by hand. | One CLI per package, JSON output for CI, container-isolated (`docker` / `podman` / `apptainer`), pluggable graders (substring + LLM judge) via `tests_newb.yaml`. Plug into a CI matrix and doc quality scales with your portfolio. |
+| 3 | **Failures are silent.** No quick start, undocumented "when not to use", install steps that work-on-my-machine — all surface only when a real user hits them. | A failing newb run names exactly which canonical question the docs couldn't answer, with the agent's own response. Bonus: `post_install_check` actually runs `pip install` + `import` + `<pkg> --help` inside the container, so install-state breakage shows up before release. |
+| 4 | **Untrusted docs are an injection surface.** A docs-reading agent is a textbook indirect-prompt-injection target. | Container is the boundary (`--cap-drop=ALL`, `--network=bridge`, `--rm`), `NEWB_ANTHROPIC_API_KEY`-only auth namespace, `prompt_injection_check` consistency probe in every run, optional `newb[security]` for Protect AI's pre-flight scanner. Full threat model: [`SECURITY.md`](SECURITY.md). |
 
 ## How it works
 
@@ -364,35 +366,18 @@ templates planned: `api-sdk`, `scientific`, `web-app`, `ml-model`.
 
 </details>
 
-## Security disclaimer
+## Security
 
-newb runs an AI agent against arbitrary package documentation, which
-is an unsolved-by-default attack surface. Read this before using.
+newb runs an AI agent against arbitrary package documentation —
+that's a real attack surface. The container is the boundary
+(`--cap-drop=ALL`, `--network=bridge`, `--rm`), the agent runs
+with `setting_sources=[]` so host `~/.claude/CLAUDE.md` never
+reaches it, and `NEWB_ANTHROPIC_API_KEY` is the single opt-in
+auth namespace. Prompt injection at the model level is unsolved
+— treat verdicts on adversarial packages as heuristic.
 
-**Threats we recognize:**
-
-- Indirect prompt injection via package READMEs, docstrings, and `tests_newb.yaml`
-- API key exfiltration via agent output (`/proc/self/environ`, encoded leaks)
-- Container escape attempts (kernel CVEs, capability misconfiguration)
-- Network exfiltration to attacker-controlled hosts
-- Resource exhaustion (fork bombs, memory hogs)
-
-**What we implement:**
-
-- Container as the boundary — Docker / Apptainer with `--cap-drop=ALL`, `--security-opt=no-new-privileges`, default `--network=bridge`
-- Configurable hardening — opt-in resource caps, `--network=none`, etc., via `NEWB_HARDEN_*` env vars or CLI flags
-- Bundled CLI runs with `setting_sources=[]` — host `~/.claude/CLAUDE.md` never reaches the agent
-- Optional `newb[security]` extra — Protect AI's `deberta-v3-base-prompt-injection-v2` for pre-flight scanning
-- Self-check question — agent reports any adversarial content it noticed
-- See `docs/security/threat-model.md` for the full Rule-of-Two analysis
-
-**What we cannot promise:**
-
-- Prompt injection is unsolved at the model level (per Meta's *[Agents Rule of Two](https://ai.meta.com/blog/practical-ai-agent-security/)*, OWASP LLM01) — research consensus reports >85% attack success against state-of-the-art defenses with adaptive attacks
-- Sophisticated, novel, or encoded injection attempts may bypass every layer above
-- We cannot accept responsibility for any consequence of running newb against untrusted package documentation
-
-**Use at your own risk.** Pin a specific newb version and image digest in CI, treat verdicts on adversarially-authored packages as heuristic only, and never run newb with credentials beyond what a single dev-loop verification needs.
+Full threat model + operating recommendations: [`SECURITY.md`](SECURITY.md)
+· [`docs/security/threat-model.md`](docs/security/threat-model.md).
 
 ## Part of SciTeX
 
