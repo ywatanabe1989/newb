@@ -106,6 +106,51 @@ def test_missing_newb_api_key_raises_clearly(monkeypatch, fake_runtime):
         DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
 
 
+def test_docker_argv_includes_default_hardening(fake_runtime):
+    """Default hardening: cap-drop=ALL, no-new-privileges, network=bridge.
+    Resource caps stay off so the agent can exercise the package."""
+    from newb._container_runner import DockerRunner
+
+    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    argv = r._build_argv("x")
+    assert "--cap-drop=ALL" in argv
+    assert "--security-opt=no-new-privileges" in argv
+    assert "--network=bridge" in argv
+    # No resource caps by default
+    assert not any(a.startswith("--memory=") for a in argv), argv
+    assert not any(a.startswith("--cpus=") for a in argv), argv
+    assert not any(a.startswith("--pids-limit=") for a in argv), argv
+    r.close()
+
+
+def test_docker_argv_resource_caps_via_env(monkeypatch, fake_runtime):
+    """NEWB_HARDEN_* env vars enable resource caps."""
+    from newb._container_runner import DockerRunner
+
+    monkeypatch.setenv("NEWB_HARDEN_MEMORY", "4g")
+    monkeypatch.setenv("NEWB_HARDEN_CPUS", "2")
+    monkeypatch.setenv("NEWB_HARDEN_PIDS_LIMIT", "256")
+
+    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    argv = r._build_argv("x")
+    assert "--memory=4g" in argv
+    assert "--cpus=2" in argv
+    assert "--pids-limit=256" in argv
+    r.close()
+
+
+def test_docker_argv_no_network_via_env(monkeypatch, fake_runtime):
+    """NEWB_HARDEN_NO_NETWORK=1 swaps bridge for none."""
+    from newb._container_runner import DockerRunner
+
+    monkeypatch.setenv("NEWB_HARDEN_NO_NETWORK", "1")
+    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    argv = r._build_argv("x")
+    assert "--network=none" in argv
+    assert "--network=bridge" not in argv
+    r.close()
+
+
 def test_apptainer_argv_mounts_project_and_forwards_token(fake_runtime):
     """ApptainerRunner mirrors DockerRunner: project bind-mount
     read-write, token forwarded as NEWB_ANTHROPIC_API_KEY env."""

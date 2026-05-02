@@ -20,7 +20,21 @@ classifiers = [
 [project.optional-dependencies]
 yaml = ["PyYAML>=6.0"]
 mcp  = ["fastmcp>=2.0"]
-all  = ["PyYAML>=6.0", "fastmcp>=2.0"]
+# Battle-tested OSS prompt-injection detector from Protect AI. Optional
+# because the model download is ~700MB; users opt in for stricter
+# pre-flight scanning beyond the in-template self-check question.
+security = [
+    "transformers>=4.40",
+    "torch>=2.0",
+    "sentencepiece>=0.1.99",
+]
+all  = [
+    "PyYAML>=6.0",
+    "fastmcp>=2.0",
+    "transformers>=4.40",
+    "torch>=2.0",
+    "sentencepiece>=0.1.99",
+]
 
 [project.scripts]
 newb = "newb._cli:cli_entrypoint"
