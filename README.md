@@ -8,6 +8,12 @@
 
 <p align="center"><b>Test your package through the eyes of a newbie agent — a fresh AI agent reads only your docs and tries to use your package. If it succeeds, your docs work.</b></p>
 
+<p align="center">
+  <a href="https://newb.readthedocs.io/">Full Documentation</a> · <code>pip install newb</code>
+</p>
+
+> Python 3.10+ · bundles [`claude-agent-sdk`](https://github.com/anthropics/claude-agent-sdk-python) (Anthropic, MIT) · newb itself AGPL-3.0-only · auth: `NEWB_ANTHROPIC_API_KEY` or local `~/.claude/` OAuth
+
 <!-- scitex-badges:start -->
 <p align="center">
   <a href="https://pypi.org/project/newb/"><img src="https://img.shields.io/pypi/v/newb.svg" alt="PyPI"></a>
@@ -18,12 +24,6 @@
   <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/license-AGPL_v3-blue.svg" alt="License: AGPL v3"></a>
 </p>
 <!-- scitex-badges:end -->
-
-<p align="center">
-  <a href="https://newb.readthedocs.io/">Full Documentation</a> · <code>pip install newb</code>
-</p>
-
-> Python 3.10+ · bundles [`claude-agent-sdk`](https://github.com/anthropics/claude-agent-sdk-python) (Anthropic, MIT) · newb itself AGPL-3.0-only · auth: `NEWB_ANTHROPIC_API_KEY` or local `~/.claude/` OAuth
 
 ---
 
