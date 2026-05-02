@@ -42,6 +42,11 @@ def _default_image() -> str:
 
 
 DEFAULT_TIMEOUT_S = 240
+# A batch of N prompts shares ONE container, so the wall-clock budget
+# must scale with N. Per-prompt budget is the old 240s; the wrapper
+# multiplies by len(prompts) and pads for container startup.
+PER_PROMPT_TIMEOUT_S = 240
+CONTAINER_STARTUP_PAD_S = 60
 
 
 class _BaseContainerRunner:
@@ -117,28 +122,67 @@ class _BaseContainerRunner:
         except ValueError:
             self.skills_path = "/work/project"
 
-    def _build_argv(self, prompt: str) -> list[str]:
+    def _build_argv(self) -> list[str]:
+        """Return the runtime argv up to (and including) the image; the
+        in-container runner reads its prompt batch from stdin."""
         raise NotImplementedError
 
-    def run(
-        self, prompt: str, *, model: str | None = None, timeout: int = DEFAULT_TIMEOUT_S
-    ) -> dict:
-        argv = self._build_argv(prompt)
+    def run_batch(
+        self,
+        prompts: list[str],
+        *,
+        model: str | None = None,
+        timeout: int | None = None,
+    ) -> list[dict]:
+        """Run all ``prompts`` in a single container invocation.
+
+        One docker/apptainer/podman startup, one project stage, one SDK
+        options object — but per-prompt independent ``query()`` calls,
+        so on-disk state (``pip install -e .``) carries between prompts
+        while conversation context does not. Returns a list of
+        ``{"result": str}`` dicts, in input order.
+        """
+        if not prompts:
+            return []
+        import json as _json
+
+        if timeout is None:
+            timeout = PER_PROMPT_TIMEOUT_S * len(prompts) + CONTAINER_STARTUP_PAD_S
+        argv = self._build_argv()
+        payload = _json.dumps({"prompts": list(prompts)})
         try:
             proc = subprocess.run(
                 argv,
+                input=payload,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
             )
         except subprocess.TimeoutExpired:
-            return {"result": f"(container timeout after {timeout}s)"}
+            stub = {"result": f"(container timeout after {timeout}s)"}
+            return [stub for _ in prompts]
         if proc.returncode != 0:
             err = (proc.stderr or proc.stdout or "").strip()[:500]
             raise RuntimeError(
                 f"{self.runtime_bin} runner failed (rc={proc.returncode}): {err}"
             )
-        return {"result": proc.stdout.strip() or "(empty response)"}
+        try:
+            envelope = _json.loads(proc.stdout)
+            results = envelope["results"]
+            assert isinstance(results, list) and len(results) == len(prompts)
+        except (_json.JSONDecodeError, KeyError, AssertionError) as e:
+            raise RuntimeError(
+                f"{self.runtime_bin} runner returned bad envelope "
+                f"({type(e).__name__}: {e}); stdout head: "
+                f"{proc.stdout[:200]!r}"
+            ) from e
+        return [{"result": (r or "").strip() or "(empty response)"} for r in results]
+
+    def run(
+        self, prompt: str, *, model: str | None = None, timeout: int = DEFAULT_TIMEOUT_S
+    ) -> dict:
+        """Single-prompt convenience wrapper around ``run_batch``."""
+        return self.run_batch([prompt], model=model, timeout=timeout)[0]
 
     def close(self) -> None:
         if self._stage_dir.exists():
@@ -150,15 +194,15 @@ class DockerRunner(_BaseContainerRunner):
 
     runtime_bin = "docker"
 
-    def _build_argv(self, prompt: str) -> list[str]:
+    def _build_argv(self) -> list[str]:
         project_host = str(self._stage_target)
-        # Forward NEWB_ANTHROPIC_API_KEY into the container; the
-        # in-container runner.py promotes it to ANTHROPIC_API_KEY for
-        # the bundled CLI. The Anthropic backend accepts both real
-        # API keys (sk-ant-api*) and Claude Code OAuth access tokens
-        # (sk-ant-oat*) on the same code path — no host-side dispatch
-        # needed.
-        argv = ["docker", "run", "--rm"]
+        # `-i` keeps stdin open so the in-container runner can read the
+        # batch JSON envelope. Forward NEWB_ANTHROPIC_API_KEY into the
+        # container; the in-container runner.py promotes it to
+        # ANTHROPIC_API_KEY for the bundled CLI. The Anthropic backend
+        # accepts both real API keys (sk-ant-api*) and Claude Code OAuth
+        # access tokens (sk-ant-oat*) on the same code path.
+        argv = ["docker", "run", "--rm", "-i"]
         argv += hardening_argv(self.hardening)
         argv += [
             "-v",
@@ -174,7 +218,7 @@ class DockerRunner(_BaseContainerRunner):
         ]
         if self._mcp_servers_env:
             argv += ["-e", f"NEWB_MCP_SERVERS_JSON={self._mcp_servers_env}"]
-        argv += [self.image, prompt]
+        argv += [self.image]
         return argv
 
 
@@ -192,8 +236,8 @@ class PodmanRunner(DockerRunner):
 
     runtime_bin = "podman"
 
-    def _build_argv(self, prompt: str) -> list[str]:
-        argv = super()._build_argv(prompt)
+    def _build_argv(self) -> list[str]:
+        argv = super()._build_argv()
         # First element is "docker"; replace with "podman".
         argv[0] = "podman"
         return argv
@@ -209,7 +253,7 @@ class ApptainerRunner(_BaseContainerRunner):
 
     runtime_bin = "apptainer"
 
-    def _build_argv(self, prompt: str) -> list[str]:
+    def _build_argv(self) -> list[str]:
         project_host = str(self._stage_target)
         argv = ["apptainer", "run", "--no-home", "--containall"]
         argv += apptainer_hardening_argv(self.hardening)
@@ -230,5 +274,5 @@ class ApptainerRunner(_BaseContainerRunner):
                 "--env",
                 f"NEWB_MCP_SERVERS_JSON={self._mcp_servers_env}",
             ]
-        argv += [f"docker://{self.image}", prompt]
+        argv += [f"docker://{self.image}"]
         return argv

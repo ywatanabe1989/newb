@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "newb"
-version = "0.18.1"
+version = "0.19.0"
 description = "A fresh AI agent tries to use your package — pytest-style. If it succeeds, your docs work."
 readme = "README.md"
 license = "AGPL-3.0-only"

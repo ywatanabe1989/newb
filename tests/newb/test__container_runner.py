@@ -43,7 +43,7 @@ def test_docker_argv_mounts_project_at_correct_path(fake_runtime):
     from newb._container_runner import DockerRunner
 
     r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = r._build_argv("hello")
+    argv = r._build_argv()
 
     project_mount = next(a for a in argv if a.endswith(":/work/project"))
     host_part, _, container_part = project_mount.partition(":")
@@ -61,7 +61,7 @@ def test_docker_argv_forwards_newb_api_key_only(fake_runtime):
     from newb._container_runner import DockerRunner
 
     r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = r._build_argv("x")
+    argv = r._build_argv()
     assert any(a == "NEWB_ANTHROPIC_API_KEY=sk-ant-api03-TEST" for a in argv), argv
     assert not any(a.startswith("ANTHROPIC_API_KEY=") for a in argv), argv
     # No credentials.json mount — the env-var path keeps newb usable in CI.
@@ -74,8 +74,8 @@ def test_docker_argv_uses_versioned_image_by_default(fake_runtime):
     from newb._container_runner import DockerRunner
 
     r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = r._build_argv("x")
-    image_tag = argv[-2]
+    argv = r._build_argv()
+    image_tag = argv[-1]
     assert image_tag.endswith(f":{newb.__version__}"), image_tag
     r.close()
 
@@ -88,7 +88,7 @@ def test_oauth_token_passes_through_opaquely(monkeypatch, fake_runtime):
     monkeypatch.setenv("NEWB_ANTHROPIC_API_KEY", "sk-ant-oat01-TEST")
 
     r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = r._build_argv("x")
+    argv = r._build_argv()
     assert any(a == "NEWB_ANTHROPIC_API_KEY=sk-ant-oat01-TEST" for a in argv), argv
     assert not any(a.startswith("ANTHROPIC_API_KEY=") for a in argv), argv
     r.close()
@@ -112,7 +112,7 @@ def test_docker_argv_includes_default_hardening(fake_runtime):
     from newb._container_runner import DockerRunner
 
     r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = r._build_argv("x")
+    argv = r._build_argv()
     assert "--cap-drop=ALL" in argv
     assert "--security-opt=no-new-privileges" in argv
     assert "--network=bridge" in argv
@@ -132,7 +132,7 @@ def test_docker_argv_resource_caps_via_env(monkeypatch, fake_runtime):
     monkeypatch.setenv("NEWB_HARDEN_PIDS_LIMIT", "256")
 
     r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = r._build_argv("x")
+    argv = r._build_argv()
     assert "--memory=4g" in argv
     assert "--cpus=2" in argv
     assert "--pids-limit=256" in argv
@@ -145,7 +145,7 @@ def test_docker_argv_no_network_via_env(monkeypatch, fake_runtime):
 
     monkeypatch.setenv("NEWB_HARDEN_NO_NETWORK", "1")
     r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = r._build_argv("x")
+    argv = r._build_argv()
     assert "--network=none" in argv
     assert "--network=bridge" not in argv
     r.close()
@@ -157,7 +157,7 @@ def test_podman_argv_swaps_only_the_binary(fake_runtime):
     from newb._container_runner import PodmanRunner
 
     podman = PodmanRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = podman._build_argv("x")
+    argv = podman._build_argv()
 
     assert argv[0] == "podman"
     # Same flag shape as docker — same hardening + same env-var forwarding.
@@ -179,7 +179,7 @@ def test_apptainer_argv_picks_up_resource_caps_from_env(monkeypatch, fake_runtim
     monkeypatch.setenv("NEWB_HARDEN_PIDS_LIMIT", "256")
 
     r = ApptainerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = r._build_argv("x")
+    argv = r._build_argv()
 
     # Apptainer takes flag value pairs, not docker-style --flag=value
     assert "--memory" in argv
@@ -197,7 +197,7 @@ def test_apptainer_argv_mounts_project_and_forwards_token(fake_runtime):
     from newb._container_runner import ApptainerRunner
 
     r = ApptainerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
-    argv = r._build_argv("x")
+    argv = r._build_argv()
     project_bind = next(a for a in argv if a.endswith(":/work/project"))
     _, _, container_part = project_bind.partition(":")
     assert container_part == "/work/project"

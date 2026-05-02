@@ -296,15 +296,34 @@ def run(
             ),
         }
         install_cmd = _INSTALL_MODE_CMD.get(install_mode, _INSTALL_MODE_CMD["editable"])
+        # Build a single batch covering every (key, run-index) pair so
+        # the entire template runs in ONE container invocation. The
+        # in-container runner shares /work/project's filesystem state
+        # across prompts (so `pip install -e .` from post_install_check
+        # carries forward) but uses an independent ``query()`` per
+        # prompt so conversation context never leaks between answers.
+        batch_keys: list[tuple[str, int]] = []
+        batch_prompts: list[str] = []
         for key, prompt in prompts.items():
-            answers = []
             rendered = prompt.format(
                 skills_path=skills_path,
                 install_cmd=install_cmd,
             )
-            for _ in range(max(1, int(runs_per_prompt))):
-                result = runner.run(rendered, model=model)
-                answers.append(_extract_text(result))
+            for run_idx in range(max(1, int(runs_per_prompt))):
+                batch_keys.append((key, run_idx))
+                batch_prompts.append(rendered)
+        run_batch = getattr(runner, "run_batch", None)
+        if callable(run_batch):
+            batch_results = run_batch(batch_prompts, model=model)
+        else:
+            # Test-seam runners that only implement .run(prompt) — fall
+            # back to per-prompt calls. Real container runners always
+            # implement run_batch (single docker startup).
+            batch_results = [runner.run(p, model=model) for p in batch_prompts]
+        per_key: Dict[str, list] = {}
+        for (key, _), result in zip(batch_keys, batch_results):
+            per_key.setdefault(key, []).append(_extract_text(result))
+        for key, answers in per_key.items():
             out[key] = answers[0] if runs_per_prompt == 1 else answers
 
         test_results = []

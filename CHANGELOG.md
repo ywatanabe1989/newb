@@ -4,6 +4,46 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.19.0] — 2026-05-02
+
+### Changed (BREAKING for forks of `containers/runner.py`)
+
+- **One container per `newb` invocation** instead of one per question.
+  Previously, each of the 6 template questions spawned its own
+  `docker run --rm`; staged the project; started the SDK; ran one
+  query; tore down. For 6 questions that's 6× container startup,
+  6× project staging, 6× pip-install (when `post_install_check`
+  ran). The new architecture batches all prompts into a single
+  container; the in-container runner reads a JSON envelope on
+  stdin (`{"prompts": [...]}`), runs each prompt as an independent
+  `query()` so conversation context never leaks between answers,
+  and emits a JSON envelope on stdout (`{"results": [...]}`).
+  On-disk state (e.g. `pip install -e .` from
+  `post_install_check`) persists across prompts because the
+  container's filesystem persists across the per-prompt
+  `query()` calls.
+- New `_BaseContainerRunner.run_batch(prompts)`. The single-prompt
+  `runner.run(prompt)` is now a thin wrapper around
+  `run_batch([prompt])[0]`; existing test seams keep working.
+- `_build_argv()` no longer takes a `prompt` arg — argv stops at
+  the image tag and the prompt(s) flow via stdin. Forks of
+  `containers/runner.py` need to read the JSON envelope from
+  stdin or fall back to the legacy single-prompt argv path
+  (still supported for back-compat).
+- Container timeout is now per-batch and scales with `N` prompts:
+  `PER_PROMPT_TIMEOUT_S * len(prompts) + CONTAINER_STARTUP_PAD_S`.
+
+### Why
+
+Empirically, against `scitex-io`: the old per-question architecture
+ran 6 separate containers; `post_install_check` would
+`pip install -e .` in a cold container that no other question
+could see, so the install couldn't actually verify "everything
+works after install". The new architecture lets
+`post_install_check` write install-state that subsequent prompts
+read; running against `scitex-io` now produces
+`INSTALL: ok / IMPORT: ok / CLI: ok` with concrete evidence.
+
 ## [0.18.1] — 2026-05-02
 
 ### Fixed
