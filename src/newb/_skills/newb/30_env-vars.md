@@ -29,19 +29,41 @@ export NEWB_ANTHROPIC_API_KEY=$(jq -r .claudeAiOauth.accessToken ~/.claude/.cred
 
 | Variable | Purpose | Default | Type |
 |---|---|---|---|
-| `NEWB_DOCKER_IMAGE` | Override the container image used by `--runtime docker` / `apptainer`. | `ghcr.io/ywatanabe1989/newb-runner:latest` | str |
+| `NEWB_DOCKER_IMAGE` | Override the container image used by `--runtime docker / podman / apptainer`. | `ghcr.io/ywatanabe1989/newb-runner:<newb-version>` | str |
 | `NEWB_MODEL` | Override the Claude model id passed to the SDK. The CLI's `--model` flag wins when both are set. | `claude-haiku-4-5` | str |
+| `NEWB_PIP_CACHE_DIR` | Host directory mounted into the container as the agent's `~/.cache/pip`. Local-dev escape hatch — leave unset for CI (cold install is the honest test). | unset | path |
 
-## SDK-internal (set by the runner, read by `containers/runner.py`)
+## Hardening (configurable, opt-in)
 
 | Variable | Purpose | Default | Type |
 |---|---|---|---|
-| `NEWB_CWD` | Working directory the SDK uses inside the container. | `/work/project` | path |
-| `NEWB_SKILLS_PATH` | Absolute path inside the container of the focused docs subdir; interpolated into prompts via `{skills_path}`. | `/work/project` | path |
+| `NEWB_HARDEN_CAP_DROP_ALL` | Drop all Linux kernel capabilities. | `1` | bool |
+| `NEWB_HARDEN_NO_NEW_PRIVS` | Block setuid privilege escalation. | `1` | bool |
+| `NEWB_HARDEN_NO_NETWORK` | If 1, `--network=none` (breaks pip + SDK). | `0` | bool |
+| `NEWB_HARDEN_MEMORY` | Container memory cap (e.g. `4g`). | unlimited | str |
+| `NEWB_HARDEN_CPUS` | Container CPU cap (cores). | unlimited | str |
+| `NEWB_HARDEN_PIDS_LIMIT` | Container PID cap. | unlimited | int |
+| `NEWB_HARDEN_TMPFS_NOEXEC` | Mount `/tmp` with `noexec,nosuid`. | `0` | bool |
 
-These two are produced by `_container_runner.DockerRunner` /
-`ApptainerRunner` and consumed by the in-container `runner.py`. Users
-don't normally set them.
+CLI flags (`--harden-memory`, `--harden-cpus`, …) override these.
+
+## Meta (env-loader)
+
+| Variable | Purpose |
+|---|---|
+| `NEWB_ENV_SRC` | Path to a `.src` file (or directory of `.src` files) sourced at startup. SciTeX standard env-loader pattern. Generate a template with `newb env-template -o ~/.scitex/newb/local.src`. |
+
+## SDK-internal (set by the host runner, read by `containers/runner.py`)
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `NEWB_CWD` | Working directory the SDK uses inside the container. | `/work/project` |
+| `NEWB_SKILLS_PATH` | Absolute path inside the container of the focused docs subdir; interpolated into prompts via `{skills_path}`. | `/work/project` |
+| `NEWB_SCOPE` | `all` (full agentic, `bypassPermissions`) or `docs` (read-only audit, `acceptEdits` + `Read/Glob/Grep` allowlist). | `all` |
+| `NEWB_MCP_SERVERS_JSON` | JSON-encoded `mcp_servers` table — produced from `[tool.newb] mcp_servers` and decoded by `containers/runner.py` for `ClaudeAgentOptions(mcp_servers=...)`. | unset |
+
+These are produced by the host runner and consumed by the
+in-container `runner.py`. Users don't normally set them.
 
 ## What newb does NOT read
 

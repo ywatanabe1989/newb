@@ -31,41 +31,40 @@
 
 | # | Problem | Solution |
 |---|---------|----------|
-| 1 | **What a package is for and how it works isn't obvious.** Authors know their own surface; readers don't. | newb asks four canonical questions automatically — *what for*, *problems solved*, *quick start*, *when not to use* — and reports back what a fresh reader actually understood. |
-| 2 | **In this era, the first-class reader of a package is an AI agent**, not a human scrolling through README hash-anchors. Docs that read well to humans can still be unusable to agents. | newb tests docs through the actual reader: a fresh `claude-agent-sdk` session with `setting_sources=[]`, `allowed_tools=["Read"]`, `cwd=<staged copy>` — no host CLAUDE.md, no Bash, no Write. |
+| 1 | **What a package is for and how it works isn't obvious.** Authors know their own surface; readers don't. | newb asks six canonical questions automatically — *what for*, *problems solved*, *quick start*, *when not to use*, *post-install check*, *prompt-injection sweep* — and reports back what a fresh reader actually understood (and whether install + import + smoke-run actually work). |
+| 2 | **In this era, the first-class reader of a package is an AI agent**, not a human scrolling through README hash-anchors. Docs that read well to humans can still be unusable to agents. | newb mimics a newbie *user*, not a docs reader. A fresh `claude-agent-sdk` session inside a hardened container with `setting_sources=[]` (no host CLAUDE.md), full agentic tools (Read/Write/Edit/Bash/Glob/Grep), and `cwd=<staged copy>` — install, import, run, report. |
 | 3 | **Learning a new package is hard for users.** No quick start, missing edge cases, undocumented "when not to use" — all silent failures. | A failing newb run names exactly which question the docs couldn't answer, with the agent's own response — surfacing gaps before users hit them. |
-| 4 | **Maintaining doc quality across many packages doesn't scale.** Manual review per release, per package, per branch is the bottleneck for ecosystem-wide quality. | One CLI per package; JSON output for CI; runs in isolation (`host` / `docker` / `apptainer`); pluggable graders (substring + LLM judge) via `tests_newb.yaml`. Plug into a CI matrix and quality scales with your portfolio. |
+| 4 | **Maintaining doc quality across many packages doesn't scale.** Manual review per release, per package, per branch is the bottleneck for ecosystem-wide quality. | One CLI per package; JSON output for CI; runs in container isolation (`docker` / `podman` / `apptainer`); pluggable graders (substring + LLM judge) via `tests_newb.yaml`. Plug into a CI matrix and quality scales with your portfolio. |
 
 ## How it works
 
 ```
-HOST                                                       DOCKER CONTAINER (ghcr.io/.../newb-runner)
+HOST                                                       CONTAINER (ghcr.io/ywatanabe1989/newb-runner:<v>)
 ┌──────────────────────────────────┐                       ┌──────────────────────────────────────────────┐
 │  Your project root               │                       │  /work/project   (rw bind-mount)             │
 │  (auto-detected — dir with       │                       │    ├── README.md, src/, tests/, examples/    │
 │   .git / pyproject.toml /        │                       │    ├── _skills/<pkg>/   ← prompt focus       │
 │   setup.py / package.json /      │                       │    └── tests_newb.yaml   (optional)          │
 │   Cargo.toml / go.mod)           │                       │                                              │
-│                                  │   docker run --rm     │  claude-agent-sdk (Anthropic, MIT)           │
+│                                  │ docker run --rm -i    │  claude-agent-sdk (Anthropic, MIT)           │
 │  ├── stage to                    │   --network bridge    │    ClaudeAgentOptions(                       │
-│  │   /tmp/newb-stage-XXX/        │   -v <staged>:rw      │      cwd="/work/project",                    │
-│  │   project/   (rw — agent      │   -e ANTHROPIC_API…   │      allowed_tools=["Read","Write","Edit",   │
-│  │   needs to pip install)       │   -e NEWB_MODEL       │                     "Bash","Glob","Grep"],   │
-│  │                               │   -e NEWB_SKILLS_PATH │      permission_mode="acceptEdits",          │
-│  ├── filter via                  │ ────────────────────► │      setting_sources=[],   # no host CLAUDE  │
-│  │   `git ls-files --cached      │                       │      max_turns=15,                           │
-│  │     --others                  │                       │    )                                         │
-│  │     --exclude-standard`       │                       │                                              │
-│  │   (or hardcoded ignore        │   stdout = answer     │  agent can ACTUALLY try the package:         │
-│  │   list for non-git dirs;      │ ◄──────────────────── │    pip install -e .                          │
-│  │   broken symlinks dropped)    │                       │    python -c "import <pkg>"                  │
-│  │                               │                       │    <pkg> --help                              │
-│  └── one prompt per question     │                       │    write a small example, run a test         │
-│      from the chosen template    │                       │  Returns ResultMessage.result per query.     │
-│      + one per tests_newb.yaml   │                       │                                              │
-│      (questions sent in fresh    │                       │                                              │
-│       sessions — no shared       │                       │                                              │
-│       conversation state)        │                       │                                              │
+│  │   /tmp/newb-stage-XXX/        │   --cap-drop=ALL      │      cwd="/work/project",                    │
+│  │   project/   (rw — agent      │   -v <staged>:rw      │      permission_mode="bypassPermissions",    │
+│  │   needs to pip install)       │   -e NEWB_…           │      setting_sources=[],   # no host CLAUDE  │
+│  │                               │ ────────────────────► │      max_turns=15,                           │
+│  ├── filter via                  │   stdin:              │    )   # --scope docs uses acceptEdits +     │
+│  │   `git ls-files --cached      │   {"prompts":[…]}     │        # allowed_tools=["Read","Glob","Grep"]│
+│  │     --others                  │                       │                                              │
+│  │     --exclude-standard`       │   stdout:             │  agent can ACTUALLY try the package:         │
+│  │   (or hardcoded ignore        │   {"results":[…]}     │    pip install -e .                          │
+│  │   list for non-git dirs;      │ ◄──────────────────── │    python -c "import <pkg>"                  │
+│  │   broken symlinks dropped)    │                       │    <pkg> --help                              │
+│  │                               │                       │    write a small example, run a test         │
+│  └── ALL prompts batched into    │                       │                                              │
+│      ONE container; per-prompt   │                       │  One container per `newb` run. Per-prompt    │
+│      independent query() so      │                       │  query() so context never leaks; on-disk     │
+│      conversations are isolated, │                       │  state (pip install) DOES persist across     │
+│      filesystem state shared     │                       │  prompts within the run.                     │
 └──────────────────────────────────┘                       └──────────────────────────────────────────────┘
                 │
                 ▼
@@ -238,14 +237,22 @@ newb 0.9 dropped the `host` runtime — full agentic permissions on the
 host are unsafe (agent could `rm -rf` your projects, `pip install` into
 your global env). **The container is the boundary, not the SDK
 options** — inside, the agent gets full `Read+Write+Edit+Bash+Glob+Grep`
-+ `permission_mode="acceptEdits"` + `max_turns=15` so it can actually
-try the package (`pip install -e .`, `python -c "import pkg"`,
-`<pkg> --help`, write a small example).
++ `permission_mode="bypassPermissions"` (for `--scope all`, the
+default) + `max_turns=15` so it can actually try the package
+(`pip install -e .`, `python -c "import pkg"`, `<pkg> --help`, write
+a small example). `--scope docs` switches to `acceptEdits` +
+`allowed_tools=["Read","Glob","Grep"]` for read-only audits.
 
-| Value | Where the agent runs | Isolation | Speed |
-|---|---|---|---|
-| `docker` *(default)* | `ghcr.io/ywatanabe1989/newb-runner`, project bind-mounted at `/work/project` | hard (filesystem + network ns) | ~15-30 s/q after pull |
-| `apptainer` | same image via `apptainer run docker://…` (HPC where docker isn't allowed) | hard (rootless, `--no-home --containall`) | ~20-40 s/q |
+Since 0.19.0 all prompts in a run share **one** container — per-prompt
+`query()` keeps conversations isolated, but on-disk state
+(`pip install -e .` from `post_install_check`) persists across
+prompts within the run.
+
+| Value | Where the agent runs | Isolation |
+|---|---|---|
+| `docker` *(default)* | `ghcr.io/ywatanabe1989/newb-runner`, project bind-mounted at `/work/project` | hard (filesystem + network ns) |
+| `podman` | same image, rootless, no daemon | hard (filesystem + network ns) |
+| `apptainer` | same image via `apptainer run docker://…` (HPC where docker isn't allowed) | hard (rootless, `--no-home --containall`) |
 
 The staged copy mounted into the container respects the project's
 `.gitignore` so build artifacts, virtualenvs, agent state, etc. never
