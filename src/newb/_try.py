@@ -212,7 +212,7 @@ _INSTALL_MODE_CMD = {
 }
 
 
-def test(
+def run(
     skills_dir: Union[Path, str],
     *,
     model: str = "claude-haiku-4-5",

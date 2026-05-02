@@ -60,12 +60,12 @@ newb list-python-apis                       # public Python surface
 ```python
 import newb
 
-# Bare-module callable (PEP 562) — equivalent to newb.test(...)
+# Bare-module callable (PEP 562) — equivalent to newb.run(...)
 report = newb("./")
 print(report["what_for"])
 
 # Explicit form
-report = newb.test(
+report = newb.run(
     "./",
     model="claude-haiku-4-5",
     template="python-package",     # or "cli-tool"

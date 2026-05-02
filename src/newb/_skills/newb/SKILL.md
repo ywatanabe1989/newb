@@ -22,7 +22,7 @@ prompt names the gap.
 
 | Pattern | Use when | Module |
 |---|---|---|
-| **One-shot probe** (`newb <dir>`) | Smoke check on a single docs/skills tree | `newb._cli`, `newb.test` |
+| **One-shot probe** (`newb <dir>`) | Smoke check on a single docs/skills tree | `newb._cli`, `newb.run` |
 | **Author tests** (`tests_newb.yaml`) | Per-package boundary tests (must contain X, must NOT hallucinate Y, must satisfy judge criteria) | `newb._try._load_tests`, `_grade` |
 
 ## Sub-skills

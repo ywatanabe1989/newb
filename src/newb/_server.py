@@ -59,7 +59,7 @@ async def newb_verify(
     runs_per_prompt
         Repeat each prompt N times for stability measurement.
     """
-    from ._try import test as _run
+    from ._try import run as _run
 
     report = _run(
         source,
@@ -141,7 +141,7 @@ async def newb_render_markdown(report: dict) -> str:
     return render_markdown(report)
 
 
-# Public Python API parity (audit-mcp-tools §6) — `newb.test` /
+# Public Python API parity (audit-mcp-tools §6) — `newb.run` /
 # mirrors of the Python API exposed as MCP tools so a
 # tool-using agent has the same vocabulary as the import-using one.
 # Both delegate to newb_verify.
@@ -155,7 +155,7 @@ async def newb_run(
     model: str = "claude-haiku-4-5",
     runs_per_prompt: int = 1,
 ) -> str:
-    """Alias for ``newb_verify`` — mirrors the ``newb.test`` Python API."""
+    """Alias for ``newb_verify`` — mirrors the ``newb.run`` Python API."""
     return await newb_verify(  # type: ignore[func-returns-value]
         source=source,
         template=template,

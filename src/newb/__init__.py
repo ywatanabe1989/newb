@@ -11,10 +11,10 @@ Quick start::
     print(report["what_for"])
 
     # Equivalent explicit form (mirrors `pytest.main()`):
-    report = newb.test("./src/mypkg/_skills/mypkg")
+    report = newb.run("./src/mypkg/_skills/mypkg")
 
 Both call the same function. Use the bare-module form in scripts; use
-``newb.test`` in code where the explicit verb mirrors pytest conventions.
+``newb.run`` in code where the explicit verb mirrors pytest conventions.
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ try:
 except ImportError:  # pragma: no cover — stdlib module is always present
     types = None  # type: ignore[assignment]
 
-from ._try import render_markdown, test
+from ._try import render_markdown, run
 
 # Resolve version from installed metadata so source edits don't drift
 # the in-tree string. Fallback uses a PEP 440 local segment so an
@@ -45,14 +45,14 @@ try:
 except ImportError:
     __version__ = "0.0.0+local"
 
-__all__ = ["__version__", "render_markdown", "test"]
+__all__ = ["__version__", "render_markdown", "run"]
 
 
 # Module-callable shortcut (PEP 562, Python 3.7+). Lets ``import newb;
-# newb("./skills")`` work as a one-liner alias for ``newb.test``.
+# newb("./skills")`` work as a one-liner alias for ``newb.run``.
 class _NewbModule(types.ModuleType):
     def __call__(self, skills_dir, **kwargs):  # type: ignore[no-untyped-def]
-        return test(skills_dir, **kwargs)
+        return run(skills_dir, **kwargs)
 
 
 sys.modules[__name__].__class__ = _NewbModule

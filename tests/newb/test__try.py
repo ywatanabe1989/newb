@@ -14,8 +14,8 @@ def test_module_imports_and_exports_callable():
     import newb
 
     assert callable(newb.render_markdown)
-    assert callable(newb.test)
-    # Module is callable as a shortcut for newb.test (PEP 562 trick).
+    assert callable(newb.run)
+    # Module is callable as a shortcut for newb.run (PEP 562 trick).
     assert callable(newb)
     # `self_explain` was the deprecated alias — removed in 0.12.0.
     assert not hasattr(newb, "self_explain")
@@ -74,11 +74,11 @@ def _make_skills(tmp_path):
 
 
 def test_run_returns_expected_keys(tmp_path):
-    from newb import test
+    from newb import run
 
     skills = _make_skills(tmp_path)
     runner = _FakeRunner()
-    result = test(skills, _runner=runner)
+    result = run(skills, _runner=runner)
 
     assert result["package"] == "mypkg"
     assert "what_for" in result
@@ -97,11 +97,11 @@ def test_run_returns_expected_keys(tmp_path):
 
 
 def test_run_runs_per_prompt_returns_lists(tmp_path):
-    from newb import test
+    from newb import run
 
     skills = _make_skills(tmp_path)
     runner = _FakeRunner()
-    result = test(skills, runs_per_prompt=2, _runner=runner)
+    result = run(skills, runs_per_prompt=2, _runner=runner)
 
     assert isinstance(result["what_for"], list)
     assert len(result["what_for"]) == 2
@@ -111,28 +111,28 @@ def test_run_runs_per_prompt_returns_lists(tmp_path):
 
 
 def test_run_accepts_string_path(tmp_path):
-    from newb import test
+    from newb import run
 
     skills = _make_skills(tmp_path)
     runner = _FakeRunner()
-    result = test(str(skills), _runner=runner)
+    result = run(str(skills), _runner=runner)
     assert result["package"] == "mypkg"
 
 
 def test_run_missing_dir_raises():
-    from newb import test
+    from newb import run
 
     with pytest.raises(FileNotFoundError):
-        test("/nonexistent/path/__no__")
+        run("/nonexistent/path/__no__")
 
 
 def test_run_no_md_files_raises(tmp_path):
-    from newb import test
+    from newb import run
 
     empty = tmp_path / "empty"
     empty.mkdir()
     with pytest.raises(FileNotFoundError):
-        test(empty)
+        run(empty)
 
 
 # ---------------------------------------------------------------------------
@@ -141,10 +141,10 @@ def test_run_no_md_files_raises(tmp_path):
 
 
 def test_render_markdown_shape(tmp_path):
-    from newb import render_markdown, test
+    from newb import render_markdown, run
 
     skills = _make_skills(tmp_path)
-    result = test(skills, _runner=_FakeRunner())
+    result = run(skills, _runner=_FakeRunner())
     md = render_markdown(result)
 
     assert "## Skills Quality (verified by agent)" in md
@@ -269,7 +269,7 @@ class _JudgeRunner:
 
 def test_run_with_yaml_tests_records_pass_fail(tmp_path):
     pytest.importorskip("yaml")
-    from newb import test
+    from newb import run
 
     skills = _make_skills(tmp_path)
     (skills / "tests_newb.yaml").write_text(
@@ -281,7 +281,7 @@ def test_run_with_yaml_tests_records_pass_fail(tmp_path):
         "  judge: Must say no parallel.\n"
     )
     runner = _JudgeRunner()
-    result = test(skills, _runner=runner)
+    result = run(skills, _runner=runner)
 
     assert "tests" in result
     assert "tests_summary" in result
@@ -292,14 +292,14 @@ def test_run_with_yaml_tests_records_pass_fail(tmp_path):
 
 def test_run_judge_fail_reflected_in_summary(tmp_path):
     pytest.importorskip("yaml")
-    from newb import test
+    from newb import run
 
     skills = _make_skills(tmp_path)
     (skills / "tests_newb.yaml").write_text(
         "- name: judge_check\n  prompt: Q\n  judge: criteria\n"
     )
     runner = _JudgeRunner(verdict="FAIL: not enough detail")
-    result = test(skills, _runner=runner)
+    result = run(skills, _runner=runner)
 
     assert result["tests_summary"]["passed"] == 0
     assert result["tests"][0]["judge"]["passed"] is False

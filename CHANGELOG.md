@@ -4,40 +4,26 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
-## [0.20.0] — 2026-05-02
+## [0.21.0] — 2026-05-02
 
-### Changed (BREAKING — public API rename)
+### Changed (BREAKING — reverts the 0.20.0 rename)
 
-- **`newb.run()` → `newb.test()`**. The framing is "newbie-agent
-  package tester" — the function name now matches.
-  - `from newb import run` → `from newb import test`
-  - `newb.run(".")` → `newb.test(".")`
-  - `newb(".")` (PEP 562 bare-module callable) is unchanged and
-    still works.
-- Module file `_try.py` retained (private; `_test.py` would collide
-  with pytest's default `*_test.py` collection pattern). The function
-  inside it is now `def test(...)`.
-- No back-compat alias. Pre-1.0 — clean break, no shim. Update your
-  imports.
+- **`newb.test()` → back to `newb.run()`**. The 0.20.0 rename was
+  a misjudgment. What `newb` actually does is closer to a "run"
+  than a "test": one container, multiple prompts, multi-turn
+  agentic exploration with persistent on-disk state. `test()`
+  suggested a one-shot pass/fail check; `run()` matches the
+  mechanism and the architecture invariants documented in 0.19.0.
+  - `from newb import test` → `from newb import run`
+  - `newb.test(".")` → `newb.run(".")`
+  - `newb(".")` (PEP 562 bare-module callable) is unchanged.
+- No back-compat alias. Pre-1.0; users from 0.20.0 update their
+  imports. The 0.20.0 release was on PyPI for ~1 hour.
 
-### Migration
+## [0.20.0] — 2026-05-02 — superseded by 0.21.0
 
-```python
-# before (≤0.19.1)
-import newb
-report = newb.run(".")
-from newb import run
-report = run(".")
-
-# after (0.20.0+)
-import newb
-report = newb.test(".")
-from newb import test
-report = test(".")
-
-# unchanged — bare-module callable still works
-report = newb(".")
-```
+Renamed `newb.run()` → `newb.test()`. **Reverted in 0.21.0.** Use
+`newb.run()` on 0.21.0+. See the 0.21.0 entry above.
 
 ## [0.19.1] — 2026-05-02
 
@@ -273,7 +259,7 @@ read; running against `scitex-io` now produces
 
 Pre-1.0 cleanup. Simplicity over compat.
 
-- Removed `newb.self_explain` alias (use `newb.test` or bare-module callable).
+- Removed `newb.self_explain` alias (use `newb.run` or bare-module callable).
 - Removed `newb_self_explain` MCP tool.
 - Removed `_PROMPT_*` re-exports in `_try.py` (templates now live in
   `question_templates/<name>.py`).
