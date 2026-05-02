@@ -20,7 +20,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from ._hardening import HardeningOptions, hardening_argv
+from ._hardening import HardeningOptions, apptainer_hardening_argv, hardening_argv
 from ._stage import stage_project
 
 
@@ -203,11 +203,9 @@ class ApptainerRunner(_BaseContainerRunner):
 
     def _build_argv(self, prompt: str) -> list[str]:
         project_host = str(self._stage_target)
-        return [
-            "apptainer",
-            "run",
-            "--no-home",
-            "--containall",
+        argv = ["apptainer", "run", "--no-home", "--containall"]
+        argv += apptainer_hardening_argv(self.hardening)
+        argv += [
             "--bind",
             f"{project_host}:/work/project",
             "--env",
@@ -221,3 +219,4 @@ class ApptainerRunner(_BaseContainerRunner):
             f"docker://{self.image}",
             prompt,
         ]
+        return argv

@@ -177,6 +177,41 @@ def hardening_argv(opts: HardeningOptions | None = None) -> list[str]:
     return argv
 
 
+def apptainer_hardening_argv(opts: HardeningOptions | None = None) -> list[str]:
+    """Apptainer-equivalent of ``hardening_argv``.
+
+    Apptainer's flag set differs from docker's; not every docker flag
+    has a direct apptainer counterpart. Best-effort parity for the
+    subset that maps cleanly:
+
+    - ``--memory`` (apptainer accepts the same value syntax: ``2g``).
+    - ``--cpus``.
+    - ``--pids-limit`` (cgroup-based, supported in modern apptainer).
+    - ``--net --network none`` for ``no_network``. Default is the host
+      network (apptainer's default; analog of docker's ``--network=bridge``).
+
+    Not mapped (silent — caller should not assume parity):
+
+    - ``--cap-drop=ALL`` — apptainer is rootless so capability drop is
+      mostly moot; the underlying user namespace already restricts.
+    - ``--security-opt=no-new-privileges`` — apptainer's security model
+      handles privilege escalation via user namespaces, not this flag.
+    - ``--tmpfs`` for /tmp — different syntax (``--no-mount tmp``); off
+      by default to match docker behavior here.
+    """
+    opts = opts or HardeningOptions()
+    argv: list[str] = []
+    if opts.memory is not None:
+        argv += ["--memory", str(opts.memory)]
+    if opts.cpus is not None:
+        argv += ["--cpus", str(opts.cpus)]
+    if opts.pids_limit is not None:
+        argv += ["--pids-limit", str(opts.pids_limit)]
+    if opts.no_network:
+        argv += ["--net", "--network", "none"]
+    return argv
+
+
 def hardening_summary(opts: HardeningOptions | None = None) -> dict:
     """Summary for the transparency report ``security:`` section."""
     opts = opts or HardeningOptions()

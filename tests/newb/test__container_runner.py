@@ -168,6 +168,29 @@ def test_podman_argv_swaps_only_the_binary(fake_runtime):
     podman.close()
 
 
+def test_apptainer_argv_picks_up_resource_caps_from_env(monkeypatch, fake_runtime):
+    """ApptainerRunner forwards memory/cpus/pids-limit from
+    NEWB_HARDEN_* env vars (best-effort parity with docker; not all
+    flags map cleanly — see apptainer_hardening_argv docstring)."""
+    from newb._container_runner import ApptainerRunner
+
+    monkeypatch.setenv("NEWB_HARDEN_MEMORY", "4g")
+    monkeypatch.setenv("NEWB_HARDEN_CPUS", "2")
+    monkeypatch.setenv("NEWB_HARDEN_PIDS_LIMIT", "256")
+
+    r = ApptainerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    argv = r._build_argv("x")
+
+    # Apptainer takes flag value pairs, not docker-style --flag=value
+    assert "--memory" in argv
+    assert argv[argv.index("--memory") + 1] == "4g"
+    assert "--cpus" in argv
+    assert argv[argv.index("--cpus") + 1] == "2"
+    assert "--pids-limit" in argv
+    assert argv[argv.index("--pids-limit") + 1] == "256"
+    r.close()
+
+
 def test_apptainer_argv_mounts_project_and_forwards_token(fake_runtime):
     """ApptainerRunner mirrors DockerRunner: project bind-mount
     read-write, token forwarded as NEWB_ANTHROPIC_API_KEY env."""
