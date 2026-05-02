@@ -417,6 +417,48 @@ def render_markdown(payload: Dict[str, Any]) -> str:
             "> " + _block(payload["when_not_to_use"]).replace("\n", "\n> "),
             "",
         ]
+    if "post_install_check" in payload:
+        parts += [
+            "**Q: Does it install + import + smoke-run cleanly?**",
+            "",
+            _block(payload["post_install_check"]).strip(),
+            "",
+        ]
+    if "subcommand_tree" in payload:
+        parts += [
+            "**Q: What subcommands / CLI surface does it expose?**",
+            "",
+            _block(payload["subcommand_tree"]).strip(),
+            "",
+        ]
+    if "typical_usage" in payload:
+        parts += [
+            "**Q: What does typical usage look like?**",
+            "",
+            _block(payload["typical_usage"]).strip(),
+            "",
+        ]
+    if "common_pitfall" in payload:
+        parts += [
+            "**Q: What's a common pitfall?**",
+            "",
+            "> " + _block(payload["common_pitfall"]).replace("\n", "\n> "),
+            "",
+        ]
+    if "install_and_help" in payload:
+        parts += [
+            "**Q: How do I install it and get help?**",
+            "",
+            _block(payload["install_and_help"]).strip(),
+            "",
+        ]
+    if "prompt_injection_check" in payload:
+        parts += [
+            "**Q: Prompt-injection sweep across the docs?**",
+            "",
+            _block(payload["prompt_injection_check"]).strip(),
+            "",
+        ]
     boundary = payload.get("tests") or []
     if boundary:
         parts += ["### Boundary tests", ""]

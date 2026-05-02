@@ -62,10 +62,19 @@ async def _run(prompt: str, model: str) -> str:
     #   - "docs" — read-only audit mode. Agent gets just Read/Glob/Grep
     #     so it can scan the project but not modify it or shell out.
     scope = os.environ.get("NEWB_SCOPE", "all").lower()
+    # Container is the boundary, not the SDK options. Inside, we want
+    # full agentic execution so post_install_check can actually run
+    # `pip install -e .` etc. — `acceptEdits` only auto-approves edits
+    # and would prompt on Bash, deadlocking the non-interactive runner.
+    # `bypassPermissions` is the SDK equivalent of
+    # `--dangerously-skip-permissions`. Safe here because the container
+    # is single-shot, network is bridge-only, and the staged project is
+    # the agent's whole filesystem horizon.
+    permission_mode = "bypassPermissions" if scope == "all" else "acceptEdits"
     sdk_kwargs = {
         "model": model,
         "cwd": os.environ.get("NEWB_CWD", "/work/project"),
-        "permission_mode": "acceptEdits",
+        "permission_mode": permission_mode,
         "setting_sources": [],
         "max_turns": 15,
     }

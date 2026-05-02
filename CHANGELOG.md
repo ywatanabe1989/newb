@@ -4,6 +4,27 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.18.1] — 2026-05-02
+
+### Fixed
+
+- **`post_install_check` could never run pip** — the in-container
+  SDK was using `permission_mode="acceptEdits"`, which only
+  auto-approves edits, so any `Bash` invocation
+  (`pip install -e .`, `python -c "import pkg"`, `<pkg> --help`)
+  hit a permission prompt and failed in the non-interactive runner.
+  Switched to `permission_mode="bypassPermissions"` (SDK equivalent
+  of `--dangerously-skip-permissions`) for `--scope all`. Safe
+  because the container is the boundary, single-shot, and the
+  staged project is the agent's whole filesystem horizon.
+  `--scope docs` still uses `acceptEdits` + an `allowed_tools`
+  allowlist that excludes `Bash`/`Write`/`Edit`.
+- `render_markdown` only emitted 4 of the 6 questions in
+  `python-package` and 2 of 6 in `cli-tool`. Added missing branches
+  for `post_install_check`, `prompt_injection_check`,
+  `install_and_help`, `subcommand_tree`, `typical_usage`,
+  `common_pitfall`.
+
 ## [0.18.0] — 2026-05-02
 
 ### Decided not to do
