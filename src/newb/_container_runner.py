@@ -141,12 +141,21 @@ class _BaseContainerRunner:
         in-container runner reads its prompt batch from stdin."""
         raise NotImplementedError
 
+    def _with_env(self, argv: list[str], name: str, value: str) -> list[str]:
+        """Insert an env-var pair before the image tag. Docker/podman use
+        ``-e NAME=VALUE``; apptainer uses ``--env NAME=VALUE``. Last argv
+        element is always the image (or ``docker://image``) — splice in
+        front of it."""
+        flag = "--env" if self.runtime_bin == "apptainer" else "-e"
+        return argv[:-1] + [flag, f"{name}={value}", argv[-1]]
+
     def run_batch(
         self,
         prompts: list[str],
         *,
         model: str | None = None,
         timeout: int | None = None,
+        verbosity: int = 0,
     ) -> list[dict]:
         """Run all ``prompts`` in a single container invocation.
 
@@ -155,20 +164,44 @@ class _BaseContainerRunner:
         so on-disk state (``pip install -e .``) carries between prompts
         while conversation context does not. Returns a list of
         ``{"result": str}`` dicts, in input order.
+
+        ``verbosity`` (0..3):
+          * 0: stderr captured silently (default).
+          * 1: same as 0 host-side; container also receives
+            ``NEWB_VERBOSE=1`` so it emits per-prompt timing on stderr,
+            replayed at the end if the run fails.
+          * 2: stderr inherited — the container's per-prompt timing
+            and SDK chatter stream live to the host.
+          * 3: -vv plus the host logs the raw container argv.
         """
         if not prompts:
             return []
         import json as _json
+        import sys as _sys
 
         if timeout is None:
             timeout = PER_PROMPT_TIMEOUT_S * len(prompts) + CONTAINER_STARTUP_PAD_S
         argv = self._build_argv()
+        # Inject per-prompt timing inside the container when -v or higher.
+        if verbosity >= 1:
+            argv = self._with_env(argv, "NEWB_VERBOSE", str(verbosity))
+        if verbosity >= 3:
+            print(
+                f"newb: container argv: {' '.join(argv)}",
+                file=_sys.stderr,
+                flush=True,
+            )
         payload = _json.dumps({"prompts": list(prompts)})
+        # -vv+ inherits stderr so the container's progress lines land
+        # on the host stderr in real time (otherwise they're captured
+        # and only shown on failure).
+        stderr_dest = None if verbosity >= 2 else subprocess.PIPE
         try:
             proc = subprocess.run(
                 argv,
                 input=payload,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=stderr_dest,
                 text=True,
                 timeout=timeout,
             )

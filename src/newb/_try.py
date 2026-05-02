@@ -224,6 +224,7 @@ def run(
     install_mode: str = "editable",
     mcp_servers: Optional[Dict[str, Any]] = None,
     pip_cache_dir: Optional[str] = None,
+    verbosity: int = 0,
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -320,7 +321,13 @@ def run(
                 batch_prompts.append(rendered)
         run_batch = getattr(runner, "run_batch", None)
         if callable(run_batch):
-            batch_results = run_batch(batch_prompts, model=model)
+            try:
+                batch_results = run_batch(
+                    batch_prompts, model=model, verbosity=verbosity
+                )
+            except TypeError:
+                # Older runner shims without `verbosity` kwarg.
+                batch_results = run_batch(batch_prompts, model=model)
         else:
             # Test-seam runners that only implement .run(prompt) — fall
             # back to per-prompt calls. Real container runners always

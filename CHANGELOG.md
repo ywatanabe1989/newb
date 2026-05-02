@@ -4,6 +4,32 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.22.0] — 2026-05-03
+
+### Added
+
+- `-v / -vv / -vvv` verbosity flag.
+  - `-v`: echo the resolved config (model, template, runtime, scope,
+    install_mode, runs, plus `mcp_servers` / `pip_cache` when set) at
+    start; print total wall-clock at end.
+  - `-vv`: same as `-v`, plus stream the container's stderr in real
+    time. The in-container runner emits per-prompt timing
+    (`newb-runner: [i/N] done in Xs`) so you can see which question
+    is slow as it happens.
+  - `-vvv`: same as `-vv`, plus log the raw container argv before
+    spawning (useful for reproducing a docker invocation by hand).
+- New env var `NEWB_VERBOSE` (set inside the container by the host
+  runner; users normally use the CLI flag).
+
+### Changed
+
+- Extracted `_cli.py`'s implicit-try action (the giant Click
+  decorator stack + body) into `_cli_try.py`. `_cli.py` is now an
+  orchestrator: argv preprocessing, the entrypoint, and subcommand
+  registrations onto the `main` group imported from `_cli_try`.
+  Mirrors the pattern of `_cli_templates.py` / `_cli_skills.py` /
+  `_cli_mcp.py` / `_cli_env.py`. No behavior change.
+
 ## [0.21.0] — 2026-05-02
 
 ### Changed (BREAKING — reverts the 0.20.0 rename)

@@ -106,13 +106,34 @@ async def _run_one(prompt: str, options) -> str:
 async def _run_all(prompts: list[str], model: str) -> list[str]:
     """Build options once, run every prompt sequentially as an
     independent ``query()`` so they share cwd / installed-state on
-    disk but do not pollute each other's conversation context."""
+    disk but do not pollute each other's conversation context.
+
+    When ``NEWB_VERBOSE`` (1..3) is set in the env, emit per-prompt
+    timing on stderr so the host can stream it live (-vv) or replay
+    it on failure (-v).
+    """
+    import time as _time
+
     from claude_agent_sdk import ClaudeAgentOptions
 
+    verbose = int(os.environ.get("NEWB_VERBOSE", "0") or "0")
     options = ClaudeAgentOptions(**_build_sdk_kwargs(model))
+    n = len(prompts)
     results: list[str] = []
-    for prompt in prompts:
-        results.append(await _run_one(prompt, options))
+    for i, prompt in enumerate(prompts, start=1):
+        if verbose >= 1:
+            print(f"newb-runner: [{i}/{n}] starting", file=sys.stderr, flush=True)
+        t0 = _time.monotonic()
+        text = await _run_one(prompt, options)
+        if verbose >= 1:
+            print(
+                f"newb-runner: [{i}/{n}] done in "
+                f"{_time.monotonic() - t0:.1f}s "
+                f"(reply chars={len(text)})",
+                file=sys.stderr,
+                flush=True,
+            )
+        results.append(text)
     return results
 
 
