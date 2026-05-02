@@ -4,6 +4,30 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.22.1] — 2026-05-03
+
+### Fixed
+
+- **`pip install -e .` failed inside the container when host UID
+  differed from container UID 1000.** The host stages the project
+  under `/tmp/newb-stage-XXX/project/`; staged files inherited the
+  host's UID, but the in-container `newb` user (UID 1000) needs to
+  write `egg-info` during editable install. On hosts whose UID is
+  not 1000 (notably GitHub Actions runners, UID 1001), the install
+  failed silently or surfaced as a `Fatal error in message reader`
+  SDK transport crash mid-prompt. `stage_project` now chmods the
+  staged tree to `0o777` for dirs / `0o666` for files so the
+  container's UID-1000 user can write regardless of host UID. The
+  staged dir lives in `/tmp` and is `rmtree`'d after the run, so
+  world-writable is fine here.
+
+### Found by
+
+`newb passes newb` in CI. Local runs (host UID 1000) had been
+silently masking the bug because UID matched. The dogfood self-
+verify workflow on GitHub Actions exposed it on the first
+end-to-end run.
+
 ## [0.22.0] — 2026-05-03
 
 ### Added

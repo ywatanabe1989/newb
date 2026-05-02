@@ -53,6 +53,13 @@ def stage_project(src: Path, dst: Path) -> None:
     --exclude-standard`` to get the set the user considers part of the
     project (tracked + untracked-but-not-ignored). Falls back to
     ``shutil.copytree`` with hardcoded essentials when not a git repo.
+
+    After staging, the tree is made world-writable so the in-container
+    runtime user (UID 1000 ``newb``) can ``pip install -e .`` regardless
+    of the host UID. Without this, hosts whose UID != 1000 (notably
+    GitHub Actions runners at UID 1001) fail with ``Permission denied
+    creating egg-info``. The staged dir lives under ``/tmp`` and is
+    ``rmtree``'d after the run, so world-writable is fine here.
     """
     import subprocess as _sp
 
@@ -91,7 +98,43 @@ def stage_project(src: Path, dst: Path) -> None:
                     shutil.copy2(src_file, dst_file, follow_symlinks=True)
                 except (OSError, shutil.SameFileError):
                     continue
+            _make_writable_for_container(dst)
             return
         except (_sp.CalledProcessError, FileNotFoundError):
             pass  # fall through to copytree
     shutil.copytree(src, dst, ignore=_stage_ignore_fallback)
+    _make_writable_for_container(dst)
+
+
+def _make_writable_for_container(root: Path) -> None:
+    """Ensure the in-container UID-1000 user can write under ``root``.
+
+    Walks the tree once: dirs get ``rwxrwxrwx`` (so subdirs and new
+    files can be created), regular files get ``rw-rw-rw-``. Symlinks
+    are skipped — the container only follows them, never edits them.
+    """
+    import os as _os
+    import stat as _stat
+
+    DIR_MODE = _stat.S_IRWXU | _stat.S_IRWXG | _stat.S_IRWXO  # 0o777
+    FILE_MODE = (
+        _stat.S_IRUSR
+        | _stat.S_IWUSR
+        | _stat.S_IRGRP
+        | _stat.S_IWGRP
+        | _stat.S_IROTH
+        | _stat.S_IWOTH
+    )  # 0o666
+    for dirpath, dirnames, filenames in _os.walk(root, followlinks=False):
+        try:
+            _os.chmod(dirpath, DIR_MODE)
+        except OSError:
+            pass
+        for name in filenames:
+            p = Path(dirpath) / name
+            if p.is_symlink():
+                continue
+            try:
+                _os.chmod(p, FILE_MODE)
+            except OSError:
+                pass
