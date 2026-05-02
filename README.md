@@ -1,17 +1,8 @@
 # newb
 
-<!-- scitex-badges:start -->
-[![PyPI](https://img.shields.io/pypi/v/newb.svg)](https://pypi.org/project/newb/)
-[![Python](https://img.shields.io/pypi/pyversions/newb.svg)](https://pypi.org/project/newb/)
-[![Tests](https://github.com/ywatanabe1989/newb/actions/workflows/test.yml/badge.svg)](https://github.com/ywatanabe1989/newb/actions/workflows/test.yml)
-[![Coverage](https://codecov.io/gh/ywatanabe1989/newb/graph/badge.svg)](https://codecov.io/gh/ywatanabe1989/newb)
-[![Docs](https://readthedocs.org/projects/newb/badge/?version=latest)](https://newb.readthedocs.io/en/latest/)
-[![License: AGPL v3](https://img.shields.io/badge/license-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-<!-- scitex-badges:end -->
-
 <p align="center">
   <a href="https://scitex.ai">
-    <img src="docs/assets/images/scitex-logo-blue-cropped.png" alt="SciTeX" width="240">
+    <img src="docs/assets/images/scitex-logo-blue-cropped.png" alt="SciTeX" width="400">
   </a>
 </p>
 
@@ -22,6 +13,15 @@
 </p>
 
 <p align="center"><sub>Python 3.10+ · bundles <a href="https://github.com/anthropics/claude-agent-sdk-python"><code>claude-agent-sdk</code></a> (Anthropic, MIT) · newb itself AGPL-3.0-only · auth: <code>NEWB_ANTHROPIC_API_KEY</code> or local <code>~/.claude/</code> OAuth</sub></p>
+
+<!-- scitex-badges:start -->
+[![PyPI](https://img.shields.io/pypi/v/newb.svg)](https://pypi.org/project/newb/)
+[![Python](https://img.shields.io/pypi/pyversions/newb.svg)](https://pypi.org/project/newb/)
+[![Tests](https://github.com/ywatanabe1989/newb/actions/workflows/test.yml/badge.svg)](https://github.com/ywatanabe1989/newb/actions/workflows/test.yml)
+[![Coverage](https://codecov.io/gh/ywatanabe1989/newb/graph/badge.svg)](https://codecov.io/gh/ywatanabe1989/newb)
+[![Docs](https://readthedocs.org/projects/newb/badge/?version=latest)](https://newb.readthedocs.io/en/latest/)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+<!-- scitex-badges:end -->
 
 ---
 
