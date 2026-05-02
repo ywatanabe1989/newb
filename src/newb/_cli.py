@@ -113,7 +113,7 @@ def _reorder_argv(argv: list[str]) -> list[str]:
 
 
 from ._try import render_markdown
-from ._try import run as _run_impl
+from ._try import test as _run_impl
 from .question_templates import DEFAULT_TEMPLATE, TEMPLATES
 
 

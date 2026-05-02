@@ -175,7 +175,7 @@ report = newb(".")                                       # bare-module callable
 print(newb.render_markdown(report))
 
 # Equivalent explicit form (mirrors pytest.main):
-report = newb.run(".", template="cli-tool", runtime="docker")
+report = newb.test(".", template="cli-tool", runtime="docker")
 
 # Discover what newb can ask:
 from newb.question_templates import TEMPLATES, get_template
