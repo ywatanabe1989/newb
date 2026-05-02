@@ -34,7 +34,7 @@ If all three are empty of markdown the run aborts with
 
 ## Validation rules (local + remote)
 
-`_validate_skills_dir`:
+`_validate_source`:
 
 - Path must resolve and be a directory (`Path.expanduser().resolve()`).
 - Must recursively contain at least one `.md` file

@@ -142,7 +142,7 @@ async def newb_render_markdown(report: dict) -> str:
 
 
 # Public Python API parity (audit-mcp-tools §6) — `newb.run` /
-# `newb.self_explain` exist on the Python side; mirror them here so a
+# mirrors of the Python API exposed as MCP tools so a
 # tool-using agent has the same vocabulary as the import-using one.
 # Both delegate to newb_verify.
 
@@ -156,24 +156,6 @@ async def newb_run(
     runs_per_prompt: int = 1,
 ) -> str:
     """Alias for ``newb_verify`` — mirrors the ``newb.run`` Python API."""
-    return await newb_verify(  # type: ignore[func-returns-value]
-        source=source,
-        template=template,
-        runtime=runtime,
-        model=model,
-        runs_per_prompt=runs_per_prompt,
-    )
-
-
-@mcp.tool()
-async def newb_self_explain(
-    source: str,
-    template: str = DEFAULT_TEMPLATE,
-    runtime: str = "docker",
-    model: str = "claude-haiku-4-5",
-    runs_per_prompt: int = 1,
-) -> str:
-    """Alias for ``newb_verify`` — mirrors the deprecated ``newb.self_explain``."""
     return await newb_verify(  # type: ignore[func-returns-value]
         source=source,
         template=template,

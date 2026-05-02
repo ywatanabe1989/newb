@@ -19,19 +19,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 # Prompt sets live in ``question_templates/`` so new templates
 # (api_sdk, cli_tool, scientific, …) can land alongside the
 # python_package default without touching this file.
-from .question_templates import (
-    PYTHON_PACKAGE as _PROMPTS_DEFAULT,
-)
 from .question_templates import get_template
-
-# Backward-compat aliases — older code (and tests) reference these
-# names directly. Kept as re-exports of the python-package template's
-# entries so the public surface doesn't shift.
-_PROMPT_WHAT_FOR = _PROMPTS_DEFAULT["what_for"]
-_PROMPT_PROBLEMS = _PROMPTS_DEFAULT["problems_solved"]
-_PROMPT_QUICK_START = _PROMPTS_DEFAULT["quick_start"]
-_PROMPT_WHEN_NOT_TO_USE = _PROMPTS_DEFAULT["when_not_to_use"]
-_PROMPTS = _PROMPTS_DEFAULT
 
 
 # ---------------------------------------------------------------------------
@@ -39,13 +27,8 @@ _PROMPTS = _PROMPTS_DEFAULT
 # ---------------------------------------------------------------------------
 
 
-def _load_red_tests(skills_src: Path) -> list[dict]:
-    """Back-compat shim — see ``_load_tests``."""
-    return _load_tests(skills_src)
-
-
 def _load_tests(skills_src: Path) -> list[dict]:
-    """Load author tests from ``tests_newb.yaml`` (or legacy ``_red_tests.yaml``).
+    """Load author tests from ``tests_newb.yaml``.
 
     Schema per entry::
 
@@ -54,15 +37,9 @@ def _load_tests(skills_src: Path) -> list[dict]:
           expect_contains: [substrings that MUST appear]   # optional
           expect_excludes: [substrings that MUST NOT appear] # optional
           judge: "criteria text for an LLM judge"          # optional
-
-    The legacy ``question`` key is accepted as an alias for ``prompt``.
     """
-    candidates = [
-        Path(skills_src) / "tests_newb.yaml",
-        Path(skills_src) / "_red_tests.yaml",
-    ]
-    test_file = next((p for p in candidates if p.is_file()), None)
-    if test_file is None:
+    test_file = Path(skills_src) / "tests_newb.yaml"
+    if not test_file.is_file():
         return []
     try:
         import yaml  # type: ignore[import-untyped]
@@ -78,14 +55,13 @@ def _load_tests(skills_src: Path) -> list[dict]:
     for i, entry in enumerate(data):
         if not isinstance(entry, dict):
             continue
-        prompt = entry.get("prompt") or entry.get("question")
+        prompt = entry.get("prompt")
         if not prompt:
             continue
         out.append(
             {
                 "name": str(entry.get("name") or f"test_{i}"),
                 "prompt": str(prompt),
-                "question": str(prompt),  # back-compat alias
                 "expect_contains": list(entry.get("expect_contains") or []),
                 "expect_excludes": list(entry.get("expect_excludes") or []),
                 "judge": entry.get("judge"),
@@ -194,10 +170,6 @@ def _validate_source(source_dir: Path) -> Path:
     if not any(p.iterdir()):
         raise FileNotFoundError(f"source directory is empty: {p}")
     return p
-
-
-# Back-compat alias for the renamed validator.
-_validate_skills_dir = _validate_source
 
 
 def _is_url(spec: Any) -> bool:
@@ -332,7 +304,7 @@ def run(
         resolved, cleanup_clone = _resolve_source(skills_dir)
     else:
         resolved, cleanup_clone = Path(skills_dir), None
-    skills_src = _validate_skills_dir(resolved)
+    skills_src = _validate_source(resolved)
     name = skills_src.name
 
     # The agent's cwd should be the package's install location — the
@@ -379,7 +351,6 @@ def run(
                 "passed": passed,
                 "total": len(test_results),
             }
-            out["red_tests"] = test_results  # back-compat
         return out
     finally:
         if cleanup_mount is not None and cleanup_mount.exists():
@@ -391,10 +362,6 @@ def run(
                 runner.close()
             except Exception:
                 pass
-
-
-# Backward-compat alias. Removed in 1.0.
-self_explain = run
 
 
 def _extract_text(result: Any) -> str:
@@ -414,7 +381,7 @@ def _extract_text(result: Any) -> str:
 
 
 def render_markdown(payload: Dict[str, Any]) -> str:
-    """Render ``self_explain`` output as a README-ready markdown block."""
+    """Render ``run`` output as a README-ready markdown block."""
     import datetime
 
     pkg = payload.get("package", "<package>")
@@ -460,13 +427,13 @@ def render_markdown(payload: Dict[str, Any]) -> str:
             "> " + _block(payload["when_not_to_use"]).replace("\n", "\n> "),
             "",
         ]
-    red = payload.get("red_tests") or []
-    if red:
+    boundary = payload.get("tests") or []
+    if boundary:
         parts += ["### Boundary tests", ""]
-        for entry in red:
+        for entry in boundary:
             mark = "PASS" if entry.get("passed") else "FAIL"
             parts += [
-                f"- **Q:** {entry['question']}",
+                f"- **Q:** {entry['prompt']}",
                 f"  - **A:** {entry['answer'].strip()} [{mark}]",
             ]
         parts.append("")

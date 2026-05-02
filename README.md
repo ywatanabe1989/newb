@@ -166,7 +166,7 @@ newb https://github.com/ywatanabe1989/newb.git \
 </details>
 
 <details>
-<summary><strong>Python API ⭐⭐</strong> &nbsp;<sub>callable + run() + self_explain()</sub></summary>
+<summary><strong>Python API ⭐⭐</strong> &nbsp;<sub>callable + run()</sub></summary>
 
 <br>
 
@@ -175,9 +175,8 @@ import newb
 report = newb(".")                                       # bare-module callable
 print(newb.render_markdown(report))
 
-# Equivalent explicit forms (mirror pytest.main):
+# Equivalent explicit form (mirrors pytest.main):
 report = newb.run(".", template="cli-tool", runtime="docker")
-report = newb.self_explain(".")                          # deprecated alias
 
 # Discover what newb can ask:
 from newb.question_templates import TEMPLATES, get_template
@@ -192,10 +191,10 @@ print(get_template("python-package").keys())             # the 6 question ids
 
 <br>
 
-newb ships a FastMCP server with 7 tools (`newb_verify`, `newb_run`,
-`newb_self_explain`, `newb_render_markdown`, `newb_templates_list`,
-`newb_templates_show`, `newb_skills_list`, `newb_skills_get`). Install
-the optional extra and start over stdio:
+newb ships a FastMCP server with these tools (`newb_verify`, `newb_run`,
+`newb_render_markdown`, `newb_templates_list`, `newb_templates_show`,
+`newb_skills_list`, `newb_skills_get`). Install the optional extra and
+start over stdio:
 
 ```bash
 pip install newb[mcp]
@@ -307,8 +306,7 @@ chosen template:
 
 Each entry is graded by the AND of (a) substring filters and (b) an
 optional LLM judge. The grading detail lands in the report's
-`tests[]` array + `tests_summary` (and a back-compat `red_tests`
-alias).
+`tests[]` array and `tests_summary`.
 
 </details>
 

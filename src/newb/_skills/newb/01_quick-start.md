@@ -52,8 +52,6 @@ report = newb.run("./docs", model="claude-haiku-4-5", runs_per_prompt=1)
 print(newb.render_markdown(report))
 ```
 
-`newb.self_explain` is a deprecated alias for `newb.run` (removed in 1.0).
-
 ## Output shape
 
 ```json
@@ -66,5 +64,5 @@ print(newb.render_markdown(report))
 }
 ```
 
-If `tests_newb.yaml` is present the report also includes `tests`,
-`tests_summary` (and a back-compat `red_tests` alias).
+If `tests_newb.yaml` is present the report also includes `tests` and
+`tests_summary`.

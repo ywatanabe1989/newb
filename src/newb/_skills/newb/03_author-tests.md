@@ -1,6 +1,6 @@
 ---
 name: newb-author-tests
-description: Per-package boundary tests via tests_newb.yaml — schema (prompt, expect_contains, expect_excludes, judge), substring grading, LLM judge, double grading semantics, back-compat with _red_tests.yaml.
+description: Per-package boundary tests via tests_newb.yaml — schema (prompt, expect_contains, expect_excludes, judge), substring grading, LLM judge, double grading semantics.
 tags: [newb, scitex-package]
 ---
 
@@ -97,9 +97,3 @@ When `tests_newb.yaml` is present, the report adds:
 
 The CLI also emits a stderr summary line (`🐝✅ 3/4 tests passed`).
 
-## Back-compat
-
-- The legacy filename `_red_tests.yaml` is still accepted (deprecated).
-- The legacy `question:` key is accepted as an alias for `prompt:`.
-- The legacy `red_tests` field is duplicated alongside `tests` in the
-  report (same content; will be removed in 1.0).

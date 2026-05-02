@@ -15,8 +15,6 @@ Quick start::
 
 Both call the same function. Use the bare-module form in scripts; use
 ``newb.run`` in code where the explicit verb mirrors pytest conventions.
-
-Alias ``newb.self_explain`` is kept for backward compat (removed in 1.0).
 """
 
 from __future__ import annotations
@@ -31,7 +29,7 @@ try:
 except ImportError:  # pragma: no cover — stdlib module is always present
     types = None  # type: ignore[assignment]
 
-from ._try import render_markdown, run, self_explain
+from ._try import render_markdown, run
 
 # Resolve version from installed metadata so source edits don't drift
 # the in-tree string. Fallback uses a PEP 440 local segment so an
@@ -47,7 +45,7 @@ try:
 except ImportError:
     __version__ = "0.0.0+local"
 
-__all__ = ["__version__", "render_markdown", "run", "self_explain"]
+__all__ = ["__version__", "render_markdown", "run"]
 
 
 # Module-callable shortcut (PEP 562, Python 3.7+). Lets ``import newb;

@@ -12,23 +12,27 @@ import pytest
 
 def test_module_imports_and_exports_callable():
     import newb
-    from newb import _try
 
-    assert callable(newb.self_explain)
     assert callable(newb.render_markdown)
     assert callable(newb.run)
     # Module is callable as a shortcut for newb.run (PEP 562 trick).
     assert callable(newb)
-    # Backward-compat: self_explain is now an alias for run.
-    assert newb.self_explain is newb.run
+    # `self_explain` was the deprecated alias — removed in 0.12.0.
+    assert not hasattr(newb, "self_explain")
+    assert "self_explain" not in newb.__all__
     # Version is resolved dynamically from importlib.metadata in
     # __init__.py, so just check the shape — not pin to a literal that
     # would drift with every release.
     assert isinstance(newb.__version__, str) and newb.__version__
-    assert isinstance(_try._PROMPT_WHAT_FOR, str)
-    assert isinstance(_try._PROMPT_PROBLEMS, str)
-    assert isinstance(_try._PROMPT_QUICK_START, str)
-    assert isinstance(_try._PROMPT_WHEN_NOT_TO_USE, str)
+    # Templates are now sourced from question_templates/<name>.py — _try.py
+    # no longer re-exports _PROMPT_* aliases. Verify the canonical template
+    # path instead.
+    from newb.question_templates import PYTHON_PACKAGE
+
+    assert isinstance(PYTHON_PACKAGE["what_for"], str)
+    assert isinstance(PYTHON_PACKAGE["problems_solved"], str)
+    assert isinstance(PYTHON_PACKAGE["quick_start"], str)
+    assert isinstance(PYTHON_PACKAGE["when_not_to_use"], str)
 
 
 # ---------------------------------------------------------------------------
@@ -69,12 +73,12 @@ def _make_skills(tmp_path):
     return skills
 
 
-def test_self_explain_returns_expected_keys(tmp_path):
-    from newb import self_explain
+def test_run_returns_expected_keys(tmp_path):
+    from newb import run
 
     skills = _make_skills(tmp_path)
     runner = _FakeRunner()
-    result = self_explain(skills, _runner=runner)
+    result = run(skills, _runner=runner)
 
     assert result["package"] == "mypkg"
     assert "what_for" in result
@@ -92,12 +96,12 @@ def test_self_explain_returns_expected_keys(tmp_path):
     assert all(call[1] == "claude-haiku-4-5" for call in runner.calls)
 
 
-def test_self_explain_runs_per_prompt_returns_lists(tmp_path):
-    from newb import self_explain
+def test_run_runs_per_prompt_returns_lists(tmp_path):
+    from newb import run
 
     skills = _make_skills(tmp_path)
     runner = _FakeRunner()
-    result = self_explain(skills, runs_per_prompt=2, _runner=runner)
+    result = run(skills, runs_per_prompt=2, _runner=runner)
 
     assert isinstance(result["what_for"], list)
     assert len(result["what_for"]) == 2
@@ -106,29 +110,29 @@ def test_self_explain_runs_per_prompt_returns_lists(tmp_path):
     assert len(runner.calls) == len(PYTHON_PACKAGE) * 2
 
 
-def test_self_explain_accepts_string_path(tmp_path):
-    from newb import self_explain
+def test_run_accepts_string_path(tmp_path):
+    from newb import run
 
     skills = _make_skills(tmp_path)
     runner = _FakeRunner()
-    result = self_explain(str(skills), _runner=runner)
+    result = run(str(skills), _runner=runner)
     assert result["package"] == "mypkg"
 
 
-def test_self_explain_missing_dir_raises():
-    from newb import self_explain
+def test_run_missing_dir_raises():
+    from newb import run
 
     with pytest.raises(FileNotFoundError):
-        self_explain("/nonexistent/path/__no__")
+        run("/nonexistent/path/__no__")
 
 
-def test_self_explain_no_md_files_raises(tmp_path):
-    from newb import self_explain
+def test_run_no_md_files_raises(tmp_path):
+    from newb import run
 
     empty = tmp_path / "empty"
     empty.mkdir()
     with pytest.raises(FileNotFoundError):
-        self_explain(empty)
+        run(empty)
 
 
 # ---------------------------------------------------------------------------
@@ -137,10 +141,10 @@ def test_self_explain_no_md_files_raises(tmp_path):
 
 
 def test_render_markdown_shape(tmp_path):
-    from newb import render_markdown, self_explain
+    from newb import render_markdown, run
 
     skills = _make_skills(tmp_path)
-    result = self_explain(skills, _runner=_FakeRunner())
+    result = run(skills, _runner=_FakeRunner())
     md = render_markdown(result)
 
     assert "## Skills Quality (verified by agent)" in md
@@ -153,56 +157,39 @@ def test_render_markdown_shape(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# _load_red_tests
+# tests_newb.yaml (canonical author-tests format)
 # ---------------------------------------------------------------------------
 
 
-def test_load_red_tests_missing_file_returns_empty(tmp_path):
-    from newb._try import _load_red_tests
+def test_load_tests_missing_file_returns_empty(tmp_path):
+    from newb._try import _load_tests
 
-    assert _load_red_tests(tmp_path) == []
-
-
-def test_load_red_tests_parses_valid_yaml(tmp_path):
-    pytest.importorskip("yaml")
-    from newb._try import _load_red_tests
-
-    (tmp_path / "_red_tests.yaml").write_text(
-        "- question: Can this do parallel execution?\n"
-        "  expect_contains: ['No', 'scitex-parallel']\n"
-        "  expect_excludes: ['yes you can']\n"
-    )
-    rs = _load_red_tests(tmp_path)
-    assert len(rs) == 1
-    assert rs[0]["question"].startswith("Can this do parallel")
-    assert "scitex-parallel" in rs[0]["expect_contains"]
+    assert _load_tests(tmp_path) == []
 
 
-def test_load_red_tests_invalid_yaml_returns_empty(tmp_path):
-    pytest.importorskip("yaml")
-    from newb._try import _load_red_tests
-
-    (tmp_path / "_red_tests.yaml").write_text("not: a list: just: garbage:")
-    assert _load_red_tests(tmp_path) == []
-
-
-# ---------------------------------------------------------------------------
-# tests_newb.yaml (v0.4.0 — pytest-style)
-# ---------------------------------------------------------------------------
-
-
-def test_load_tests_prefers_tests_newb_over_red(tmp_path):
+def test_load_tests_parses_valid_yaml(tmp_path):
     pytest.importorskip("yaml")
     from newb._try import _load_tests
 
-    (tmp_path / "_red_tests.yaml").write_text("- question: legacy\n")
     (tmp_path / "tests_newb.yaml").write_text(
-        "- name: pkg_purpose\n  prompt: What is this?\n"
+        "- name: pkg_purpose\n"
+        "  prompt: What is this?\n"
+        "  expect_contains: ['No', 'scitex-parallel']\n"
+        "  expect_excludes: ['yes you can']\n"
     )
     rs = _load_tests(tmp_path)
     assert len(rs) == 1
     assert rs[0]["name"] == "pkg_purpose"
     assert rs[0]["prompt"] == "What is this?"
+    assert "scitex-parallel" in rs[0]["expect_contains"]
+
+
+def test_load_tests_invalid_yaml_returns_empty(tmp_path):
+    pytest.importorskip("yaml")
+    from newb._try import _load_tests
+
+    (tmp_path / "tests_newb.yaml").write_text("not: a list: just: garbage:")
+    assert _load_tests(tmp_path) == []
 
 
 def test_load_tests_accepts_judge_field(tmp_path):
@@ -258,7 +245,7 @@ def test_run_with_yaml_tests_records_pass_fail(tmp_path):
     assert "tests_summary" in result
     assert result["tests_summary"]["total"] == 2
     assert result["tests_summary"]["passed"] == 2
-    assert result["red_tests"] is result["tests"]  # back-compat
+    assert "red_tests" not in result  # back-compat alias removed in 0.12.0
 
 
 def test_run_judge_fail_reflected_in_summary(tmp_path):
