@@ -61,11 +61,23 @@ is a dict `{key: prompt}` where prompts use these placeholders:
 
 All prompts in a template run in **one** container per invocation:
 
-- **Conversation isolation**: each prompt is an independent
-  `query()` call, so answers do not influence each other.
-- **Filesystem sharing**: all prompts share `/work/project`, so
-  `post_install_check`'s `pip install -e .` is visible to anything
-  that runs after it.
+- **Conversation isolation** (verified 2026-05-02): each prompt is an
+  independent `query()` call, so answers do not influence each other.
+  Empirical probe: prompt 1 told the agent a secret word; prompt 2
+  asked for it and got `NO_MEMORY`.
+- **Filesystem sharing** (verified 2026-05-02): all prompts share
+  `/work/project` and the container's `~`, so `post_install_check`'s
+  `pip install -e .` is visible to anything that runs after it.
+  Empirical probe: prompt 1 ran `pip install --user six` and wrote
+  `/tmp/marker.txt`; prompt 2 successfully read the marker AND
+  `import six`.
+
+Together: the agent's *exploration* state (what it tried on disk)
+carries forward; its *conversation* state (what it said) does not.
+This is the right tradeoff for a docs-verifier — we want
+`post_install_check` to make the install observable downstream, but
+we do NOT want one prompt's answer to anchor the next prompt's
+answer.
 
 Every `newb` run also calls `_load_tests()` to pick up
 `tests_newb.yaml` / `tests_newb.py` / `test_newb_*.py` (see

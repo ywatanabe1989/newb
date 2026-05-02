@@ -87,6 +87,22 @@ rendering); the SDK owns **everything else**: session lifecycle,
 transport, message structuring, tool execution. Runtime details and
 backend comparison live in [Isolation runtimes](#isolation-runtimes--runtime) below.
 
+### Architecture invariants (verified empirically)
+
+A single `newb .` invocation is **one** container holding **N** prompts.
+Two properties matter, and both have been smoke-tested end-to-end:
+
+| Property | What it means | Verified? |
+|---|---|---|
+| **Filesystem state persists across prompts** | A `pip install -e .` (or `touch /tmp/marker`) in prompt *i* is visible to prompt *j>i*. So `post_install_check` actually validates the install for downstream questions. | ✅ — prompt 1 ran `pip install --user six` and wrote a marker file; prompt 2 (independent agent) successfully `import six` and read the marker content back. |
+| **Conversation context does NOT leak across prompts** | Each prompt is a fresh `query()` — no message history carried over — so answers can't bias each other. | ✅ — prompt 1 was told a secret word; prompt 2 (asked for it) reported `NO_MEMORY`. |
+
+So "newb agent lives long" only **within** one run (prompt-to-prompt
+filesystem sharing). It does NOT live across runs: the container is
+`--rm`'d at the end, every `newb` invocation is a cold start. The
+optional `--pip-cache` mount carries wheel downloads forward; install
+state itself does not.
+
 ## Installation
 
 ```bash

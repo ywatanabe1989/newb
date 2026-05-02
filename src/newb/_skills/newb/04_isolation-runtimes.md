@@ -39,6 +39,30 @@ prompts into a single container:
 This makes `post_install_check` actually meaningful: the install
 state it produces is visible to subsequent questions.
 
+### Two architectural invariants (verified empirically 2026-05-02)
+
+Both invariants were probed by piping a 2-prompt JSON envelope
+directly to the container runner:
+
+1. **Filesystem state persists across prompts.** Prompt 1 ran
+   `pip install --user six` and wrote `/tmp/marker.txt`. Prompt 2 — an
+   independent `query()` with a fresh agent — successfully read the
+   marker content back AND `import six` (1.17.0).
+2. **Conversation context does NOT leak across prompts.** Prompt 1
+   was told a secret word and asked to acknowledge with `OK`. Prompt 2
+   asked "what was the secret word?" and the agent correctly replied
+   `NO_MEMORY` because the previous conversation history wasn't
+   carried over.
+
+Together: install in q5 → import in q6 works; answers in q5 → bias in
+q6 does not.
+
+**The agent lives long within one run, not across runs.** Container
+is `--rm`'d at the end; every `newb` invocation is a cold start. The
+`--pip-cache` mount carries wheel downloads forward but install state
+itself does not. If you need cross-run state, that's outside newb's
+scope — newb is a one-shot newbie probe by design.
+
 ## Container is the boundary, not the SDK options
 
 ```
