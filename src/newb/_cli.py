@@ -25,12 +25,18 @@ import click
 # Subcommand names registered on the top-level group. Used by
 # _reorder_argv to tell "subcommand invocation" from "implicit-try
 # invocation with options after the SOURCE positional".
-_SUBCOMMANDS = {"templates", "skills", "mcp", "list-python-apis"}
+_SUBCOMMANDS = {"templates", "skills", "mcp", "list-python-apis", "env-template"}
 
 
 def cli_entrypoint():
     """Console-script entry — preprocess argv (so ``newb <SOURCE>
     [options...]`` works), then hand off to Click."""
+    # Load NEWB_ENV_SRC early so all CLI flag resolution + downstream
+    # reads of NEWB_* vars see the unified shell-profile config.
+    # SciTeX standard env-loader pattern.
+    from ._env_loader import load_newb_env
+
+    load_newb_env()
     sys.argv[1:] = _reorder_argv(sys.argv[1:])
     return main()
 
@@ -159,7 +165,32 @@ def _print_top_level_json(ctx: click.Context, _param, value):
 # ---------------------------------------------------------------------------
 
 
+class _NewbGroup(click.Group):
+    """Group that yields to subcommand resolution before consuming the
+    optional SOURCE positional. Without this, ``newb templates list``
+    is parsed as ``newb SOURCE=templates`` and ``list`` falls off the
+    end as an unknown subcommand."""
+
+    def parse_args(self, ctx, args):
+        first_pos = next((a for a in args if not a.startswith("-")), None)
+        if first_pos and first_pos in self.commands:
+            saved = list(self.params)
+            self.params = [
+                p
+                for p in saved
+                if not (isinstance(p, click.Argument) and p.name == "source")
+            ]
+            try:
+                result = super().parse_args(ctx, args)
+            finally:
+                self.params = saved
+            ctx.params.setdefault("source", None)
+            return result
+        return super().parse_args(ctx, args)
+
+
 @click.group(
+    cls=_NewbGroup,
     invoke_without_command=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
@@ -384,6 +415,7 @@ def main(
 # ---------------------------------------------------------------------------
 
 
+from ._cli_env import env_template as _env_template_cmd  # noqa: E402
 from ._cli_mcp import mcp as _mcp_group  # noqa: E402
 from ._cli_skills import skills as _skills_group  # noqa: E402
 from ._cli_templates import templates as _templates_group  # noqa: E402
@@ -391,6 +423,7 @@ from ._cli_templates import templates as _templates_group  # noqa: E402
 main.add_command(_templates_group)
 main.add_command(_skills_group)
 main.add_command(_mcp_group)
+main.add_command(_env_template_cmd)
 
 
 # ---------------------------------------------------------------------------

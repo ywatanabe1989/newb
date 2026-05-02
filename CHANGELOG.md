@@ -4,6 +4,28 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.17.0] — 2026-05-02
+
+### Added
+
+- `NEWB_ENV_SRC` env-loader (SciTeX ecosystem standard). Point at a
+  `.src` file (or directory of `.src` files) and `newb` auto-loads
+  `NEWB_*` env vars at CLI / MCP-server startup. Lets users keep
+  auth + hardening config in their shell profile instead of
+  per-shell `export` lines.
+- `newb env-template [-o PATH]` — emits a copy-pasteable `.src`
+  file listing every `NEWB_*` env var with description + commented
+  example. Single source of truth in `_env_registry.REGISTRY`.
+
+### Fixed
+
+- Subcommand routing: `newb templates list`, `newb skills list`,
+  `newb mcp list-tools`, `newb env-template`, etc. all work again.
+  The optional SOURCE positional on the top-level group was
+  greedily eating subcommand names; the new `_NewbGroup.parse_args`
+  peeks at the first positional and yields to subcommand
+  resolution when it matches a registered command.
+
 ## [0.16.1] — 2026-05-02
 
 ### Fixed
