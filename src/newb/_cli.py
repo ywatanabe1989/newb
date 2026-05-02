@@ -1,9 +1,8 @@
-"""newb CLI — ``newb <skills_dir>``.
+"""newb CLI — ``newb <source>``.
 
-newb 0.6.0 delegates ALL runtime/auth/isolation/lifecycle to
-scitex-agent-container (sac). The CLI surface is therefore minimal:
-just the source, model, output format, and the host sac will run the
-agent on. Everything else is sac-internal.
+The CLI is intentionally minimal: source, model, output format,
+container runtime, question template. Everything else (auth,
+isolation, lifecycle) is delegated to the chosen runtime.
 """
 
 from __future__ import annotations
@@ -14,12 +13,70 @@ import click
 
 from ._verify import render_markdown
 from ._verify import run as _run_impl
+from .question_templates import DEFAULT_TEMPLATE, TEMPLATES
 
 
-@click.command()
-@click.argument("source", required=False)
+def _print_help_recursive(ctx: click.Context, _param, value):
+    """Flatten help for the top command + every subcommand."""
+    if not value or ctx.resilient_parsing:
+        return
+    cmd = ctx.command
+    click.echo(cmd.get_help(ctx))
+    if isinstance(cmd, click.Group):
+        for name in sorted(cmd.commands):
+            sub = cmd.commands[name]
+            sub_ctx = click.Context(sub, info_name=name, parent=ctx)
+            click.echo("\n---\n")
+            click.echo(sub.get_help(sub_ctx))
+    ctx.exit(0)
+
+
+@click.group(
+    invoke_without_command=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
+@click.option(
+    "--help-recursive",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_print_help_recursive,
+    help="Flatten help for every subcommand.",
+)
+@click.version_option(prog_name="newb")
+@click.pass_context
+def main(ctx: click.Context):
+    """Test your package through the eyes of a fresh AI agent.
+
+    \b
+    Example:
+        $ newb verify .
+        $ newb verify https://github.com/user/repo.git --format markdown
+        $ newb templates list
+
+    A sandboxed container session reads your project (respecting
+    .gitignore) and answers four canonical questions about it.
+    """
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+        ctx.exit(0)
+
+
+# ---------------------------------------------------------------------------
+# verify — the main subcommand
+# ---------------------------------------------------------------------------
+
+
+@main.command()
+@click.argument("source", required=True)
 @click.option("--model", default="claude-haiku-4-5", help="Claude model id.")
 @click.option("--runs", default=1, type=int, help="Runs per prompt.")
+@click.option(
+    "--template",
+    type=click.Choice(sorted(TEMPLATES)),
+    default=DEFAULT_TEMPLATE,
+    help="Question template — which prompt set to send the agent.",
+)
 @click.option(
     "--format",
     "out_format",
@@ -28,18 +85,20 @@ from ._verify import run as _run_impl
     help="Output format.",
 )
 @click.option(
+    "--json",
+    "json_alias",
+    is_flag=True,
+    default=False,
+    help="Alias for --format json (universal SciTeX flag).",
+)
+@click.option(
     "--runtime",
     type=click.Choice(["docker", "apptainer"]),
     default="docker",
-    help="Container the agent runs in. "
-    "docker=ghcr.io/ywatanabe1989/newb-runner (hard isolation, default); "
-    "apptainer=same image via apptainer (HPC). "
-    "host runtime was removed in 0.9 — container is the boundary.",
+    help="Container runtime. docker (default) or apptainer (HPC).",
 )
-@click.version_option()
-@click.pass_context
-def main(ctx, source, model, runs, out_format, runtime):
-    """Run a fresh AI agent against a docs/skills directory or git URL.
+def verify(source, model, runs, template, out_format, json_alias, runtime):
+    """Run the agent against SOURCE — the main verify command.
 
     \b
     SOURCE may be:
@@ -48,32 +107,28 @@ def main(ctx, source, model, runs, out_format, runtime):
         _skills/, docs/, or repo root is auto-detected.
 
     \b
-    Backed by Anthropic's claude-agent-sdk:
-      No docker, no multiplexer, no wire format. The SDK handles the
-      Claude Code session; newb owns the test schema + grading.
-
-    \b
     Auth (NEWB_-prefixed env vars only — no upstream surprises):
-      $ export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...   # canonical, ToS-clean
-      (Or rely on your local ~/.claude/ OAuth login on personal machines —
-       newb actively masks any stray ANTHROPIC_API_KEY so it can't sneak in.)
+      $ export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...
+      (or NEWB_ANTHROPIC_API_KEY_OAUTH=sk-ant-oat01-... for Pro/Max
+       users with a Claude Code subscription — extracted from
+       ~/.claude/.credentials.json)
 
     \b
     Example:
-        $ newb ./docs
-        $ newb ./src/mypkg/_skills/mypkg
-        $ newb https://github.com/user/repo.git
-        $ newb ./docs --format markdown >> README.md
+        $ newb verify .
+        $ newb verify ./src/mypkg/_skills/mypkg
+        $ newb verify https://github.com/user/repo.git
+        $ newb verify . --template python-package --json
     """
-    if source is None:
-        click.echo(ctx.get_help())
-        ctx.exit(0)
+    if json_alias:
+        out_format = "json"
     click.echo(f"\U0001f41d newb: probing {source} ...", err=True)
     result = _run_impl(
         source,
         model=model,
         runs_per_prompt=runs,
         runtime=runtime,
+        template=template,
     )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)
@@ -94,5 +149,100 @@ def main(ctx, source, model, runs, out_format, runtime):
         )
 
 
+# ---------------------------------------------------------------------------
+# templates — list / show built-in question templates
+# ---------------------------------------------------------------------------
+
+
+@main.group()
+def templates():
+    """Built-in question templates — what newb asks the agent."""
+
+
+@templates.command("list")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Machine-readable JSON output.",
+)
+def templates_list(as_json):
+    """List all built-in question templates."""
+    rows = [
+        {"name": n, "questions": list(p.keys())} for n, p in sorted(TEMPLATES.items())
+    ]
+    if as_json:
+        click.echo(json.dumps(rows, indent=2))
+        return
+    for r in rows:
+        click.echo(f"{r['name']}  ({len(r['questions'])} questions)")
+        for q in r["questions"]:
+            click.echo(f"  - {q}")
+
+
+@templates.command("show")
+@click.argument("name")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Machine-readable JSON output.",
+)
+def templates_show(name, as_json):
+    """Show the prompts in a template."""
+    if name not in TEMPLATES:
+        raise click.ClickException(
+            f"unknown template {name!r}; available: {sorted(TEMPLATES)}"
+        )
+    prompts = TEMPLATES[name]
+    if as_json:
+        click.echo(json.dumps({"name": name, "prompts": prompts}, indent=2))
+        return
+    for k, prompt in prompts.items():
+        click.echo(f"## {k}\n")
+        click.echo(prompt)
+        click.echo()
+
+
+# ---------------------------------------------------------------------------
+# Backward-compat shim — `newb <source>` (without `verify`) → `newb verify <source>`
+# ---------------------------------------------------------------------------
+
+
+_LEGACY_FLAGS = {
+    "--model",
+    "--runs",
+    "--format",
+    "--runtime",
+    "--template",
+    "--json",
+    "-h",
+    "--help",
+}
+
+
+def _legacy_dispatch():
+    """If invoked as ``newb <SOURCE> ...`` (positional arg, no subcommand),
+    rewrite argv as ``newb verify <SOURCE> ...`` so old call sites keep
+    working.
+    """
+    import sys
+
+    argv = sys.argv[1:]
+    if not argv:
+        return
+    first = argv[0]
+    # If first arg is a known subcommand or starts with a flag/help, no rewrite.
+    if first in {"verify", "templates"} or first.startswith("-"):
+        return
+    sys.argv = [sys.argv[0], "verify"] + argv
+
+
 if __name__ == "__main__":
+    _legacy_dispatch()
     main()
+else:
+    # Also rewrite when invoked through the entry-point script.
+    _legacy_dispatch()

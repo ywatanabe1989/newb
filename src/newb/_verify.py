@@ -22,6 +22,7 @@ from typing import Any, Dict, Optional, Tuple, Union
 from .question_templates import (
     PYTHON_PACKAGE as _PROMPTS_DEFAULT,
 )
+from .question_templates import get_template
 
 # Backward-compat aliases — older code (and tests) reference these
 # names directly. Kept as re-exports of the python-package template's
@@ -287,7 +288,8 @@ def run(
     *,
     model: str = "claude-haiku-4-5",
     runs_per_prompt: int = 1,
-    runtime: str = "host",
+    runtime: str = "docker",
+    template: str = "python-package",
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -296,12 +298,17 @@ def run(
     ----------
     skills_dir
         Path to a directory containing ``.md`` skill files (and optionally
-        a ``_red_tests.yaml``).
+        a ``tests_newb.yaml``).
     model
-        Claude model id passed to ``claude -p --model``.
+        Claude model id passed to the SDK.
     runs_per_prompt
         How many times to ask each prompt. >1 returns lists; ==1 returns
         scalars.
+    runtime
+        Container backend: ``docker`` (default) or ``apptainer``.
+    template
+        Question-template name from ``newb.question_templates`` (default
+        ``python-package``).
     _runner
         Test seam — inject a runner with a ``.run(prompt, model=...)``
         method to bypass docker.
@@ -309,9 +316,10 @@ def run(
     Returns
     -------
     dict
-        ``{"package", "what_for", "problems_solved", "quick_start",
-        "when_not_to_use"[, "red_tests"]}``.
+        ``{"package", <prompt-keys-from-the-template>...
+        [, "tests", "tests_summary"]}``.
     """
+    prompts = get_template(template)
     if _runner is None:
         resolved, cleanup_clone = _resolve_source(skills_dir)
     else:
@@ -343,8 +351,8 @@ def run(
         # the agent reads from the right place.
         skills_path = getattr(runner, "skills_path", "/home/agent/.claude/skills/")
 
-        out: Dict[str, Any] = {"package": name}
-        for key, prompt in _PROMPTS.items():
+        out: Dict[str, Any] = {"package": name, "template": template}
+        for key, prompt in prompts.items():
             answers = []
             rendered = prompt.format(skills_path=skills_path)
             for _ in range(max(1, int(runs_per_prompt))):

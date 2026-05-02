@@ -304,8 +304,13 @@ def test_cli_help_shows_example_block():
 
     from newb._cli import main
 
+    # Top-level help mentions the example invocation pattern.
     result = CliRunner().invoke(main, ["--help"])
     assert result.exit_code == 0
     assert "Example" in result.output
-    assert "newb ./" in result.output
-    assert "--format" in result.output
+    assert "newb verify" in result.output
+    # `newb verify --help` is where the canonical flags appear.
+    sub = CliRunner().invoke(main, ["verify", "--help"])
+    assert sub.exit_code == 0
+    assert "--format" in sub.output
+    assert "--template" in sub.output

@@ -50,13 +50,24 @@ class _BaseContainerRunner:
             raise RuntimeError(
                 f"{type(self).__name__} requires `{self.runtime_bin}` on PATH."
             )
-        api_key = os.environ.get("NEWB_ANTHROPIC_API_KEY")
+        # Two opt-in env vars (NEWB_ prefix only — never silently picks
+        # up the upstream ANTHROPIC_API_KEY):
+        #   NEWB_ANTHROPIC_API_KEY        sk-ant-api03-...  (canonical)
+        #   NEWB_ANTHROPIC_API_KEY_OAUTH  sk-ant-oat01-...  (Pro/Max
+        #                                  users — extract from
+        #                                  ~/.claude/.credentials.json)
+        # Whichever is set gets forwarded to the container as
+        # ANTHROPIC_API_KEY so the SDK inside picks it up.
+        api_key = os.environ.get("NEWB_ANTHROPIC_API_KEY") or os.environ.get(
+            "NEWB_ANTHROPIC_API_KEY_OAUTH"
+        )
         if not api_key:
             raise RuntimeError(
-                f"{type(self).__name__} needs $NEWB_ANTHROPIC_API_KEY set "
-                "(forwarded to the container as ANTHROPIC_API_KEY for the SDK). "
-                "newb never reads the upstream ANTHROPIC_API_KEY env var — "
-                "set NEWB_ANTHROPIC_API_KEY explicitly to opt in."
+                f"{type(self).__name__} needs $NEWB_ANTHROPIC_API_KEY "
+                "(API key) or $NEWB_ANTHROPIC_API_KEY_OAUTH (Claude Code "
+                "subscription, extracted from ~/.claude/.credentials.json) "
+                "set. newb never reads the upstream ANTHROPIC_API_KEY env "
+                "var — set the NEWB_-prefixed var explicitly to opt in."
             )
         self._api_key = api_key
         self.skills_mount = Path(skills_mount).resolve()

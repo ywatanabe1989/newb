@@ -22,6 +22,7 @@ yaml = ["PyYAML>=6.0"]
 
 [project.scripts]
 newb = "newb._cli:main"
+scitex-newb = "newb._cli:main"   # SciTeX-namespaced alias
 
 [project.urls]
 Homepage = "https://github.com/ywatanabe1989/newb"

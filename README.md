@@ -159,16 +159,22 @@ Each test combines optional substring grading and an optional LLM judge.
 
 ## Auth
 
+newb owns its own env namespace and never silently inherits the
+upstream `ANTHROPIC_API_KEY`. Two opt-in vars (set whichever you have):
+
 ```bash
-export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...   # canonical, ToS-clean
+# Canonical API key — sk-ant-api03-... (production / CI / redistributed use)
+export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...
+
+# OR: Claude Code subscription (Pro / Max) — sk-ant-oat01-...
+# Extract from ~/.claude/.credentials.json:
+export NEWB_ANTHROPIC_API_KEY_OAUTH=$(jq -r .claudeAiOauth.accessToken ~/.claude/.credentials.json)
 ```
 
-newb owns its own env namespace and never silently inherits the
-upstream `ANTHROPIC_API_KEY`. On a personal machine, leaving the var
-unset falls through to your local `~/.claude/` OAuth login (host
-runtime only — containers require the explicit env var). Per
+Whichever is set is forwarded to the container as `ANTHROPIC_API_KEY`
+(the SDK inside reads the canonical name). Per
 [Anthropic's commercial ToS](https://www.anthropic.com/legal/commercial-terms),
-redistributed / CI use should set `NEWB_ANTHROPIC_API_KEY`.
+redistributed / CI use should prefer the API-key form.
 
 ## Part of SciTeX
 
