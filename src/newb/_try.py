@@ -216,6 +216,7 @@ def _make_runner(
     project_root: Path,
     model: str,
     runtime: str = "docker",
+    hardening=None,
 ) -> Any:
     """Build a runner.
 
@@ -244,13 +245,18 @@ def _make_runner(
         from ._container_runner import DockerRunner
 
         return DockerRunner(
-            skills_mount=skills_dir, project_root=project_root, model=model
+            skills_mount=skills_dir,
+            project_root=project_root,
+            model=model,
+            hardening=hardening,
         )
     if runtime == "apptainer":
         from ._container_runner import ApptainerRunner
 
         return ApptainerRunner(
-            skills_mount=skills_dir, project_root=project_root, model=model
+            skills_mount=skills_dir,
+            project_root=project_root,
+            model=model,
         )
     raise ValueError(
         f"unknown runtime: {runtime!r} (expected docker / apptainer; "
@@ -270,6 +276,7 @@ def run(
     runs_per_prompt: int = 1,
     runtime: str = "docker",
     template: str = "python-package",
+    hardening=None,
     _runner: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Have an agent (mounted with only the given skills) self-explain.
@@ -322,6 +329,7 @@ def run(
                 project_root=project_root,
                 model=model,
                 runtime=runtime,
+                hardening=hardening,
             )
 
         # Resolve the skills path the agent will see inside the runner.

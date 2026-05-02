@@ -200,6 +200,35 @@ def _print_top_level_json(ctx: click.Context, _param, value):
     help="Container runtime. docker (default) or apptainer (HPC).",
 )
 @click.option(
+    "--harden-memory",
+    default=None,
+    metavar="SIZE",
+    help="Container memory cap, e.g. 2g. Default: unlimited (agent runs free).",
+)
+@click.option(
+    "--harden-cpus",
+    default=None,
+    metavar="N",
+    help="Container CPU cap (cores). Default: unlimited.",
+)
+@click.option(
+    "--harden-pids-limit",
+    default=None,
+    type=int,
+    metavar="N",
+    help="Container PID cap. Default: unlimited.",
+)
+@click.option(
+    "--harden-no-network/--harden-network",
+    default=None,
+    help="--harden-no-network adds --network=none (breaks pip + SDK; only for fully offline workflows). Default: bridge.",
+)
+@click.option(
+    "--harden-tmpfs-noexec/--no-harden-tmpfs-noexec",
+    default=None,
+    help="Mount /tmp with noexec,nosuid. Default: off (pip/pytest sometimes write+exec wheels in /tmp).",
+)
+@click.option(
     "--help-recursive",
     is_flag=True,
     is_eager=True,
@@ -219,6 +248,11 @@ def main(
     json_alias,
     md_alias,
     runtime,
+    harden_memory,
+    harden_cpus,
+    harden_pids_limit,
+    harden_no_network,
+    harden_tmpfs_noexec,
 ):
     """A fresh AI agent tries to use your package — pytest-style.
 
@@ -256,6 +290,19 @@ def main(
         out_format = "json"
     if md_alias:
         out_format = "markdown"
+
+    # Resolve hardening: env vars first (NEWB_HARDEN_*), then CLI flags
+    # override (None = absent flag, leaves env-supplied value untouched).
+    from ._hardening import HardeningOptions
+
+    hardening = HardeningOptions.from_env().merged_with(
+        memory=harden_memory,
+        cpus=harden_cpus,
+        pids_limit=harden_pids_limit,
+        no_network=harden_no_network,
+        tmpfs_noexec=harden_tmpfs_noexec,
+    )
+
     click.echo(f"\U0001f41d newb: trying {source} ...", err=True)
     result = _run_impl(
         source,
@@ -263,6 +310,7 @@ def main(
         runs_per_prompt=runs,
         runtime=runtime,
         template=template,
+        hardening=hardening,
     )
     if out_format == "markdown":
         click.echo(render_markdown(result), nl=False)
@@ -284,160 +332,21 @@ def main(
 
 
 # ---------------------------------------------------------------------------
-# templates — list / show built-in question templates
+# Subcommand groups (extracted into sibling modules for line-budget hygiene)
 # ---------------------------------------------------------------------------
 
 
-@main.group()
-def templates():
-    """Built-in question templates — what newb asks the agent."""
+from ._cli_mcp import mcp as _mcp_group  # noqa: E402
+from ._cli_skills import skills as _skills_group  # noqa: E402
+from ._cli_templates import templates as _templates_group  # noqa: E402
 
-
-@templates.command("list")
-@click.option(
-    "--json",
-    "as_json",
-    is_flag=True,
-    default=False,
-    help="Machine-readable JSON output.",
-)
-def templates_list(as_json):
-    """List all built-in question templates.
-
-    \b
-    Example:
-      $ newb templates list
-      $ newb templates list --json
-    """
-    rows = [
-        {"name": n, "questions": list(p.keys())} for n, p in sorted(TEMPLATES.items())
-    ]
-    if as_json:
-        click.echo(json.dumps(rows, indent=2))
-        return
-    for r in rows:
-        click.echo(f"{r['name']}  ({len(r['questions'])} questions)")
-        for q in r["questions"]:
-            click.echo(f"  - {q}")
-
-
-@templates.command("show")
-@click.argument("name")
-@click.option(
-    "--json",
-    "as_json",
-    is_flag=True,
-    default=False,
-    help="Machine-readable JSON output.",
-)
-def templates_show(name, as_json):
-    """Show the prompts in a template.
-
-    \b
-    Example:
-      $ newb templates show python-package
-      $ newb templates show cli-tool --json
-    """
-    if name not in TEMPLATES:
-        raise click.ClickException(
-            f"unknown template {name!r}; available: {sorted(TEMPLATES)}"
-        )
-    prompts = TEMPLATES[name]
-    if as_json:
-        click.echo(json.dumps({"name": name, "prompts": prompts}, indent=2))
-        return
-    for k, prompt in prompts.items():
-        click.echo(f"## {k}\n")
-        click.echo(prompt)
-        click.echo()
+main.add_command(_templates_group)
+main.add_command(_skills_group)
+main.add_command(_mcp_group)
 
 
 # ---------------------------------------------------------------------------
-# skills — list / get newb's own _skills/<pkg>/ tree
-# ---------------------------------------------------------------------------
-
-
-@main.group()
-def skills():
-    """newb's own agent-facing skill leaves (under src/newb/_skills/newb/)."""
-
-
-def _skills_dir():
-    from pathlib import Path
-
-    import newb as _newb
-
-    return Path(_newb.__file__).parent / "_skills" / "newb"
-
-
-@skills.command("list")
-@click.option(
-    "--json",
-    "as_json",
-    is_flag=True,
-    default=False,
-    help="Machine-readable JSON output.",
-)
-def skills_list(as_json):
-    """List newb's skill leaves (SKILL.md + NN_*.md sub-skills).
-
-    \b
-    Example:
-      $ newb skills list
-      $ newb skills list --json
-    """
-    d = _skills_dir()
-    if not d.is_dir():
-        raise click.ClickException(f"skills dir missing: {d}")
-    leaves = sorted(p.name for p in d.glob("*.md"))
-    if as_json:
-        click.echo(json.dumps({"skills_dir": str(d), "leaves": leaves}, indent=2))
-        return
-    click.echo(f"# {d}")
-    for name in leaves:
-        click.echo(f"  - {name}")
-
-
-@skills.command("get")
-@click.argument("name")
-@click.option(
-    "--json",
-    "as_json",
-    is_flag=True,
-    default=False,
-    help="Machine-readable JSON output (path + content fields).",
-)
-def skills_get(name, as_json):
-    """Print one skill leaf's content (e.g. `newb skills get SKILL.md`).
-
-    \b
-    Example:
-      $ newb skills get SKILL.md
-      $ newb skills get 04_isolation
-      $ newb skills get 01_quick-start --json
-    """
-    d = _skills_dir()
-    p = d / name
-    if not p.is_file():
-        candidates = [c for c in d.glob("*.md") if name in c.name]
-        if len(candidates) == 1:
-            p = candidates[0]
-        elif len(candidates) > 1:
-            raise click.ClickException(
-                f"ambiguous skill name {name!r}; matches: "
-                + ", ".join(c.name for c in candidates)
-            )
-        else:
-            raise click.ClickException(f"unknown skill: {name!r}")
-    content = p.read_text(encoding="utf-8")
-    if as_json:
-        click.echo(json.dumps({"path": str(p), "content": content}, indent=2))
-        return
-    click.echo(content, nl=False)
-
-
-# ---------------------------------------------------------------------------
-# list-python-apis
+# list-python-apis (small enough to keep in-line)
 # ---------------------------------------------------------------------------
 
 
@@ -479,97 +388,6 @@ def list_python_apis(as_json):
         return
     for r in rows:
         click.echo(f"{r['name']}{r['signature']}  [{r['kind']}]")
-
-
-# ---------------------------------------------------------------------------
-# mcp — server lifecycle + tool listing
-# ---------------------------------------------------------------------------
-
-
-@main.group()
-def mcp():
-    """MCP server commands (start, list-tools)."""
-
-
-@mcp.command("list-tools")
-@click.option(
-    "--json",
-    "as_json",
-    is_flag=True,
-    default=False,
-    help="Machine-readable JSON output.",
-)
-def mcp_list_tools(as_json):
-    """List MCP tools exposed by newb's server.
-
-    \b
-    Example:
-      $ newb mcp list-tools
-      $ newb mcp list-tools --json
-    """
-    try:
-        from ._server import mcp as _mcp_server
-    except ImportError as e:
-        raise click.ClickException(
-            f"MCP support requires the [mcp] extra: pip install 'newb[mcp]' ({e})"
-        ) from e
-    tool_mgr = getattr(_mcp_server, "_tool_manager", None) or getattr(
-        _mcp_server, "tool_manager", None
-    )
-    tools = (
-        list(tool_mgr._tools.values())
-        if tool_mgr and hasattr(tool_mgr, "_tools")
-        else []
-    )
-    rows = [
-        {
-            "name": getattr(t, "name", "?"),
-            "description": (getattr(t, "description", "") or "").strip().splitlines()[0]
-            if getattr(t, "description", None)
-            else "",
-        }
-        for t in tools
-    ]
-    if as_json:
-        click.echo(json.dumps(rows, indent=2))
-        return
-    for r in rows:
-        click.echo(f"{r['name']}  — {r['description']}")
-
-
-@mcp.command("start")
-@click.option(
-    "--dry-run",
-    is_flag=True,
-    default=False,
-    help="Print the planned action and exit (don't bind / serve).",
-)
-@click.option(
-    "--yes",
-    "-y",
-    is_flag=True,
-    default=False,
-    help="Bypass any TTY confirm (no-op here; present for SciTeX CLI parity).",
-)
-def mcp_start(dry_run, yes):
-    """Start the newb MCP server (stdio transport).
-
-    \b
-    Example:
-      $ newb mcp start
-      $ newb mcp start --dry-run
-    """
-    if dry_run:
-        click.echo("would start: newb MCP server on stdio transport")
-        return
-    _ = yes
-    try:
-        from ._server import run_server
-    except ImportError as e:
-        raise click.ClickException(
-            f"MCP support requires the [mcp] extra: pip install 'newb[mcp]' ({e})"
-        ) from e
-    run_server()
 
 
 if __name__ == "__main__":
