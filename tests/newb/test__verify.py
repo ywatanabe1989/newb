@@ -310,13 +310,12 @@ def test_cli_help_shows_example_block():
 
     from newb._cli import main
 
-    # Top-level help mentions the example invocation pattern.
+    # pytest-style top-level: `newb <target>` is THE primary form.
+    # All the canonical flags + the example block live on the group's
+    # own --help (no subcommand needed for the try-action).
     result = CliRunner().invoke(main, ["--help"])
     assert result.exit_code == 0
     assert "Example" in result.output
-    assert "newb verify" in result.output
-    # `newb verify --help` is where the canonical flags appear.
-    sub = CliRunner().invoke(main, ["verify", "--help"])
-    assert sub.exit_code == 0
-    assert "--format" in sub.output
-    assert "--template" in sub.output
+    assert "newb ." in result.output  # canonical positional invocation
+    assert "--format" in result.output
+    assert "--template" in result.output

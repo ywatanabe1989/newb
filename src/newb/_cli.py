@@ -1,8 +1,18 @@
-"""newb CLI — ``newb <source>``.
+"""newb CLI — pytest-style.
 
-The CLI is intentionally minimal: source, model, output format,
-container runtime, question template. Everything else (auth,
-isolation, lifecycle) is delegated to the chosen runtime.
+Primary form (no subcommand needed):
+
+    newb <target>                  → a fresh agent tries to use the package
+
+Subcommands are introspection-only:
+
+    newb templates list / show
+    newb skills list / get
+    newb mcp list-tools / start
+    newb list-python-apis
+
+Mental model: a newbie tries something. The CLI's default action is the
+"try" — pytest-style positional, no verb in front.
 """
 
 from __future__ import annotations
@@ -32,8 +42,14 @@ def _print_help_recursive(ctx: click.Context, _param, value):
 
 
 def _print_top_level_json(ctx: click.Context, _param, value):
-    """Top-level --json: emit a JSON summary of registered subcommands."""
+    """Top-level --json (no positional, no subcommand): emit a JSON
+    summary of registered subcommands. When SOURCE is positional,
+    --json acts as a `--format json` alias inside the try action."""
     if not value or ctx.resilient_parsing:
+        return
+    # Only handle the introspection mode here; the try-action's --json
+    # is consumed downstream.
+    if ctx.params.get("source"):
         return
     cmd = ctx.command
     rows = []
@@ -53,52 +69,16 @@ def _print_top_level_json(ctx: click.Context, _param, value):
     ctx.exit(0)
 
 
+# ---------------------------------------------------------------------------
+# Top-level group — also runs the "try" action when invoked with a positional
+# ---------------------------------------------------------------------------
+
+
 @click.group(
     invoke_without_command=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
-@click.option(
-    "--help-recursive",
-    is_flag=True,
-    is_eager=True,
-    expose_value=False,
-    callback=_print_help_recursive,
-    help="Flatten help for every subcommand.",
-)
-@click.option(
-    "--json",
-    is_flag=True,
-    is_eager=True,
-    expose_value=False,
-    callback=_print_top_level_json,
-    help="Machine-readable JSON summary of subcommands (universal SciTeX flag).",
-)
-@click.version_option(prog_name="newb")
-@click.pass_context
-def main(ctx: click.Context):
-    """Test your package through the eyes of a fresh AI agent.
-
-    \b
-    Example:
-        $ newb verify .
-        $ newb verify https://github.com/user/repo.git --format markdown
-        $ newb templates list
-
-    A sandboxed container session reads your project (respecting
-    .gitignore) and answers four canonical questions about it.
-    """
-    if ctx.invoked_subcommand is None:
-        click.echo(ctx.get_help())
-        ctx.exit(0)
-
-
-# ---------------------------------------------------------------------------
-# verify — the main subcommand
-# ---------------------------------------------------------------------------
-
-
-@main.command("verify-package")
-@click.argument("source", required=True)
+@click.argument("source", required=False)
 @click.option("--model", default="claude-haiku-4-5", help="Claude model id.")
 @click.option("--runs", default=1, type=int, help="Runs per prompt.")
 @click.option(
@@ -127,35 +107,61 @@ def main(ctx: click.Context):
     default="docker",
     help="Container runtime. docker (default) or apptainer (HPC).",
 )
-def verify_package(source, model, runs, template, out_format, json_alias, runtime):
-    # Click runner-only alias: `newb verify ...` == `newb verify-package ...`
-    # (the legacy_dispatch shim handles the same translation when invoked
-    # via the entry-point script; this keeps CliRunner-based tests working.)
-    """Run the agent against SOURCE — verify a package's docs.
-
-    \b
-    SOURCE may be:
-      - a local directory containing .md files (any layout)
-      - a git URL (https://, git@, or *.git) — shallow-cloned, then
-        _skills/, docs/, or repo root is auto-detected.
-
-    \b
-    Auth (NEWB_-prefixed env vars only — no upstream surprises):
-      $ export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...
-      (or NEWB_ANTHROPIC_API_KEY_OAUTH=sk-ant-oat01-... for Pro/Max
-       users with a Claude Code subscription — extracted from
-       ~/.claude/.credentials.json)
+@click.option(
+    "--help-recursive",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_print_help_recursive,
+    help="Flatten help for every subcommand.",
+)
+@click.version_option(prog_name="newb")
+@click.pass_context
+def main(
+    ctx: click.Context,
+    source,
+    model,
+    runs,
+    template,
+    out_format,
+    json_alias,
+    runtime,
+):
+    """A fresh AI agent tries to use your package — pytest-style.
 
     \b
     Example:
-        $ newb verify-package .
-        $ newb verify-package ./src/mypkg/_skills/mypkg
-        $ newb verify-package https://github.com/user/repo.git
-        $ newb verify-package . --template python-package --json
+        $ newb .                                # current project
+        $ newb https://github.com/user/repo.git # git URL — shallow-clones
+        $ newb . --template cli-tool --json
+        $ newb templates list                   # introspect
+        $ newb mcp start                        # MCP server (stdio)
+
+    SOURCE may be a local directory or a git URL (https://, git@, *.git).
+    A sandboxed container session reads your project (respecting
+    .gitignore) and answers the questions in the chosen template.
+    Runtime defaults to docker; auth via NEWB_ANTHROPIC_API_KEY.
     """
+    if ctx.invoked_subcommand is not None:
+        return  # subcommand handler will run
+    if source is None:
+        click.echo(ctx.get_help())
+        ctx.exit(0)
+    # Friendly deprecation hint for the old verb-prefixed forms — the
+    # 0.9.x line had `newb verify <SOURCE>` and `newb verify-package
+    # <SOURCE>`. Pytest-style dropped both. Direct users to the new form.
+    if source in {"verify", "verify-package", "try", "test"}:
+        click.echo(
+            f"\u26a0\ufe0f  `newb {source} ...` was removed in 0.10.0 — "
+            "the canonical invocation is now pytest-style: `newb <target>`. "
+            "(Drop the `verify` / `verify-package` token; everything else "
+            "stays the same.)",
+            err=True,
+        )
+        ctx.exit(2)
     if json_alias:
         out_format = "json"
-    click.echo(f"\U0001f41d newb: probing {source} ...", err=True)
+    click.echo(f"\U0001f41d newb: trying {source} ...", err=True)
     result = _run_impl(
         source,
         model=model,
@@ -252,8 +258,7 @@ def templates_show(name, as_json):
 
 
 # ---------------------------------------------------------------------------
-# skills — list / get newb's own _skills/<pkg>/ tree (introspection parity
-# with scitex packages' `<pkg> skills list/get`)
+# skills — list / get newb's own _skills/<pkg>/ tree
 # ---------------------------------------------------------------------------
 
 
@@ -318,7 +323,6 @@ def skills_get(name, as_json):
     """
     d = _skills_dir()
     p = d / name
-    # also accept partial-name lookup
     if not p.is_file():
         candidates = [c for c in d.glob("*.md") if name in c.name]
         if len(candidates) == 1:
@@ -338,7 +342,7 @@ def skills_get(name, as_json):
 
 
 # ---------------------------------------------------------------------------
-# list-python-apis — required top-level command per scitex audit-cli §1a
+# list-python-apis
 # ---------------------------------------------------------------------------
 
 
@@ -383,7 +387,7 @@ def list_python_apis(as_json):
 
 
 # ---------------------------------------------------------------------------
-# mcp — server lifecycle + tool listing (parity with scitex-* convention)
+# mcp — server lifecycle + tool listing
 # ---------------------------------------------------------------------------
 
 
@@ -414,14 +418,14 @@ def mcp_list_tools(as_json):
         raise click.ClickException(
             f"MCP support requires the [mcp] extra: pip install 'newb[mcp]' ({e})"
         ) from e
-    # FastMCP exposes tools via _tool_manager._tools (versioned across releases).
     tool_mgr = getattr(_mcp_server, "_tool_manager", None) or getattr(
         _mcp_server, "tool_manager", None
     )
-    if tool_mgr and hasattr(tool_mgr, "_tools"):
-        tools = list(tool_mgr._tools.values())
-    else:
-        tools = []
+    tools = (
+        list(tool_mgr._tools.values())
+        if tool_mgr and hasattr(tool_mgr, "_tools")
+        else []
+    )
     rows = [
         {
             "name": getattr(t, "name", "?"),
@@ -461,9 +465,9 @@ def mcp_start(dry_run, yes):
       $ newb mcp start --dry-run
     """
     if dry_run:
-        click.echo("would start: newb MCP server on stdio transport (3 tools)")
+        click.echo("would start: newb MCP server on stdio transport")
         return
-    _ = yes  # consumed for SciTeX CLI parity
+    _ = yes
     try:
         from ._server import run_server
     except ImportError as e:
@@ -473,57 +477,5 @@ def mcp_start(dry_run, yes):
     run_server()
 
 
-# ---------------------------------------------------------------------------
-# Backward-compat shim — `newb <source>` (without `verify`) → `newb verify <source>`
-# ---------------------------------------------------------------------------
-
-
-# Names of registered subcommand groups — keep in sync with the @main.group
-# / @main.command decorators above. Used by _legacy_dispatch to know what
-# NOT to rewrite. ``verify`` (no -package suffix) is kept as a recognised
-# alias — the legacy dispatcher rewrites it to the canonical form.
-_SUBCOMMANDS = {
-    "verify-package",
-    "verify",  # legacy alias for verify-package
-    "templates",
-    "skills",
-    "mcp",
-    "list-python-apis",
-}
-
-
-def _legacy_dispatch():
-    """Backward-compat shims for two old call shapes:
-
-    1. ``newb <SOURCE> …``  →  ``newb verify-package <SOURCE> …``
-       (positional source, no subcommand at all).
-    2. ``newb verify <SOURCE> …``  →  ``newb verify-package <SOURCE> …``
-       (the noun-verb rename in 0.10 dropped the bare ``verify`` form
-       to satisfy audit-cli §1 — keep the old name working).
-    """
-    import sys
-
-    argv = sys.argv[1:]
-    if not argv:
-        return
-    first = argv[0]
-    if first == "verify":
-        sys.argv = [sys.argv[0], "verify-package"] + argv[1:]
-        return
-    # If first arg is a known subcommand or starts with a flag, no rewrite.
-    if first in _SUBCOMMANDS or first.startswith("-"):
-        return
-    sys.argv = [sys.argv[0], "verify-package"] + argv
-
-
-# Register `verify` as a hidden Click alias for `verify-package` so tests
-# that use CliRunner can still invoke ``main, ["verify", ...]``.
-main.add_command(verify_package, name="verify")
-
-
 if __name__ == "__main__":
-    _legacy_dispatch()
     main()
-else:
-    # Also rewrite when invoked through the entry-point script.
-    _legacy_dispatch()

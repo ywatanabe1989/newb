@@ -131,12 +131,12 @@ redistributed / CI use should prefer the API-key form.
 <br>
 
 ```bash
-newb verify-package .                              # current project — docker by default
-newb verify-package ./src/mypkg/_skills/mypkg      # focused docs subdir
-newb verify-package https://github.com/u/r.git     # git URL — shallow-clones
-newb verify-package . --format markdown >> README.md
-newb verify-package . --runtime apptainer          # HPC variant
-newb verify-package . --template cli-tool          # CLI-focused question set
+newb .                              # current project — docker by default
+newb ./src/mypkg/_skills/mypkg      # focused docs subdir
+newb https://github.com/u/r.git     # git URL — shallow-clones
+newb . --format markdown >> README.md
+newb . --runtime apptainer          # HPC variant
+newb . --template cli-tool          # CLI-focused question set
 
 # Introspection
 newb templates list                        # built-in question templates
@@ -149,11 +149,14 @@ newb mcp start                             # serve over stdio (for IDEs)
 newb --help-recursive                      # flatten help across subcommands
 ```
 
-For backward compat, `newb <source>` (positional, no subcommand) is
-auto-rewritten to `newb verify-package <source>`. Self-verification example:
+pytest-style: `newb <target>` is the canonical invocation — no verb in
+front. Subcommands (`templates`, `skills`, `mcp`, `list-python-apis`)
+are introspection-only.
+
+Self-verification example:
 
 ```bash
-newb verify-package https://github.com/ywatanabe1989/newb.git \
+newb https://github.com/ywatanabe1989/newb.git \
   > .history/$(date +%F)-self-verification.txt 2>&1
 ```
 
@@ -274,8 +277,8 @@ prompt-injection scan since newb's surface (untrusted-docs reader)
 is a textbook indirect-injection target.
 
 ```bash
-newb verify-package .                              # default: python-package
-newb verify-package . --template cli-tool
+newb .                              # default: python-package
+newb . --template cli-tool
 newb templates list                        # discover what's available
 newb templates show python-package         # see the actual prompts
 ```
@@ -315,7 +318,7 @@ For a different *prompt set* (not just extras), define a YAML template
 and pass its path to `--template`:
 
 ```bash
-newb verify-package . --template ./my-template.yaml
+newb . --template ./my-template.yaml
 ```
 
 ```yaml
