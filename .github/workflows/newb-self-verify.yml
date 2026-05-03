@@ -1,4 +1,4 @@
-name: newb verifies itself
+name: Newb
 
 # Dogfood verification — `newb .` against newb. If this is red, newb's
 # own docs are not ready to ship; if green, the verification path works
