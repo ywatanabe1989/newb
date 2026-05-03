@@ -19,7 +19,7 @@ Three steps for any Python package that wants the badge:
 
 The full canonical template (workflow YAML, secret notes, trigger
 patterns, cost shape, failure semantics) lives in
-[`docs/badge.md`](../../../../docs/badge.md). This leaf is the
+[`docs/badge.md`](https://github.com/ywatanabe1989/newb/blob/main/docs/badge.md). This leaf is the
 discovery shim — agents and humans landing on the skill get the
 4-line summary plus the pointer.
 
@@ -72,6 +72,6 @@ pattern.
 
 Default trigger is `workflow_dispatch` (manual). Add `schedule:` /
 `pull_request:` only after the canary is stable — see
-[`docs/badge.md`](../../../../docs/badge.md) for the recommended
+[`docs/badge.md`](https://github.com/ywatanabe1989/newb/blob/main/docs/badge.md) for the recommended
 hash-of-package-name cron-slot pattern that staggers ecosystem-wide
 runs.
