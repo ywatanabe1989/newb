@@ -4,6 +4,23 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.22.2] — 2026-05-03
+
+### Changed (CI + docs only — no library code change)
+
+- `newb-self-verify.yml` action versions bumped to current majors
+  (`actions/checkout@v6`, `actions/setup-python@v6`,
+  `actions/upload-artifact@v7`) — Node 20 force-migration starts
+  June 2026.
+- Added explicit resource caps to the self-verify workflow
+  (`NEWB_HARDEN_MEMORY=4g`, `NEWB_HARDEN_PIDS_LIMIT=512`,
+  `NEWB_HARDEN_CPUS=2`). `cap-drop=ALL` covers Linux capabilities
+  but unconstrained memory/pids opens a DoS lane if an attacker
+  hijacks the docs-reading agent. Generous-but-bounded for
+  pip wheel-building's transient peak.
+- Native GH-Actions status badge for self-verify added to
+  README.
+
 ## [0.22.1] — 2026-05-03
 
 ### Fixed
