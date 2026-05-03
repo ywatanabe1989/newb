@@ -18,8 +18,6 @@
   <a href="https://pypi.org/project/newb/"><img src="https://img.shields.io/pypi/pyversions/newb.svg" alt="Python"></a>
   <a href="https://github.com/ywatanabe1989/newb/actions/workflows/test.yml"><img src="https://github.com/ywatanabe1989/newb/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
   <a href="https://github.com/ywatanabe1989/newb/actions/workflows/newb-self-verify.yml"><img src="https://github.com/ywatanabe1989/newb/actions/workflows/newb-self-verify.yml/badge.svg?branch=develop" alt="Newb"></a>
-  <a href="https://codecov.io/gh/ywatanabe1989/newb"><img src="https://codecov.io/gh/ywatanabe1989/newb/graph/badge.svg" alt="Coverage"></a>
-  <a href="https://newb.readthedocs.io/en/latest/"><img src="https://readthedocs.org/projects/newb/badge/?version=latest" alt="Docs"></a>
   <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/license-AGPL_v3-blue.svg" alt="License: AGPL v3"></a>
 </p>
 <!-- scitex-badges:end -->
