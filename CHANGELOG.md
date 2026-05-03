@@ -4,6 +4,58 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.23.0] — 2026-05-03
+
+### Added
+
+- **Structured `<key>_parsed` siblings** for the canonical questions
+  whose replies are CI-gateable. Free-text reply still ships
+  unchanged; the parsed form is additive.
+  - `post_install_check_parsed`: `{install, import, cli}` — each
+    `ok | fail | n/a | unknown`.
+  - `install_and_help_parsed` (cli-tool template): `{install, help}`.
+  - `prompt_injection_check_parsed`: `{found: bool|None, found_raw: yes|no|unknown}`.
+  - CI gating becomes
+    `jq -e '.post_install_check_parsed.install == "ok"' newb.json`,
+    no fragile substring grepping.
+  - Off-script replies (agent didn't follow the prompted format)
+    yield `"unknown"` instead of raising — itself a CI signal.
+  - New module: `newb._parsers` (`parse_post_install_check`,
+    `parse_install_and_help`, `parse_prompt_injection_check`,
+    `attach_parsed_fields`). 19 new tests.
+- **`newb_signature` field** at the top of every report — version,
+  tagline, PyPI URL, GitHub URL, "Part of SciTeX". Same signature
+  rendered as a footer in `render_markdown` so paste-into-README
+  reports carry their own provenance.
+
+### Internal
+
+- Extracted `render_markdown` into `_render.py` (line-budget
+  hygiene; `_try.py` was at the 512-line limit). Re-exported from
+  `newb._try` so existing imports keep working.
+- Extracted `_parsers.py` as a focused module rather than inlining
+  into `_try.py` — keeps the parser surface easy to extend when new
+  question keys land.
+
+### Not yet (future work)
+
+The auditor noted that even with parsing, agents occasionally drift
+from the prompted format (`Install:` vs `INSTALL:`, emoji injection,
+extra prose on the verdict line). Three escalation rungs if drift
+becomes a real problem:
+
+1. **Few-shot examples** in the prompt templates (~30 min, ~95%
+   reliability).
+2. **Anthropic Tool Use** for `post_install_check` and
+   `prompt_injection_check` only — JSON schema enforcement at the
+   SDK boundary, structurally impossible to drift (~half day).
+3. Hybrid stays: free-text for human-readable questions
+   (`what_for`, `problems_solved`, …), structured for CI-gate
+   questions.
+
+Shipping the parsers as the foundation; (1) and (2) defer until
+real-world drift data justifies them.
+
 ## [0.22.2] — 2026-05-03
 
 ### Changed (CI + docs only — no library code change)

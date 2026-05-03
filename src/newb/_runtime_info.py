@@ -61,3 +61,34 @@ def _newb_version() -> str:
         return _v
     except Exception:
         return "unknown"
+
+
+# Single source of truth for the project tagline. Referenced from
+# `_build_signature()` so every report carries the same one-line
+# framing, and from README.md (kept manually in sync — there's no
+# build step that injects it).
+NEWB_TAGLINE = (
+    "Test your package through the eyes of a newbie agent — "
+    "because that's who's reading your docs now."
+)
+
+
+def _build_signature() -> dict:
+    """Return the self-describing signature embedded in every report.
+
+    Tells readers (humans and tools) which version of newb produced
+    this report, where to find the project, and what newb is for in
+    one line. Surfaced both in the JSON envelope (top-level
+    ``newb_signature``) and in the markdown render footer.
+    """
+    return {
+        "tool": "newb",
+        "version": _newb_version(),
+        "tagline": NEWB_TAGLINE,
+        "pypi": "https://pypi.org/project/newb/",
+        "github": "https://github.com/ywatanabe1989/newb",
+        "ecosystem": {
+            "name": "SciTeX",
+            "url": "https://scitex.ai",
+        },
+    }
