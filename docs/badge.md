@@ -30,18 +30,12 @@ jobs:
     timeout-minutes: 25
     permissions:
       contents: read
-      packages: read       # pull ghcr.io/ywatanabe1989/newb-runner
     steps:
       - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-
-      - name: Login to ghcr.io (so docker can pull the runner image)
-        run: |
-          echo "${{ secrets.GHCR_PAT }}" \
-            | docker login ghcr.io -u ywatanabe1989 --password-stdin
 
       - name: Install newb
         run: pip install --upgrade newb
@@ -66,6 +60,10 @@ jobs:
           name: newb-report
           path: newb-report.json
           if-no-files-found: warn
+
+      - name: Gate on report (optional — uncomment to hard-fail on regressions)
+        # run: newb gate newb-report.json
+        run: 'true'
 
       - name: Render markdown summary
         if: success()
@@ -96,11 +94,14 @@ project tagline, before the description body).
 | Secret | Source | Notes |
 |---|---|---|
 | `NEWB_ANTHROPIC_API_KEY` | Anthropic API key OR Claude Code OAuth access token | newb forwards verbatim; the Anthropic backend accepts both on the same Authorization header. For CI, prefer a real API key with a per-key spend cap (Pro/Max OAuth tokens expire and Pro/Max licenses aren't sized for automated use). |
-| `GHCR_PAT` | ywatanabe1989's GHCR-scoped PAT | Needed only because the runner image is currently a private package. If we make it public later, this requirement drops. |
 
-For SciTeX-ecosystem repos, the cleanest pattern is an **org-level**
-`NEWB_ANTHROPIC_API_KEY` secret on `ywatanabe1989`, visible to all
-selected repos. One secret to rotate.
+That's it — one secret. The runner image
+(`ghcr.io/ywatanabe1989/newb-runner`) is published publicly, so no
+docker login step is required.
+
+If you're rolling out across many repos under one org, set
+`NEWB_ANTHROPIC_API_KEY` once as an organization secret with
+selected-repo access — one place to rotate.
 
 ## Triggers — start manual, scale up
 
@@ -129,17 +130,15 @@ ordinary code PRs don't pay the 5-minute API cost.
 
 ## Cost shape
 
-Per-run rough numbers (measured against scitex-io and newb itself, on
-GitHub-hosted Ubuntu runners):
+Per-run rough numbers, measured on GitHub-hosted Ubuntu runners:
 
 - Wall-clock: ~3-5 minutes
 - API spend on `claude-haiku-4-5`: ~$0.05-$0.15 per run
 - CI minutes: free for public repos
 
-Across the SciTeX 19-package ecosystem at one daily run per package,
-that's ~$30-90/month in API spend, $0 in CI minutes. See the
-[security model](../SECURITY.md) for why this is the right
-shape.
+For N packages on a daily schedule, multiply: ~N × $0.05-$0.15/day in
+API spend, $0 in CI minutes. See the
+[security model](../SECURITY.md) for why this shape is intentional.
 
 ## Failure semantics
 
@@ -147,10 +146,36 @@ The workflow is green when:
 - newb produced a report (i.e. the SDK call completed end-to-end), AND
 - all workflow steps exited 0.
 
-The workflow is **not** gated on the *content* of the report — a
-report that says `INSTALL: fail` will still produce a green workflow
-and a `Newb | passing` badge. This is by design: newb's value is in
-the *evidence*, not in a binary verdict. Read the
-`newb-report.json` artifact (or the markdown summary) to see what
-actually happened. If you want hard-gating, wrap the run with `jq`
-(see `_skills/newb/07_ci-integration.md`).
+By default the workflow is **not** gated on the *content* of the
+report — a report that says `INSTALL: fail` will still produce a
+green workflow and a `Newb | passing` badge. This is by design:
+newb's value is in the *evidence*, not in a binary verdict.
+
+If you DO want hard-gating, append a `newb gate` step (since 0.24.0):
+
+```yaml
+      - name: Gate on report
+        run: newb gate newb-report.json
+```
+
+Default criteria:
+
+- `post_install_check.install == "ok"`
+- `post_install_check.import  == "ok"`
+- `prompt_injection_check.found == false`
+
+Override per-project in `pyproject.toml`:
+
+```toml
+[tool.newb.gate.post_install_check]
+install = "ok"
+import  = "ok"
+cli     = ["ok", "n/a"]   # list = any-of
+
+[tool.newb.gate.prompt_injection_check]
+found = false
+```
+
+The gate reads `<key>_parsed` fields, populated by host-side parsers —
+backed by the agent's fenced ` ```newb-json ` trailer when present,
+regex over the prose otherwise.

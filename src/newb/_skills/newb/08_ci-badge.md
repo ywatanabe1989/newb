@@ -1,7 +1,7 @@
 ---
 name: newb-ci-badge
 description: How a Python package adopts the `Newb | passing` GitHub Actions badge — the workflow file template, the `NEWB_ANTHROPIC_API_KEY` secret, and the README markdown one-liner. Reuses the same self-verify scaffold newb runs against itself, so a repo gains a visible "an AI agent can use this package's docs" signal in ~5 minutes.
-tags: [newb, scitex-package, ci]
+tags: [newb, ci]
 ---
 
 # `Newb | passing` badge — adoption checklist
@@ -60,8 +60,20 @@ inside the report still ships a green badge. The badge attests to
 "newb can run against this package", not "this package's docs are
 perfect".
 
-For hard-gating ("fail CI if `INSTALL: fail`"), wrap with `jq`. See
-[`07_ci-integration.md`](07_ci-integration.md) for the parsing
+For hard-gating ("fail CI if `INSTALL: fail`"), append a `newb gate`
+step after the run:
+
+```yaml
+      - name: Gate on report
+        run: newb gate newb-report.json
+```
+
+Default criteria require `install==ok`, `import==ok`, and
+`prompt_injection_check.found==false`. Override per-project via
+`[tool.newb.gate]` in `pyproject.toml`. See
+[`docs/badge.md`](https://github.com/ywatanabe1989/newb/blob/main/docs/badge.md)
+for the full schema, or
+[`07_ci-integration.md`](07_ci-integration.md) for the legacy `jq`
 pattern.
 
 ## Cost / spend shape

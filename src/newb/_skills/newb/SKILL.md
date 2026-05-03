@@ -6,10 +6,10 @@ interfaces:
   python: 1
   cli: 1
   mcp: 0
-  skills: 7
+  skills: 8
   hook: 0
   http: 0
-tags: [newb, scitex-package]
+tags: [newb]
 ---
 
 # newb — newbie-agent package tester
@@ -33,7 +33,8 @@ prompt names the gap.
 - [04_isolation-runtimes.md](04_isolation-runtimes.md) — `docker` / `podman` / `apptainer`; one-container-per-run batched execution; configurable hardening; pip cache
 - [05_source-resolution.md](05_source-resolution.md) — local paths, git URLs, the `_skills/` → `docs/` → root detection order
 - [06_when-not-to-use.md](06_when-not-to-use.md) — explicit boundaries (not a test runner, not a model benchmark, not a coverage tool)
-- [07_ci-integration.md](07_ci-integration.md) — JSON output for CI, markdown for README, exit codes, `tests_summary`
+- [07_ci-integration.md](07_ci-integration.md) — JSON / markdown output, `<key>_parsed` structured fields, `newb gate` declarative CI criteria
+- [08_ci-badge.md](08_ci-badge.md) — `Newb | passing` GitHub Actions badge adoption
 - [30_env-vars.md](30_env-vars.md) — every NEWB_-prefixed env var with type/default; explicit "what newb does NOT read"
 
 ## Quick example

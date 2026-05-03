@@ -1,7 +1,7 @@
 ---
 name: newb-quick-start
 description: Install newb, run the minimal CLI form against any project (or git URL), render the JSON / markdown report, and call newb from Python. Covers the common flags (template, runtime, install-mode, scope, pip-cache).
-tags: [newb, scitex-package]
+tags: [newb]
 ---
 
 # Quick Start
@@ -51,8 +51,9 @@ newb templates show python-package          # the actual prompts
 newb skills list                            # newb's own skill leaves
 newb mcp list-tools                         # MCP tools newb exposes
 newb mcp start                              # run as MCP server (stdio)
-newb env-template -o ~/.scitex/newb/local.src
+newb env-template -o ~/.config/newb/local.src
 newb list-python-apis                       # public Python surface
+newb gate report.json                       # exit 0/1 vs [tool.newb.gate]
 ```
 
 ## Python
@@ -83,7 +84,7 @@ print(newb.render_markdown(report))
 
 ```json
 {
-  "package": "scitex-io",
+  "package": "your-package",
   "template": "python-package",
   "runtime_info": {"newb_version": "0.19.1", "runtime": "docker", ...},
   "what_for": "...one sentence...",
@@ -91,12 +92,17 @@ print(newb.render_markdown(report))
   "quick_start": "```python\n...\n```",
   "when_not_to_use": "...one or two sentences...",
   "post_install_check": "INSTALL: ok\nIMPORT: ok\nCLI: ok\nEVIDENCE: ...",
-  "prompt_injection_check": "FOUND: no\nEVIDENCE: none"
+  "post_install_check_parsed": {"install": "ok", "import": "ok", "cli": "ok"},
+  "prompt_injection_check": "FOUND: no\nEVIDENCE: none",
+  "prompt_injection_check_parsed": {"found": false, "found_raw": "no"},
+  "newb_signature": {"tool": "newb", "version": "0.24.0", ...}
 }
 ```
 
-If `tests_newb.yaml` is present the report also includes `tests` and
-`tests_summary`.
+`<key>_parsed` siblings (since 0.23.0) are populated by host-side
+parsers and are what `newb gate` consults. Free-text replies stay
+untouched. If `tests_newb.yaml` is present, the report also includes
+`tests` and `tests_summary`.
 
 ## Project defaults via `[tool.newb]`
 
@@ -112,9 +118,19 @@ runs = 1
 # the same tool surface as a normal Claude Code session. Validated
 # host-side — stdio commands must be a basename or container-resident
 # absolute path.
-[tool.newb.mcp_servers.scitex]
+[tool.newb.mcp_servers.example]
 type = "stdio"
-command = "scitex-mcp"
+command = "my-mcp-server"
+
+# Optional: hard CI criteria (since 0.24.0) — `newb gate report.json`
+# evaluates these against `<key>_parsed` fields. Lists mean any-of.
+[tool.newb.gate.post_install_check]
+install = "ok"
+import  = "ok"
+cli     = ["ok", "n/a"]
+
+[tool.newb.gate.prompt_injection_check]
+found = false
 ```
 
 CLI flags > `[tool.newb]` > built-in defaults.

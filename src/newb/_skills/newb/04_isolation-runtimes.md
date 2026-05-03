@@ -1,7 +1,7 @@
 ---
 name: newb-isolation-runtimes
 description: The three container isolation runtimes (docker default, podman rootless, apptainer HPC), one-container-per-run batched execution, the design rule "container is the boundary, not the SDK options", permission_mode=bypassPermissions inside the container, and configurable hardening.
-tags: [newb, scitex-package]
+tags: [newb]
 ---
 
 # Isolation runtimes (`--runtime`)

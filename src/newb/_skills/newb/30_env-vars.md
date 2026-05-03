@@ -1,7 +1,7 @@
 ---
 name: newb-env-vars
 description: Environment variables read by newb at import / runtime. NEWB_-prefixed only — never silently inherits the upstream ANTHROPIC_API_KEY. Documents auth (API key + OAuth Pro/Max), runtime (docker image, model), and SDK-internal (cwd, skills path) vars.
-tags: [newb, scitex-package]
+tags: [newb]
 ---
 
 # newb — Environment Variables
@@ -51,7 +51,7 @@ CLI flags (`--harden-memory`, `--harden-cpus`, …) override these.
 
 | Variable | Purpose |
 |---|---|
-| `NEWB_ENV_SRC` | Path to a `.src` file (or directory of `.src` files) sourced at startup. SciTeX standard env-loader pattern. Generate a template with `newb env-template -o ~/.scitex/newb/local.src`. |
+| `NEWB_ENV_SRC` | Path to a `.src` file (or directory of `.src` files) sourced at startup. Generate a template with `newb env-template -o ~/.config/newb/local.src`. |
 
 ## SDK-internal (set by the host runner, read by `containers/runner.py`)
 

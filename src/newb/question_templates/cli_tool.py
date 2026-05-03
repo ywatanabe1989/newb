@@ -25,11 +25,21 @@ _PROMPT_WHAT_FOR = (
 _PROMPT_INSTALL_AND_HELP = (
     "Your cwd is the project root. Run `pip install -e .` (Bash). "
     "Find the console script name in pyproject.toml's "
-    "`[project.scripts]` section. Run `<script> --help` and report:\n\n"
-    "INSTALL: <ok|fail>\nHELP_EXIT: <integer>\nFIRST_30_LINES:\n"
-    "  ```\n  <paste here>\n  ```\n"
+    "`[project.scripts]` section. Run `<script> --help` and report "
+    "(free-text body, then a ```newb-json block as the LAST thing in "
+    "your reply):\n\n"
+    "INSTALL: <ok|fail>\nHELP: <ok|fail>\nHELP_EXIT: <integer>\n"
+    "FIRST_30_LINES:\n  ```\n  <paste here>\n  ```\n"
+    "\n```newb-json\n"
+    '{{"install": "ok|fail", "help": "ok|fail"}}\n'
+    "```\n\n"
+    "Example of a clean run:\n\n"
+    "INSTALL: ok\nHELP: ok\nHELP_EXIT: 0\nFIRST_30_LINES:\n"
+    "  ```\n  Usage: foo [OPTIONS] COMMAND [ARGS]...\n  ```\n"
+    "\n```newb-json\n"
+    '{{"install": "ok", "help": "ok"}}\n'
+    "```\n"
 )
-
 _PROMPT_SUBCOMMAND_TREE = (
     "List every top-level subcommand the CLI exposes (run "
     "`<script> --help` again or `<script> --help-recursive` if it "

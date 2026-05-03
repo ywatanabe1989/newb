@@ -1,7 +1,7 @@
 ---
 name: newb-source-resolution
 description: How newb resolves a SOURCE argument — local paths pass through; git URLs are shallow-cloned; the inside-clone search order is _skills/ → docs/ → repo root, picking the first dir that contains any .md file.
-tags: [newb, scitex-package]
+tags: [newb]
 ---
 
 # Source resolution
@@ -53,8 +53,7 @@ on broken inputs).
 
 ## Skill-tree convention
 
-For a SciTeX-style package the canonical layout the agent will be
-pointed at is:
+A canonical layout the agent works well against:
 
 ```
 src/<pkg>/

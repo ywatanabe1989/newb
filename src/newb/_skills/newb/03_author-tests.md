@@ -1,7 +1,7 @@
 ---
 name: newb-author-tests
 description: Per-package boundary tests via tests_newb.yaml — schema (prompt, expect_contains, expect_excludes, judge), substring grading, LLM judge, double grading semantics.
-tags: [newb, scitex-package]
+tags: [newb]
 ---
 
 # Author tests — `tests_newb.yaml`

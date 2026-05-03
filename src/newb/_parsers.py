@@ -29,8 +29,43 @@ Design choices:
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Dict, Optional
+
+
+# ---------------------------------------------------------------------------
+# Structured-emission preference
+# ---------------------------------------------------------------------------
+#
+# Newb prompts the agent to append a fenced ```newb-json block at the end
+# of structured replies (post_install_check, install_and_help,
+# prompt_injection_check). This is a stepping-stone toward true Anthropic
+# Tool Use: the agent's structured answer arrives as parseable JSON we own,
+# instead of free-text we have to regex-mine. When the block is present and
+# parses, parsers below trust it over the regex path. Missing or malformed
+# blocks fall back to the regex parser, so older agent replies still work.
+
+_NEWB_JSON_BLOCK = re.compile(
+    r"```newb-json\s*\n(.*?)\n```",
+    re.DOTALL | re.IGNORECASE,
+)
+
+
+def _extract_newb_json(text: str) -> Optional[Dict[str, object]]:
+    """Return the LAST ```newb-json block parsed as a dict, or None."""
+    if not text:
+        return None
+    matches = _NEWB_JSON_BLOCK.findall(text)
+    for raw in reversed(matches):
+        try:
+            obj = json.loads(raw)
+        except Exception:
+            continue
+        if isinstance(obj, dict):
+            return obj
+    return None
+
 
 # ---------------------------------------------------------------------------
 # Regex helpers
@@ -106,13 +141,21 @@ def parse_post_install_check(text: str) -> Dict[str, str]:
           <one-line summary or first error line>
 
     Returns a dict with keys ``install``, ``import``, ``cli`` —
-    each one of ``ok``, ``fail``, ``n/a``, or ``unknown``.
+    each one of ``ok``, ``fail``, ``n/a``, or ``unknown``. A trailing
+    ```newb-json block, if present and parseable, takes precedence over
+    the regex path for the keys it carries.
     """
-    return {
+    out = {
         "install": _ok_fail_na(_line_field("INSTALL", text)),
         "import": _ok_fail_na(_line_field("IMPORT", text)),
         "cli": _ok_fail_na(_line_field("CLI", text)),
     }
+    blob = _extract_newb_json(text)
+    if blob is not None:
+        for k in ("install", "import", "cli"):
+            if k in blob:
+                out[k] = _ok_fail_na(str(blob[k]))
+    return out
 
 
 def parse_install_and_help(text: str) -> Dict[str, str]:
@@ -125,10 +168,16 @@ def parse_install_and_help(text: str) -> Dict[str, str]:
         EVIDENCE:
           <…>
     """
-    return {
+    out = {
         "install": _ok_fail_na(_line_field("INSTALL", text)),
         "help": _ok_fail_na(_line_field("HELP", text)),
     }
+    blob = _extract_newb_json(text)
+    if blob is not None:
+        for k in ("install", "help"):
+            if k in blob:
+                out[k] = _ok_fail_na(str(blob[k]))
+    return out
 
 
 def parse_prompt_injection_check(text: str) -> Dict[str, object]:
@@ -145,6 +194,13 @@ def parse_prompt_injection_check(text: str) -> Dict[str, object]:
     the ``unknown`` sentinel so callers can detect off-script replies.
     """
     raw = _yes_no(_line_field("FOUND", text))
+    blob = _extract_newb_json(text)
+    if blob is not None and "found" in blob:
+        v = blob["found"]
+        if isinstance(v, bool):
+            raw = "yes" if v else "no"
+        elif isinstance(v, str):
+            raw = _yes_no(v)
     return {
         "found": True if raw == "yes" else (False if raw == "no" else None),
         "found_raw": raw,

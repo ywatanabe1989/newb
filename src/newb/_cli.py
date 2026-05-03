@@ -30,7 +30,17 @@ import click
 # Subcommand names registered on the top-level group. Used by
 # _reorder_argv to tell "subcommand invocation" from "implicit-try
 # invocation with options after the SOURCE positional".
-_SUBCOMMANDS = {"templates", "skills", "mcp", "list-python-apis", "env-template"}
+_SUBCOMMANDS = {
+    "templates",
+    "skills",
+    "mcp",
+    "list-python-apis",
+    "env-template",
+    "gate",
+    "scaffold-workflow",
+    "set-secret",
+    "install",
+}
 
 
 def cli_entrypoint():
@@ -118,6 +128,12 @@ def _reorder_argv(argv: list[str]) -> list[str]:
 from ._cli_try import main  # noqa: E402
 
 from ._cli_env import env_template as _env_template_cmd  # noqa: E402
+from ._cli_gate import gate as _gate_cmd  # noqa: E402
+from ._cli_install import (  # noqa: E402
+    install as _install_cmd,
+    scaffold_workflow as _scaffold_workflow_cmd,
+    set_secret as _set_secret_cmd,
+)
 from ._cli_mcp import mcp as _mcp_group  # noqa: E402
 from ._cli_skills import skills as _skills_group  # noqa: E402
 from ._cli_templates import templates as _templates_group  # noqa: E402
@@ -126,6 +142,10 @@ main.add_command(_templates_group)
 main.add_command(_skills_group)
 main.add_command(_mcp_group)
 main.add_command(_env_template_cmd)
+main.add_command(_gate_cmd)
+main.add_command(_scaffold_workflow_cmd)
+main.add_command(_set_secret_cmd)
+main.add_command(_install_cmd)
 
 
 # ---------------------------------------------------------------------------

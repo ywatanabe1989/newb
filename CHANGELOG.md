@@ -4,6 +4,86 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.25.0] — 2026-05-03
+
+### Added
+
+- **`newb install <owner>/<repo>`** — single-repo CI bootstrap.
+  Drops `.github/workflows/newb.yml` (PR by default, `--push` for
+  direct-push) AND sets the `NEWB_ANTHROPIC_API_KEY` repo secret in
+  one verb. Also exposed as separate verbs:
+  `newb scaffold-workflow` and `newb set-secret`. All three accept a
+  positional `<owner>/<repo>` or `.` (or omitted) for the current
+  git remote. Idempotent — re-running skips already-set secrets and
+  existing workflow files; `--force` overrides.
+  - newb deliberately stays single-repo: it knows nothing about
+    ecosystems or registries. Multi-repo loops are downstream
+    concerns (a wrapping tool calls `newb install` per repo).
+- **`docs/install.md`** — generic how-to for `newb install`.
+
+### Changed
+
+- **Generalized public-facing docs.** Skill frontmatter tags
+  (`scitex-package` → `newb`), removed "SciTeX-ecosystem"-specific
+  prose from `docs/badge.md`, the skill leaves, and the runtime
+  example. The `newb` package itself no longer mentions specific
+  package names (scitex-io etc.) in user-facing text. The runner
+  image URL (`ghcr.io/ywatanabe1989/newb-runner`) and the repo URL
+  remain — those are real addresses.
+- **Runner image is now public** on ghcr.io. Workflow templates
+  drop the docker-login step; adopting repos need exactly one
+  secret (`NEWB_ANTHROPIC_API_KEY`).
+- **`newb-self-verify.yml`** — added a `newb gate` step
+  (dogfoods the 0.24.0 declarative gate); dropped the
+  GHCR_PAT login.
+
+### Removed
+
+- **`docs/fleet-onboarding.md`** — replaced by `docs/install.md`.
+  "Fleet" framing was scitex-specific scaffolding for what is, in
+  newb, a single-repo operation.
+
+## [0.24.0] — 2026-05-03
+
+### Added
+
+- **Few-shot examples in structured prompts.** `post_install_check`,
+  `install_and_help`, and `prompt_injection_check` now end with a
+  worked clean-run example. Anchors the LLM's output format and
+  reduces `"unknown"` parsed values when the model would otherwise
+  paraphrase the schema.
+- **`newb-json` fenced-block emission.** Every structured prompt
+  asks the agent to append a final ```` ```newb-json ```` block
+  with the same fields the regex parser extracts. Parsers
+  (`_parsers._extract_newb_json`) prefer this block when present
+  and parseable; missing or malformed blocks fall back to the
+  regex path, so older replies still work. Stepping-stone toward
+  true Anthropic Tool Use.
+- **`newb gate` subcommand + `[tool.newb.gate]` config.** Declarative
+  CI criteria evaluated against the report's `<key>_parsed` fields:
+  `newb gate report.json` exits 0/1 against the configured
+  thresholds. Defaults: `post_install_check.install == "ok"`,
+  `post_install_check.import == "ok"`,
+  `prompt_injection_check.found == false`. Override per-project via
+  `[tool.newb.gate.<question>]` tables; list values mean any-of.
+  `runs_per_prompt > 1` requires every run to pass. Replaces the
+  `jq` recipe with a single CLI call. 9 new tests.
+- **`docs/install.md`.** How to install newb CI into a single repo
+  (`newb install <owner>/<repo>`).
+
+### Changed
+
+- **`docs/badge.md` + `08_ci-badge.md` skill leaf** updated to point
+  at `newb gate` instead of the legacy `jq` recipe.
+- Literal `{` / `}` in prompt few-shot examples are now properly
+  escaped (`{{` / `}}`) so `prompt.format()` doesn't choke.
+
+### Deferred
+
+- True Anthropic Tool Use migration. The ```` ```newb-json ```` block
+  gets most of the structural benefit; full Tool Use would require an
+  MCP server the in-container SDK can call into.
+
 ## [0.23.0] — 2026-05-03
 
 ### Added

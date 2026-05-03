@@ -1,7 +1,7 @@
 ---
 name: newb-when-not-to-use
 description: Explicit boundaries — newb is not a unit-test runner, not a model benchmark, not a coverage tool, not a security scanner, and not deterministic. Use the right tool for those jobs and reach for newb only for docs-quality verification.
-tags: [newb, scitex-package]
+tags: [newb]
 ---
 
 # When NOT to use newb
@@ -52,4 +52,4 @@ either:
 
 - generate `.md` exports for the agent's view, or
 - point newb at a curated `_skills/<pkg>/` tree built specifically for
-  agent consumption (recommended — that's what SciTeX packages do).
+  agent consumption (recommended).

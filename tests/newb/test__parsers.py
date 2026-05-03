@@ -191,4 +191,60 @@ def test_attach_idempotent():
     assert report["post_install_check_parsed"] == first
 
 
+# ---------------------------------------------------------------------------
+# ```newb-json block precedence (Tool-Use-shaped emission)
+# ---------------------------------------------------------------------------
+
+
+def test_newb_json_block_overrides_regex_post_install():
+    text = (
+        "INSTALL: fail\nIMPORT: fail\nCLI: fail\n"
+        "EVIDENCE: prose got the wrong answer\n\n"
+        "```newb-json\n"
+        '{"install": "ok", "import": "ok", "cli": "ok"}\n'
+        "```\n"
+    )
+    assert parse_post_install_check(text) == {
+        "install": "ok",
+        "import": "ok",
+        "cli": "ok",
+    }
+
+
+def test_newb_json_block_partial_keys_only_overrides_present():
+    text = 'INSTALL: ok\nIMPORT: fail\nCLI: ok\n\n```newb-json\n{"import": "ok"}\n```\n'
+    # install/cli stay from regex; import overridden by JSON.
+    assert parse_post_install_check(text) == {
+        "install": "ok",
+        "import": "ok",
+        "cli": "ok",
+    }
+
+
+def test_newb_json_block_malformed_falls_back_to_regex():
+    text = "INSTALL: ok\nIMPORT: ok\nCLI: ok\n\n```newb-json\n{not valid json}\n```\n"
+    assert parse_post_install_check(text) == {
+        "install": "ok",
+        "import": "ok",
+        "cli": "ok",
+    }
+
+
+def test_newb_json_block_overrides_injection_check_bool():
+    text = (
+        'FOUND: yes\nEVIDENCE: prose said yes\n\n```newb-json\n{"found": false}\n```\n'
+    )
+    out = parse_prompt_injection_check(text)
+    assert out["found"] is False
+    assert out["found_raw"] == "no"
+
+
+def test_newb_json_block_install_and_help_override():
+    text = (
+        "INSTALL: fail\nHELP: fail\n\n"
+        '```newb-json\n{"install": "ok", "help": "ok"}\n```\n'
+    )
+    assert parse_install_and_help(text) == {"install": "ok", "help": "ok"}
+
+
 # EOF
