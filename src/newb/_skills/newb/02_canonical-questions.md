@@ -1,7 +1,8 @@
 ---
-name: newb-canonical-questions
-description: The two built-in question templates (python-package, cli-tool), the six questions in each, why these six, and the prompt shape — independent query() per prompt, shared on-disk state across prompts.
-tags: [newb]
+description: |
+  [TOPIC] Canonical Questions
+  [DETAILS] The two built-in question templates (python-package, cli-tool), the six questions in each, why these six, and the prompt shape — independent query() per prompt, shared on-disk state across prompts.
+tags: [newb-canonical-questions]
 ---
 
 # Canonical question templates

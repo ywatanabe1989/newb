@@ -1,7 +1,8 @@
 ---
-name: newb-quick-start
-description: Install newb, run the minimal CLI form against any project (or git URL), render the JSON / markdown report, and call newb from Python. Covers the common flags (template, runtime, install-mode, scope, pip-cache).
-tags: [newb]
+description: |
+  [TOPIC] Quick Start
+  [DETAILS] Install newb, run the minimal CLI form against any project (or git URL), render the JSON / markdown report, and call newb from Python. Covers the common flags (template, runtime, install-mode, scope, pip-cache).
+tags: [newb-quick-start]
 ---
 
 # Quick Start

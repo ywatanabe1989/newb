@@ -1,11 +1,8 @@
 ---
-package: newb
-version: 0.24.0
-source: github.com/ywatanabe1989/newb
-skills_path: src/newb/_skills/newb/
-name: MANIFEST
-tags: [newb]
-description: Skills Manifest — These skills are distributed with **newb** and are the source of truth.
+description: |
+  [TOPIC] Manifest
+  [DETAILS] Skills Manifest — These skills are distributed with **newb** and are the source of truth.
+tags: [newb-manifest]
 ---
 
 # Skills Manifest

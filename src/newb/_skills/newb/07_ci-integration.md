@@ -1,7 +1,8 @@
 ---
-name: newb-ci-integration
-description: Wire newb into CI — JSON output for parsing, markdown for README updates, exit-code semantics, the `<key>_parsed` structured fields, the `newb gate` declarative criteria evaluator, and a sample GitHub Actions step.
-tags: [newb]
+description: |
+  [TOPIC] Ci Integration
+  [DETAILS] Wire newb into CI — JSON output for parsing, markdown for README updates, exit-code semantics, the `<key>_parsed` structured fields, the `newb gate` declarative criteria evaluator, and a sample GitHub Actions step.
+tags: [newb-ci-integration]
 ---
 
 # CI integration

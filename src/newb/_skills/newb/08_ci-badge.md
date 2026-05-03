@@ -1,7 +1,8 @@
 ---
-name: newb-ci-badge
-description: How a Python package adopts the `Newb | passing` GitHub Actions badge — the workflow file template, the `NEWB_ANTHROPIC_API_KEY` secret, and the README markdown one-liner. Reuses the same self-verify scaffold newb runs against itself, so a repo gains a visible "an AI agent can use this package's docs" signal in ~5 minutes.
-tags: [newb, ci]
+description: |
+  [TOPIC] Ci Badge
+  [DETAILS] How a Python package adopts the `Newb | passing` GitHub Actions badge — the workflow file template, the `NEWB_ANTHROPIC_API_KEY` secret, and the README markdown one-liner. Reuses the same self-verify scaffold newb runs against itself, so a repo gains a visible "an AI agent can use this package's docs" signal in ~5 minutes.
+tags: [newb-ci-badge]
 ---
 
 # `Newb | passing` badge — adoption checklist

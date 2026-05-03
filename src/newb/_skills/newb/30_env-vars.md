@@ -1,7 +1,8 @@
 ---
-name: newb-env-vars
-description: Environment variables read by newb at import / runtime. NEWB_-prefixed only — never silently inherits the upstream ANTHROPIC_API_KEY. Documents auth (API key + OAuth Pro/Max), runtime (docker image, model), and SDK-internal (cwd, skills path) vars.
-tags: [newb]
+description: |
+  [TOPIC] Env Vars
+  [DETAILS] Environment variables read by newb at import / runtime. NEWB_-prefixed only — never silently inherits the upstream ANTHROPIC_API_KEY. Documents auth (API key + OAuth Pro/Max), runtime (docker image, model), and SDK-internal (cwd, skills path) vars.
+tags: [newb-env-vars]
 ---
 
 # newb — Environment Variables

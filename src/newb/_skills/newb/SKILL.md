@@ -1,15 +1,17 @@
 ---
 name: newb
-description: Newbie-agent package tester — a fresh AI agent reads only your docs and tries to use your package; if it succeeds, your docs work. `newb <project-dir>` spins up a sandboxed container (docker default, podman for rootless, apptainer for HPC), stages the project respecting .gitignore, and runs ONE batched `claude-agent-sdk` session at `/work/project` with FULL agentic permissions (Read+Write+Edit+Bash+Glob+Grep, `bypassPermissions` for `--scope all`) — agent can `pip install -e .`, `python -c "import pkg"`, `<pkg> --help`, write an example. The container IS the boundary; SDK options inside grant the agent enough power to actually try the package. The agent answers six canonical questions per template — `python-package`: what_for, problems_solved, quick_start, when_not_to_use, post_install_check, prompt_injection_check; `cli-tool`: what_for, install_and_help, subcommand_tree, typical_usage, common_pitfall, prompt_injection_check — plus any author-defined prompts in `tests_newb.yaml`. JSON or markdown output for CI. The first-class reader of a modern package is an agent; newb mimics a newbie *user* using the agent as the lens. Use whenever the user asks "is my docs good enough?", "would an agent understand this?", "can a newcomer use my package from docs alone?", "verify package docs", "audit skills quality", "test install + import + smoke-run". Do NOT use as a unit-test runner (use pytest), as a benchmark for the model (use eval frameworks), or for code coverage (use pytest-cov).
+description: |
+  [WHAT] Newbie-agent package tester — a fresh AI agent reads only your docs and tries to use your package; if it succeeds, your docs work. `newb <project-dir>` spins up a sandboxed container (docker default, podman for rootless, apptainer for HPC), stages the project respecting .gitignore, and runs ONE batched `claude-agent-sdk` session at `/work/project` with FULL agentic permissions…
+  [WHEN] Use whenever the user asks "is my docs good enough?", "would an agent understand this?", "can a newcomer use my package from docs alone?", "verify package docs", "audit skills quality", "test install + import + smoke-run".
+  [HOW] Do NOT use as a unit-test runner (use pytest), as a benchmark for the model (use eval frameworks), or for code coverage (use pytest-cov).
+tags: [newb]
 primary_interface: cli
 interfaces:
   python: 1
   cli: 1
   mcp: 0
   skills: 8
-  hook: 0
   http: 0
-tags: [newb]
 ---
 
 # newb — newbie-agent package tester

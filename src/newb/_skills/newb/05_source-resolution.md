@@ -1,7 +1,8 @@
 ---
-name: newb-source-resolution
-description: How newb resolves a SOURCE argument — local paths pass through; git URLs are shallow-cloned; the inside-clone search order is _skills/ → docs/ → repo root, picking the first dir that contains any .md file.
-tags: [newb]
+description: |
+  [TOPIC] Source Resolution
+  [DETAILS] How newb resolves a SOURCE argument — local paths pass through; git URLs are shallow-cloned; the inside-clone search order is _skills/ → docs/ → repo root, picking the first dir that contains any .md file.
+tags: [newb-source-resolution]
 ---
 
 # Source resolution
