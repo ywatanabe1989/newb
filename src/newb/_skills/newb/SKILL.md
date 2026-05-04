@@ -29,14 +29,21 @@ prompt names the gap.
 
 ## Sub-skills
 
-- [01_quick-start.md](01_quick-start.md) — install, minimal CLI + Python forms, output formats
-- [02_canonical-questions.md](02_canonical-questions.md) — the 6-question templates (`python-package`, `cli-tool`) + why those questions
-- [03_author-tests.md](03_author-tests.md) — `tests_newb.yaml` schema, substring graders, LLM judge, double grading
-- [04_isolation-runtimes.md](04_isolation-runtimes.md) — `docker` / `podman` / `apptainer`; one-container-per-run batched execution; configurable hardening; pip cache
-- [05_source-resolution.md](05_source-resolution.md) — local paths, git URLs, the `_skills/` → `docs/` → root detection order
-- [06_when-not-to-use.md](06_when-not-to-use.md) — explicit boundaries (not a test runner, not a model benchmark, not a coverage tool)
-- [07_ci-integration.md](07_ci-integration.md) — JSON / markdown output, `<key>_parsed` structured fields, `newb gate` declarative CI criteria
-- [08_ci-badge.md](08_ci-badge.md) — `Newb | passing` GitHub Actions badge adoption
+### Core
+- [01_installation.md](01_installation.md) — pip install + container runtime + auth
+- [02_quick-start.md](02_quick-start.md) — install, minimal CLI + Python forms, output formats
+- [03_python-api.md](03_python-api.md) — `newb()`, `run()`, `render_markdown()`
+- [04_cli-reference.md](04_cli-reference.md) — `newb` subcommands + options
+- [05_mcp-tools.md](05_mcp-tools.md) — MCP server (stdio) for AI agents
+
+### Detail
+- [10_canonical-questions.md](10_canonical-questions.md) — the 6-question templates (`python-package`, `cli-tool`) + why those questions
+- [11_author-tests.md](11_author-tests.md) — `tests_newb.yaml` schema, substring graders, LLM judge, double grading
+- [12_isolation-runtimes.md](12_isolation-runtimes.md) — `docker` / `podman` / `apptainer`; one-container-per-run batched execution; configurable hardening; pip cache
+- [13_source-resolution.md](13_source-resolution.md) — local paths, git URLs, the `_skills/` → `docs/` → root detection order
+- [14_when-not-to-use.md](14_when-not-to-use.md) — explicit boundaries (not a test runner, not a model benchmark, not a coverage tool)
+- [15_ci-integration.md](15_ci-integration.md) — JSON / markdown output, `<key>_parsed` structured fields, `newb gate` declarative CI criteria
+- [16_ci-badge.md](16_ci-badge.md) — `Newb | passing` GitHub Actions badge adoption
 - [30_env-vars.md](30_env-vars.md) — every NEWB_-prefixed env var with type/default; explicit "what newb does NOT read"
 
 ## Quick example
