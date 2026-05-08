@@ -259,7 +259,22 @@ newb skills get SKILL.md
 newb list-python-apis                      # public Python surface
 newb mcp list-tools                        # FastMCP tools exposed
 newb mcp start                             # serve over stdio (for IDEs)
+newb show-env-template                     # NEWB_* env-var schema (.src or --json)
 newb --help-recursive                      # flatten help across subcommands
+
+# CI integration
+newb . --json > report.json
+newb gate report.json                      # exit 0/1 vs [tool.newb.gate]
+
+# Maintainer plumbing — `newb dev` group
+newb dev install <owner>/<repo>            # set-secret + scaffold-workflow combo
+newb dev set-secret <owner>/<repo>         # push NEWB_ANTHROPIC_API_KEY to GH
+newb dev scaffold-workflow <owner>/<repo>  # drop .github/workflows/newb.yml
+
+# Shell completion
+newb install-shell-completion              # bash / zsh / fish (auto-detected)
+newb print-shell-completion bash           # emit script to stdout
+newb skills install                        # copy skill leaves into ~/.claude/skills/
 ```
 
 pytest-style: `newb <target>` is the canonical invocation — no verb in
@@ -317,20 +332,22 @@ For Claude Code or another MCP host, point it at `newb mcp start`.
 </details>
 
 <details>
-<summary><strong>Skills ⭐⭐</strong> &nbsp;<sub>9 agent-facing leaves under <code>_skills/newb/</code></sub></summary>
+<summary><strong>Skills ⭐⭐</strong> &nbsp;<sub>14 agent-facing leaves under <code>_skills/newb/</code></sub></summary>
 
 <br>
 
 newb ships an agent-facing skill tree with the canonical SciTeX layout:
 SKILL.md (thin index) + numbered `NN_topic.md` sub-skills covering
-quick-start, the 4 canonical questions, author tests, isolation
-runtimes, source resolution, when-not-to-use, CI integration, and env
-vars. Browse from the CLI:
+installation, quick-start, Python API, CLI reference, MCP tools, the
+6 canonical questions, author tests, isolation runtimes, source
+resolution, when-not-to-use, CI integration, CI badge adoption, and
+env vars. Browse from the CLI:
 
 ```bash
 newb skills list
 newb skills get SKILL.md
-newb skills get 04_isolation        # partial-name match
+newb skills get 12_isolation        # partial-name match
+newb skills install                 # copy leaves into ~/.claude/skills/newb/
 ```
 
 Source: [`src/newb/_skills/newb/`](src/newb/_skills/newb/).
