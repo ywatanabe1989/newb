@@ -4,6 +4,29 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.26.4] — 2026-05-08
+
+### Fixed
+
+- **Container image: pre-create `/home/newb/.claude/`** owned by
+  the `newb` user. When the host bind-mounts
+  `~/.claude/.credentials.json` into the container, Docker would
+  otherwise create the parent directory as `root`, which blocks
+  the SDK from writing `/home/newb/.claude/session-env` at runtime
+  (the agent's per-session scratch dir). Symptom on the prior
+  image: all 6 prompts authenticated and ran, but every prompt's
+  Bash tool refused to initialise — `INSTALL: fail / IMPORT: fail`
+  on a perfectly good package. Pre-creating the dir at image-build
+  time, owned by the right uid, fixes it cleanly. Requires
+  rebuilding the runner image.
+- **GitHub Actions Node 20 deprecation.** Bumped pinned action
+  versions in `test.yml`, `sync-main.yml`, `publish-pypi.yml`, and
+  `publish-image.yml` so they run on Node 24:
+  `actions/checkout@v4 → @v6`, `actions/setup-python@v5 → @v6`,
+  `actions/upload-artifact@v4 → @v7`,
+  `codecov/codecov-action@v4 → @v5`. (`newb-self-verify.yml` was
+  already on v6/v7.)
+
 ## [0.26.3] — 2026-05-08
 
 ### Fixed

@@ -50,7 +50,13 @@ WORKDIR /work
 # Default to non-root for hardening. NEWB_ANTHROPIC_API_KEY is passed via -e.
 # The agent needs write access to /work/project for `pip install -e .`,
 # so make the staged copy owned by the runtime user.
-RUN useradd -m -u 1000 newb && mkdir -p /work && chown -R newb:newb /work
+RUN useradd -m -u 1000 newb \
+    && mkdir -p /work /home/newb/.claude \
+    && chown -R newb:newb /work /home/newb
+# Pre-creating /home/newb/.claude/ owned by `newb` matters: when the
+# host bind-mounts ~/.claude/.credentials.json into the container,
+# Docker would otherwise create the parent dir as root, blocking the
+# SDK from writing /home/newb/.claude/session-env at runtime.
 USER newb
 
 ENTRYPOINT ["python", "/opt/newb/runner.py"]
