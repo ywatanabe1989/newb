@@ -4,6 +4,20 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.26.6] — 2026-05-08
+
+### Changed
+
+- **Container image: unpin `claude-agent-sdk` floor.** The 0.1.73-
+  0.1.77 "regression" we suspected at 0.26.0 was actually the
+  OAuth-bare-env auth bug in disguise (Anthropic rejecting
+  `sk-ant-oat01-…` tokens passed without the full credentials.json
+  context). 0.26.2 fixed the auth path; `claude-agent-sdk==0.1.72`
+  was a workaround that's no longer necessary. Verified locally on
+  2026-05-08: 0.1.77 round-trips a real SDK `query()` in 5s with a
+  bind-mounted credentials.json, no `is_error=True/subtype=success`
+  failure. Back to `claude-agent-sdk>=0.1.0`.
+
 ## [0.26.5] — 2026-05-08
 
 ### Added

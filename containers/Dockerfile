@@ -34,12 +34,13 @@ RUN apt-get update -y \
         build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Pin the SDK: 0.1.73-0.1.77 introduced a regression where
-# `result.is_error=True` paired with `subtype="success"` makes the
-# bundled CLI raise "Claude Code returned an error result: success"
-# on the first prompt. Last known-good is 0.1.72 (image 0.23.0 ran
-# clean on 2026-05-02). Revisit when upstream confirms a fix.
-RUN pip install --no-cache-dir 'claude-agent-sdk==0.1.72'
+# Install the SDK (unpinned floor). The 0.1.73-0.1.77 "regression"
+# we suspected at 0.26.0 was actually the OAuth-bare-env auth bug
+# in disguise — fixed by 0.26.2's credentials.json bind-mount path.
+# Verified locally on 2026-05-08 that 0.1.77 round-trips a real SDK
+# query() in 5s with a bind-mounted credentials.json, no
+# "is_error=True / subtype=success" failure.
+RUN pip install --no-cache-dir 'claude-agent-sdk>=0.1.0'
 
 # Bake the runner script into the image so newb only mounts the project.
 COPY runner.py /opt/newb/runner.py
