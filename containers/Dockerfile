@@ -34,9 +34,12 @@ RUN apt-get update -y \
         build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install the SDK. Pin a floor version so behavior matches the host
-# newb that spawned the container.
-RUN pip install --no-cache-dir 'claude-agent-sdk>=0.1.0'
+# Pin the SDK: 0.1.73-0.1.77 introduced a regression where
+# `result.is_error=True` paired with `subtype="success"` makes the
+# bundled CLI raise "Claude Code returned an error result: success"
+# on the first prompt. Last known-good is 0.1.72 (image 0.23.0 ran
+# clean on 2026-05-02). Revisit when upstream confirms a fix.
+RUN pip install --no-cache-dir 'claude-agent-sdk==0.1.72'
 
 # Bake the runner script into the image so newb only mounts the project.
 COPY runner.py /opt/newb/runner.py

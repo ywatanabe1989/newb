@@ -4,6 +4,18 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.26.1] — 2026-05-08
+
+### Fixed
+
+- **Container image:** pin `claude-agent-sdk==0.1.72` in
+  `containers/Dockerfile`. The previous unbounded floor pulled in
+  SDK 0.1.77, which raises `Claude Code returned an error result:
+  success` on the first prompt — observed via `newb-self-verify` on
+  the freshly-built v0.26.0 image. 0.1.72 (used by the v0.23.0 image)
+  was the last known-good. We'll un-pin when upstream confirms the
+  fix.
+
 ## [0.26.0] — 2026-05-08
 
 ### Added
