@@ -4,6 +4,19 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.26.3] — 2026-05-08
+
+### Fixed
+
+- **In-container `_provision_auth()`** now prefers the bind-mounted
+  `~/.claude/.credentials.json` over `ANTHROPIC_API_KEY`. When both
+  are present (the 0.26.2 path), the SDK was picking the env var
+  and getting rejected because Anthropic doesn't accept
+  `sk-ant-oat01-…` OAuth tokens via bare env. The runner now
+  unsets `ANTHROPIC_API_KEY` when credentials.json is mounted so
+  the SDK uses the file-based credentials_file flow exclusively.
+  This requires rebuilding the runner image (0.26.3).
+
 ## [0.26.2] — 2026-05-08
 
 ### Added

@@ -45,9 +45,29 @@ import select
 import sys
 
 
+_CREDS_FILE = os.path.expanduser("~/.claude/.credentials.json")
+
+
 def _provision_auth() -> bool:
-    """Promote NEWB_ANTHROPIC_API_KEY → ANTHROPIC_API_KEY. Returns
-    False if no token was supplied."""
+    """Resolve auth for the bundled SDK.
+
+    Two paths, in this precedence order:
+
+    1. ``~/.claude/.credentials.json`` exists (host bind-mount): use
+       the file-based credentials_file flow. We explicitly UNSET
+       ``ANTHROPIC_API_KEY`` if also present in env, because
+       Anthropic rejects ``sk-ant-oat01-…`` OAuth tokens passed as
+       bare env (no refresh-token / expiresAt context); leaving both
+       set causes the SDK to pick the env-var path and 401.
+    2. ``NEWB_ANTHROPIC_API_KEY`` set: promote to
+       ``ANTHROPIC_API_KEY``. Works for real ``sk-ant-api*`` keys.
+
+    Returns False if no auth source is available.
+    """
+    if os.path.isfile(_CREDS_FILE):
+        # Force the SDK onto the credentials_file path.
+        os.environ.pop("ANTHROPIC_API_KEY", None)
+        return True
     token = os.environ.get("NEWB_ANTHROPIC_API_KEY", "").strip()
     if not token:
         return False
