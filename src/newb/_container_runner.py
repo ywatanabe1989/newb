@@ -97,6 +97,16 @@ class _BaseContainerRunner:
             )
         self._api_key = api_key
         self.scope = scope if scope in {"all", "docs"} else "all"
+        # OAuth flat-rate path: if `~/.claude/.credentials.json` exists
+        # on the host (Claude Code Pro/Max), bind-mount it into the
+        # container so the SDK uses the file-based auth flow instead
+        # of the bare-env path. Anthropic rejects ``sk-ant-oat01-…``
+        # OAuth tokens passed as ``ANTHROPIC_API_KEY`` env vars (no
+        # refresh-token / expiresAt context); the file gives them the
+        # full credentials shape they expect. The env var still flows
+        # for ``sk-ant-api*`` real API keys, which work fine bare.
+        creds_path = Path("~/.claude/.credentials.json").expanduser()
+        self._host_credentials_json = creds_path if creds_path.is_file() else None
         # Validated host-side; container-side runner trusts the encoded
         # JSON. Empty / None → no NEWB_MCP_SERVERS_JSON env var, container
         # gets the SDK default (no MCP servers).
@@ -267,6 +277,13 @@ class DockerRunner(_BaseContainerRunner):
             argv += ["-e", f"NEWB_MCP_SERVERS_JSON={self._mcp_servers_env}"]
         if self._pip_cache_host:
             argv += ["-v", f"{self._pip_cache_host}:/home/newb/.cache/pip"]
+        if self._host_credentials_json is not None:
+            # Mount read-only at the agent user's $HOME path so the
+            # bundled CLI's credentials_file lookup picks it up.
+            argv += [
+                "-v",
+                f"{self._host_credentials_json}:/home/newb/.claude/.credentials.json:ro",
+            ]
         argv += [self.image]
         return argv
 
@@ -325,5 +342,10 @@ class ApptainerRunner(_BaseContainerRunner):
             ]
         if self._pip_cache_host:
             argv += ["--bind", f"{self._pip_cache_host}:/home/newb/.cache/pip"]
+        if self._host_credentials_json is not None:
+            argv += [
+                "--bind",
+                f"{self._host_credentials_json}:/home/newb/.claude/.credentials.json:ro",
+            ]
         argv += [f"docker://{self.image}"]
         return argv

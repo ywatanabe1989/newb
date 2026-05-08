@@ -4,6 +4,28 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.26.2] — 2026-05-08
+
+### Added
+
+- **Container runners bind-mount `~/.claude/.credentials.json`**
+  (read-only) into the container when the file exists on the host.
+  Anthropic rejects `sk-ant-oat01-…` OAuth tokens passed as a bare
+  `ANTHROPIC_API_KEY` env var (no refresh-token / expiresAt
+  context); the file-based flow gives the SDK the full credentials
+  shape it expects. The env-var-only path still works for real
+  `sk-ant-api*` keys, which authenticate fine bare.
+  - DockerRunner, PodmanRunner (inherits), ApptainerRunner: same
+    semantics, runtime-appropriate flags (`-v` / `--bind`).
+- **`newb-self-verify.yml`** materialises `~/.claude/.credentials.json`
+  from the new `CLAUDE_CREDENTIALS_JSON` repo secret before running
+  the verification, so CI can use OAuth flat-rate billing without
+  the bare-env rejection. If the secret is unset, the workflow
+  falls back to the bare `NEWB_ANTHROPIC_API_KEY` path (real API
+  keys only).
+- New unit test asserting the bind-mount appears in argv when the
+  host has a credentials file (145 tests, was 144).
+
 ## [0.26.1] — 2026-05-08
 
 ### Fixed

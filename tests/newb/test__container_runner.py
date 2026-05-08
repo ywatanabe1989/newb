@@ -17,11 +17,16 @@ import pytest
 @pytest.fixture
 def fake_runtime(monkeypatch, tmp_path):
     """Pretend `docker`/`apptainer` exist on PATH and opt newb in
-    via the single ``NEWB_ANTHROPIC_API_KEY`` env var."""
+    via the single ``NEWB_ANTHROPIC_API_KEY`` env var. Re-roots HOME
+    to a tmpdir so tests are hermetic w.r.t. the developer's actual
+    ``~/.claude/.credentials.json`` (which would otherwise alter the
+    bind-mount argv)."""
     import shutil
 
     monkeypatch.setattr(shutil, "which", lambda _: "/usr/bin/fake")
     monkeypatch.setenv("NEWB_ANTHROPIC_API_KEY", "sk-ant-api03-TEST")
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    (tmp_path / "home").mkdir()
 
     src = tmp_path / "pkg"
     src.mkdir()
@@ -57,15 +62,44 @@ def test_docker_argv_forwards_newb_api_key_only(fake_runtime):
     """DockerRunner forwards NEWB_ANTHROPIC_API_KEY into the container
     verbatim. It must NOT inject ANTHROPIC_API_KEY (the upstream name)
     — that's the in-container runner.py's job, decided by token
-    prefix (sk-ant-api* vs sk-ant-oat*)."""
+    prefix (sk-ant-api* vs sk-ant-oat*).
+
+    With no ``~/.claude/.credentials.json`` on the host (the fake
+    HOME from the fixture is empty), no bind-mount should appear —
+    the env-var-only path keeps newb usable in CI when the runner
+    has only a real ``sk-ant-api*`` key.
+    """
     from newb._container_runner import DockerRunner
 
     r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
     argv = r._build_argv()
     assert any(a == "NEWB_ANTHROPIC_API_KEY=sk-ant-api03-TEST" for a in argv), argv
     assert not any(a.startswith("ANTHROPIC_API_KEY=") for a in argv), argv
-    # No credentials.json mount — the env-var path keeps newb usable in CI.
     assert not any(":/home/newb/.claude/.credentials.json" in a for a in argv), argv
+    r.close()
+
+
+def test_docker_argv_mounts_credentials_when_host_has_them(
+    monkeypatch, fake_runtime, tmp_path
+):
+    """When ``~/.claude/.credentials.json`` exists on the host,
+    DockerRunner bind-mounts it read-only into the container at
+    ``/home/newb/.claude/.credentials.json``. This is the OAuth
+    flat-rate path: Anthropic rejects bare ``sk-ant-oat01-…`` env
+    tokens, but accepts the file-based credentials_file flow."""
+    from newb._container_runner import DockerRunner
+
+    creds = tmp_path / "home" / ".claude" / ".credentials.json"
+    creds.parent.mkdir(parents=True)
+    creds.write_text('{"claudeAiOauth": {"accessToken": "sk-ant-oat01-x"}}')
+
+    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    argv = r._build_argv()
+    mount = next(
+        a for a in argv if a.endswith(":/home/newb/.claude/.credentials.json:ro")
+    )
+    host_part, _, _ = mount.partition(":")
+    assert host_part == str(creds)
     r.close()
 
 
@@ -221,9 +255,7 @@ def test_docker_argv_mounts_pip_cache_when_configured(fake_runtime, tmp_path):
     )
     argv = r._build_argv()
     assert cache.is_dir(), "runner should mkdir the cache dir"
-    assert any(
-        f"{cache}:/home/newb/.cache/pip" == a for a in argv
-    ), argv
+    assert any(f"{cache}:/home/newb/.cache/pip" == a for a in argv), argv
     r.close()
 
 

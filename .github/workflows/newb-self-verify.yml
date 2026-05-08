@@ -35,6 +35,28 @@ jobs:
         run: |
           python -c "from newb._container_runner import _default_image; print('image=' + _default_image())" >> "$GITHUB_OUTPUT"
 
+      - name: Provision Anthropic auth (credentials.json or bare key)
+        # Anthropic rejects `sk-ant-oat01-…` OAuth tokens passed as a
+        # bare ANTHROPIC_API_KEY. The container runner bind-mounts
+        # ~/.claude/.credentials.json into the container when it
+        # exists on the host — so we materialise it here from a
+        # secret. CLAUDE_CREDENTIALS_JSON should hold the *full*
+        # credentials.json content (refresh_token, expiresAt, …) as
+        # produced by `claude /login` locally. If the secret is
+        # missing, fall back to the bare-key path (works for real
+        # `sk-ant-api*` keys).
+        env:
+          CLAUDE_CREDENTIALS_JSON: ${{ secrets.CLAUDE_CREDENTIALS_JSON }}
+        run: |
+          if [ -n "${CLAUDE_CREDENTIALS_JSON}" ]; then
+            mkdir -p "${HOME}/.claude"
+            printf '%s' "${CLAUDE_CREDENTIALS_JSON}" > "${HOME}/.claude/.credentials.json"
+            chmod 600 "${HOME}/.claude/.credentials.json"
+            echo "auth: bind-mounted credentials.json (OAuth flat-rate)"
+          else
+            echo "auth: NEWB_ANTHROPIC_API_KEY only (no credentials.json secret set)"
+          fi
+
       - name: Run newb against newb
         env:
           NEWB_ANTHROPIC_API_KEY: ${{ secrets.NEWB_ANTHROPIC_API_KEY }}
