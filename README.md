@@ -215,22 +215,29 @@ pip install newb[all]      # everything above
 <br>
 
 newb owns its own env namespace and never silently inherits the
-upstream `ANTHROPIC_API_KEY`. One opt-in var, opaque to newb:
+upstream `ANTHROPIC_API_KEY`. Two opt-in vars, both opaque to newb:
 
 ```bash
-# Real Anthropic API key (production / CI / redistributed use)
+# Real Anthropic API key — works as bare env (production / CI).
 export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...
 
-# OR: a Claude Code Pro / Max OAuth access token. Extract from
-# ~/.claude/.credentials.json:
+# Claude Code Pro / Max OAuth — local dev: pull the access token
+# from the credentials file the SDK already reads.
 export NEWB_ANTHROPIC_API_KEY=$(jq -r .claudeAiOauth.accessToken ~/.claude/.credentials.json)
+
+# Claude Code Pro / Max OAuth — CI: pass the FULL credentials.json
+# content. newb materialises it to a tempfile and bind-mounts it
+# into the container so the SDK uses the file-based auth flow.
+# Anthropic rejects bare sk-ant-oat01-… tokens; this is the
+# supported OAuth-in-CI path.
+export NEWB_CLAUDE_CODE_CREDENTIALS_JSON="$(cat ~/.claude/.credentials.json)"
 ```
 
 The Anthropic backend accepts both `sk-ant-api*` (API keys) and
-`sk-ant-oat*` (Claude Code OAuth access tokens) on the same
-Authorization header — newb forwards the value verbatim into the
-container, where the bundled CLI promotes it to `ANTHROPIC_API_KEY`.
-Per
+`sk-ant-oat*` (Claude Code OAuth access tokens). newb forwards the
+key verbatim into the container; for OAuth in CI you also need
+`NEWB_CLAUDE_CODE_CREDENTIALS_JSON` so the SDK can use the file-based
+flow. Per
 [Anthropic's commercial ToS](https://www.anthropic.com/legal/commercial-terms),
 redistributed / CI use should prefer the API-key form.
 

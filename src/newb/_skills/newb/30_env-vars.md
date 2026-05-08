@@ -13,17 +13,23 @@ host runtime actively masks it for the duration of the SDK call so
 the bundled CLI cleanly falls through to OAuth or fails. Container
 runtimes hard-fail without a NEWB_-prefixed key.
 
-## Auth (one var, opt-in)
+## Auth (two vars, opt-in)
 
 | Variable | Purpose | Default | Type |
 |---|---|---|---|
-| `NEWB_ANTHROPIC_API_KEY` | Opaque token. Forwarded verbatim into the container, where the in-container runner promotes it to `ANTHROPIC_API_KEY` for the bundled CLI. The Anthropic backend accepts both `sk-ant-api03-…` (real API keys) and `sk-ant-oat01-…` (Claude Code Pro / Max OAuth access tokens) on the same Authorization header — newb does not dispatch on prefix. | unset | secret |
+| `NEWB_ANTHROPIC_API_KEY` | Opaque token. Forwarded verbatim into the container, where the in-container runner promotes it to `ANTHROPIC_API_KEY` for the bundled CLI. Real `sk-ant-api03-…` keys auth fine bare. | unset | secret |
+| `NEWB_CLAUDE_CODE_CREDENTIALS_JSON` | Full `~/.claude/.credentials.json` content (refresh_token + accessToken + expiresAt + scopes + subscriptionType) as the env-var value. When set, newb materialises it to a 0644 tempfile and bind-mounts that into the container so the SDK uses the file-based credentials_file flow. **Required for OAuth `sk-ant-oat01-…` tokens** — Anthropic rejects bare-env OAuth without refresh-token / expiresAt context. Skip this var entirely if you're using a real `sk-ant-api*` key. | unset | secret |
 
-OAuth users on Claude Code Pro / Max can extract the access token
-from the local credentials file:
+OAuth users on Claude Code Pro / Max should pass the full file
+content via the second var (the local `01_newb.src` shell bridge
+exports `NEWB_ANTHROPIC_API_KEY` from it for local dev):
 
 ```bash
+# Local dev: extract the access token (the SDK has the file too)
 export NEWB_ANTHROPIC_API_KEY=$(jq -r .claudeAiOauth.accessToken ~/.claude/.credentials.json)
+
+# CI: pass the full credentials.json content as a secret
+export NEWB_CLAUDE_CODE_CREDENTIALS_JSON="$(cat ~/.claude/.credentials.json)"
 ```
 
 ## Runtime (image + model overrides)

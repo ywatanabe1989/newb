@@ -4,19 +4,36 @@ name: Newb
 # own docs are not ready to ship; if green, the verification path works
 # end-to-end on the simplest target there is (newb knows itself).
 #
-# Manual trigger only for now — once stable, add a daily schedule.
+# Triggers:
+#   * workflow_dispatch — manual ad-hoc.
+#   * workflow_run — chained off `Publish newb-runner image`. Tag
+#     pushes fire publish-image first; this workflow runs once that
+#     completes successfully so it can pull the freshly-built tag.
+#     Triggering on tag push directly would race the image build.
 
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Publish newb-runner image"]
+    types: [completed]
 
 jobs:
   self-verify:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    # Only run when the upstream image-publish actually succeeded;
+    # workflow_run fires on completion regardless of conclusion.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          # On workflow_run, default checkout grabs the *branch* HEAD,
+          # not the SHA that triggered the upstream workflow. We want
+          # the tag's commit so the verification matches what was
+          # actually published.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: actions/setup-python@v6
         with:
