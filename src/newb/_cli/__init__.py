@@ -27,20 +27,7 @@ import sys
 
 import click
 
-# Subcommand names registered on the top-level group. Used by
-# _reorder_argv to tell "subcommand invocation" from "implicit-try
-# invocation with options after the SOURCE positional".
-_SUBCOMMANDS = {
-    "templates",
-    "skills",
-    "mcp",
-    "list-python-apis",
-    "env-template",
-    "gate",
-    "scaffold-workflow",
-    "set-secret",
-    "install",
-}
+from ._reorder import _reorder_argv, _SUBCOMMANDS  # noqa: F401
 
 
 def cli_entrypoint():
@@ -49,75 +36,12 @@ def cli_entrypoint():
     # Load NEWB_ENV_SRC early so all CLI flag resolution + downstream
     # reads of NEWB_* vars see the unified shell-profile config.
     # SciTeX standard env-loader pattern.
-    from ._env_loader import load_newb_env
+    from .._env._loader import load_newb_env
 
     load_newb_env()
     sys.argv[1:] = _reorder_argv(sys.argv[1:])
     return main()
 
-
-def _reorder_argv(argv: list[str]) -> list[str]:
-    """Allow ``newb <SOURCE> [options...]`` ordering, not just the
-    Click-default ``newb [options...] <SOURCE>``.
-
-    Click's ``invoke_without_command=True`` group treats anything after
-    the SOURCE positional as a subcommand name, so ``newb /path
-    --format markdown`` parses ``--format`` as a subcommand and
-    explodes. We pre-walk argv: if a non-subcommand positional appears,
-    rotate it to the end so all options precede it from Click's POV.
-
-    Untouched cases (returned verbatim):
-      * No positional at all.
-      * First positional IS a registered subcommand (let Click route).
-      * The argv contains ``--`` (caller asked for explicit separation).
-    """
-    if not argv or "--" in argv:
-        return argv
-    value_taking = {
-        "--model",
-        "--runs",
-        "--template",
-        "--format",
-        "--runtime",
-    }
-    out_options: list[str] = []
-    positional: str | None = None
-    rest_after: list[str] = []
-    i = 0
-    while i < len(argv):
-        a = argv[i]
-        if positional is not None:
-            rest_after.append(a)
-            i += 1
-            continue
-        if a.startswith("-"):
-            out_options.append(a)
-            takes_value = (a in value_taking) or (
-                a.startswith("--")
-                and "=" not in a
-                and a
-                not in {
-                    "--json",
-                    "--help-recursive",
-                    "--help",
-                    "-h",
-                    "--version",
-                }
-            )
-            if takes_value and i + 1 < len(argv) and not argv[i + 1].startswith("-"):
-                if a in value_taking:
-                    out_options.append(argv[i + 1])
-                    i += 2
-                    continue
-            i += 1
-            continue
-        if a in _SUBCOMMANDS:
-            return argv  # subcommand invocation — leave alone
-        positional = a
-        i += 1
-    if positional is None:
-        return argv
-    return out_options + rest_after + [positional]
 
 
 # ---------------------------------------------------------------------------
@@ -125,18 +49,18 @@ def _reorder_argv(argv: list[str]) -> list[str]:
 # Subcommands attach here.
 # ---------------------------------------------------------------------------
 
-from ._cli_try import main  # noqa: E402
+from ._try import main  # noqa: E402
 
-from ._cli_env import env_template as _env_template_cmd  # noqa: E402
-from ._cli_gate import gate as _gate_cmd  # noqa: E402
-from ._cli_install import (  # noqa: E402
+from ._env import env_template as _env_template_cmd  # noqa: E402
+from ._gate import gate as _gate_cmd  # noqa: E402
+from ._install import (  # noqa: E402
     install as _install_cmd,
     scaffold_workflow as _scaffold_workflow_cmd,
     set_secret as _set_secret_cmd,
 )
-from ._cli_mcp import mcp as _mcp_group  # noqa: E402
-from ._cli_skills import skills as _skills_group  # noqa: E402
-from ._cli_templates import templates as _templates_group  # noqa: E402
+from ._mcp import mcp as _mcp_group  # noqa: E402
+from ._skills import skills as _skills_group  # noqa: E402
+from ._templates import templates as _templates_group  # noqa: E402
 
 main.add_command(_templates_group)
 main.add_command(_skills_group)

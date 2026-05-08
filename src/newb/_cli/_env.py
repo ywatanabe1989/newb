@@ -30,7 +30,7 @@ def env_template(output: str | None):
       $ newb env-template -o ~/.scitex/newb/local.src      # to file
       $ export NEWB_ENV_SRC=~/.scitex/newb/local.src       # then in your shell rc
     """
-    from ._env_registry import generate_template
+    from .._env._registry import generate_template
 
     content = generate_template()
     if output:

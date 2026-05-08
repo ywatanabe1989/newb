@@ -100,7 +100,7 @@ class _BaseContainerRunner:
         # Validated host-side; container-side runner trusts the encoded
         # JSON. Empty / None → no NEWB_MCP_SERVERS_JSON env var, container
         # gets the SDK default (no MCP servers).
-        from ._mcp_inject import encode_env as _mcp_encode_env
+        from ._mcp._inject import encode_env as _mcp_encode_env
 
         self._mcp_servers_env = _mcp_encode_env(mcp_servers)
         # Optional host-side pip cache; mounted into the container as

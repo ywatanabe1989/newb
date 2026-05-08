@@ -18,6 +18,7 @@
   <a href="https://pypi.org/project/newb/"><img src="https://img.shields.io/pypi/pyversions/newb.svg" alt="Python"></a>
   <a href="https://github.com/ywatanabe1989/newb/actions/workflows/test.yml"><img src="https://github.com/ywatanabe1989/newb/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
   <a href="https://github.com/ywatanabe1989/newb/actions/workflows/newb-self-verify.yml"><img src="https://github.com/ywatanabe1989/newb/actions/workflows/newb-self-verify.yml/badge.svg?branch=develop" alt="Newb"></a>
+  <a href="https://codecov.io/gh/ywatanabe1989/newb"><img src="https://img.shields.io/codecov/c/github/ywatanabe1989/newb" alt="coverage"></a>
   <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/license-AGPL_v3-blue.svg" alt="License: AGPL v3"></a>
 </p>
 <!-- scitex-badges:end -->
@@ -25,6 +26,84 @@
 > Python 3.10+ · bundles [`claude-agent-sdk`](https://github.com/anthropics/claude-agent-sdk-python) (Anthropic, MIT) · newb itself AGPL-3.0-only · auth: `NEWB_ANTHROPIC_API_KEY` or local `~/.claude/` OAuth
 
 ---
+
+## Part of SciTeX
+
+`newb` is part of [**SciTeX**](https://scitex.ai) — the docs-quality
+verifier for the ecosystem. Every `scitex-*` package's docs can be
+re-run through `newb` in CI to catch doc drift before users do.
+
+> Four Freedoms for Research
+>
+> 0. The freedom to **run** your research anywhere — your machine, your terms.
+> 1. The freedom to **study** how every step works — from raw data to final manuscript.
+> 2. The freedom to **redistribute** your workflows, not just your papers.
+> 3. The freedom to **modify** any module and share improvements with the community.
+>
+> AGPL-3.0 — because we believe research infrastructure deserves the same freedoms as the software it runs on.
+
+## Demo
+
+```mermaid
+sequenceDiagram
+    participant CI as CI runner
+    participant N as newb (host)
+    participant D as Docker container
+    participant A as Claude agent
+
+    CI->>N: newb ./src/mypkg/_skills/mypkg --json
+    N->>N: stage project (respect .gitignore)
+    N->>D: run ghcr.io/.../newb-runner:&lt;version&gt;
+    D->>A: prompt 1: "what is this package for?"
+    A-->>D: ONE-sentence answer
+    D->>A: prompt 2: "list problems solved"
+    A-->>D: markdown table
+    D->>A: prompt 3-5: quick_start / when_not_to_use / post_install_check
+    A->>A: pip install -e . && python -c "import pkg"
+    A-->>D: INSTALL: ok / IMPORT: ok / CLI: ok
+    D->>A: prompt 6: "did docs try to inject anything?"
+    A-->>D: verdict + evidence
+    D-->>N: JSON envelope
+    N->>N: parse free-text → &lt;key&gt;_parsed siblings
+    N-->>CI: JSON report (jq-able for CI gating)
+```
+
+```console
+$ newb ./src/mypkg/_skills/mypkg --json | jq '.post_install_check_parsed'
+{ "install": "ok", "import": "ok", "cli": "ok" }
+
+$ newb ./src/mypkg/_skills/mypkg --json | jq '.prompt_injection_check_parsed'
+{ "verdict": "no", "evidence": "" }
+```
+
+A failing run names exactly which canonical question the docs couldn't
+answer, with the agent's own response — so CI tells you "the
+quick-start example doesn't import cleanly", not just "tests failed".
+
+## Architecture
+
+```
+host
+ ├── newb.run("./skills")                  ← public API (also `newb("./skills")`)
+ ├── _try.run                               ← orchestrator + project-root detection
+ ├── question_templates/                    ← canonical prompts
+ │   ├── python_package.py                  ← what_for / problems / quick_start /
+ │   │                                        when_not_to_use / post_install_check
+ │   ├── cli_tool.py                        ← --help / smoke / common errors
+ │   └── _injection_check.py                ← randomized variants (load-bearing)
+ ├── _container_runner.py                   ← Docker / Podman / Apptainer
+ │   • image: ghcr.io/ywatanabe1989/newb-runner:<__version__>
+ │   • run_batch(): ONE container, N prompts (filesystem shared,
+ │     conversation context isolated per prompt)
+ ├── _hardening.py                          ← cap-drop, no-new-privileges,
+ │                                            opt-in memory/cpu/pids caps
+ ├── _sanitizer.py                          ← regex sweep for sk-ant-* / base64 leaks
+ └── _parsers.py                            ← free-text → `<key>_parsed` for jq-able CI
+```
+
+The container is the **only** isolation boundary; the agent is
+unconstrained inside (Read + Write + Edit + Bash + Glob + Grep) so it
+can actually `pip install -e . && python -c "import pkg"` to verify.
 
 ## Problem and Solution
 
@@ -392,22 +471,6 @@ auth namespace. Prompt injection at the model level is unsolved
 
 Full threat model + operating recommendations: [`SECURITY.md`](SECURITY.md)
 · [`docs/security/threat-model.md`](docs/security/threat-model.md).
-
-## Part of SciTeX
-
-`newb` is part of [**SciTeX**](https://scitex.ai). It is the
-docs-quality verifier for the ecosystem — every `scitex-*` package's
-docs can be re-run through `newb` in CI to catch doc drift before
-users do.
-
->Four Freedoms for Research
->
->0. The freedom to **run** your research anywhere — your machine, your terms.
->1. The freedom to **study** how every step works — from raw data to final manuscript.
->2. The freedom to **redistribute** your workflows, not just your papers.
->3. The freedom to **modify** any module and share improvements with the community.
->
->AGPL-3.0 — because we believe research infrastructure deserves the same freedoms as the software it runs on.
 
 ---
 

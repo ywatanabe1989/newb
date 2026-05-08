@@ -11,7 +11,7 @@ import json
 
 import click
 
-from .question_templates import TEMPLATES
+from ..question_templates import TEMPLATES
 
 
 @click.group()

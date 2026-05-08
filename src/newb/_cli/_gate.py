@@ -22,7 +22,7 @@ from pathlib import Path
 
 import click
 
-from ._gate import evaluate, load_gate_config
+from .._gate import evaluate, load_gate_config
 
 
 @click.command("gate")

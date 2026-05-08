@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from newb._mcp_inject import McpInjectError, encode_env, validate
+from newb._mcp._inject import McpInjectError, encode_env, validate
 
 
 def test_empty_returns_none():

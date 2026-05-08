@@ -35,6 +35,17 @@ all  = [
     "torch>=2.0",
     "sentencepiece>=0.1.99",
 ]
+# PS210 — `[dev]` includes every dependency that the test suite imports
+# unguarded so a fresh `pip install -e .[dev]` runs the full suite.
+# fastmcp is here because tests/newb/test__mcp_inject.py imports it
+# without a `pytest.importorskip` guard.
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-timeout",
+    "PyYAML>=6.0",
+    "fastmcp>=2.0",
+]
 
 [project.scripts]
 newb = "newb._cli:cli_entrypoint"

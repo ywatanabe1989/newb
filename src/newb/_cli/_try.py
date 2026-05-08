@@ -22,9 +22,9 @@ import time
 
 import click
 
-from ._try import render_markdown
-from ._try import run as _run_impl
-from .question_templates import DEFAULT_TEMPLATE, TEMPLATES
+from .._try import render_markdown
+from .._try import run as _run_impl
+from ..question_templates import DEFAULT_TEMPLATE, TEMPLATES
 
 
 class _NewbGroup(click.Group):
@@ -252,7 +252,7 @@ def main(
         out_format = "markdown"
 
     # CLI > [tool.newb] > built-in defaults.
-    from ._pyproject_config import load_pyproject_config
+    from .._pyproject_config import load_pyproject_config
 
     project_cfg = load_pyproject_config(source if source else ".")
     if template == "python-package" and project_cfg.get("template"):
@@ -269,8 +269,8 @@ def main(
         install_mode = project_cfg["install_mode"]
     mcp_servers_cfg: dict | None = project_cfg.get("mcp_servers") or None
     if mcp_servers_cfg:
-        from ._mcp_inject import McpInjectError
-        from ._mcp_inject import validate as _mcp_validate
+        from .._mcp._inject import McpInjectError
+        from .._mcp._inject import validate as _mcp_validate
 
         try:
             mcp_servers_cfg = _mcp_validate(mcp_servers_cfg)
@@ -279,7 +279,7 @@ def main(
             ctx.exit(2)
 
     # Resolve hardening: env vars first, CLI flags override.
-    from ._hardening import HardeningOptions
+    from .._hardening import HardeningOptions
 
     hardening = HardeningOptions.from_env().merged_with(
         memory=harden_memory,

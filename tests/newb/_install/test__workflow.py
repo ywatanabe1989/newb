@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from newb import _install_workflow as iw
+from newb._install import _workflow as iw
 
 
 @pytest.fixture

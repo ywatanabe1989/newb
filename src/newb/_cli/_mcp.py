@@ -34,7 +34,7 @@ def mcp_list_tools(as_json):
       $ newb mcp list-tools --json
     """
     try:
-        from ._server import mcp as _mcp_server
+        from .._server import mcp as _mcp_server
     except ImportError as e:
         raise click.ClickException(
             f"MCP support requires the [mcp] extra: pip install 'newb[mcp]' ({e})"
@@ -90,7 +90,7 @@ def mcp_start(dry_run, yes):
         return
     _ = yes
     try:
-        from ._server import run_server
+        from .._server import run_server
     except ImportError as e:
         raise click.ClickException(
             f"MCP support requires the [mcp] extra: pip install 'newb[mcp]' ({e})"

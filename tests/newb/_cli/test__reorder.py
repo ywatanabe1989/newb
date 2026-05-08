@@ -10,7 +10,7 @@ is being invoked.
 
 from __future__ import annotations
 
-from newb._cli import _reorder_argv
+from newb._cli._reorder import _reorder_argv
 
 
 def test_options_after_source_get_reordered_before():

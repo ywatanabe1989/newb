@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from newb._install_target import resolve_target
+from newb._install._target import resolve_target
 
 
 def _git_init(path: Path, remote: str | None = None) -> None:

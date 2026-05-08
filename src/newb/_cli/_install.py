@@ -12,8 +12,8 @@ import sys
 
 import click
 
-from ._install_target import resolve_target
-from ._install_workflow import (
+from .._install._target import resolve_target
+from .._install._workflow import (
     GhError,
     install as _install,
     scaffold_workflow as _scaffold,
