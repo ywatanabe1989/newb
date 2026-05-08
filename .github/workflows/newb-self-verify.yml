@@ -35,39 +35,18 @@ jobs:
         run: |
           python -c "from newb._container_runner import _default_image; print('image=' + _default_image())" >> "$GITHUB_OUTPUT"
 
-      - name: Provision Anthropic auth (credentials.json or bare key)
-        # Anthropic rejects `sk-ant-oat01-…` OAuth tokens passed as a
-        # bare ANTHROPIC_API_KEY. The container runner bind-mounts
-        # ~/.claude/.credentials.json into the container when it
-        # exists on the host — so we materialise it here from a
-        # secret. CLAUDE_CREDENTIALS_JSON should hold the *full*
-        # credentials.json content (refresh_token, expiresAt, …) as
-        # produced by `claude /login` locally. If the secret is
-        # missing, fall back to the bare-key path (works for real
-        # `sk-ant-api*` keys).
-        env:
-          CLAUDE_CREDENTIALS_JSON: ${{ secrets.CLAUDE_CREDENTIALS_JSON }}
-        run: |
-          if [ -n "${CLAUDE_CREDENTIALS_JSON}" ]; then
-            mkdir -p "${HOME}/.claude"
-            printf '%s' "${CLAUDE_CREDENTIALS_JSON}" > "${HOME}/.claude/.credentials.json"
-            # 644, not 600. The newb-runner image runs as UID 1000
-            # (`newb` user); the GH runner host writes this file as
-            # UID 1001. With 600, the container can't read the
-            # bind-mounted file and the SDK silently falls back to
-            # the (now unset) env var -> 'Command failed with exit
-            # code 1' from the bundled CLI. The runner is ephemeral
-            # and the secret stays in GitHub, so 644 is acceptable
-            # for the ~1-minute job lifetime.
-            chmod 644 "${HOME}/.claude/.credentials.json"
-            echo "auth: bind-mounted credentials.json (OAuth flat-rate)"
-          else
-            echo "auth: NEWB_ANTHROPIC_API_KEY only (no credentials.json secret set)"
-          fi
-
       - name: Run newb against newb
+        # Auth: NEWB_ANTHROPIC_API_KEY covers real sk-ant-api* keys
+        # bare. Anthropic rejects sk-ant-oat01-… OAuth tokens passed
+        # as bare env, so for Claude Code Pro/Max OAuth we also pass
+        # NEWB_CLAUDE_CODE_CREDENTIALS_JSON (full credentials.json
+        # content). When set, the container runner materialises it
+        # to a tempfile and bind-mounts it into the agent's HOME so
+        # the SDK uses the file-based credentials_file flow. If the
+        # secret is unset, the workflow falls back to bare-key auth.
         env:
           NEWB_ANTHROPIC_API_KEY: ${{ secrets.NEWB_ANTHROPIC_API_KEY }}
+          NEWB_CLAUDE_CODE_CREDENTIALS_JSON: ${{ secrets.CLAUDE_CREDENTIALS_JSON }}
           # Resource caps — auditor flagged that cap-drop=ALL handles
           # capabilities but unconstrained memory/pids opens a DoS lane
           # if an attacker hijacks the agent. Generous-but-bounded is

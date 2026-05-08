@@ -4,6 +4,33 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.26.5] — 2026-05-08
+
+### Added
+
+- **`NEWB_CLAUDE_CODE_CREDENTIALS_JSON` env var.** Full
+  `credentials.json` content (refresh_token + accessToken +
+  expiresAt + scopes + subscriptionType) as the env-var value. When
+  set, `DockerRunner`/`PodmanRunner`/`ApptainerRunner` materialise
+  it to a `0644` tempfile, bind-mount that into the container, and
+  unlink the tempfile on `close()`. Adopting workflows pass the GH
+  secret as this env var directly — no shell provisioning step
+  needed.
+- Two new tests covering env-var materialisation and the env-var-
+  > host-file precedence (17 container-runner tests, was 15).
+
+### Changed
+
+- **`newb-self-verify.yml` simplified.** Dropped the bash
+  `Provision Anthropic auth` step (chmod 644, mkdir ~/.claude/,
+  printf to file). The `Run newb against newb` step now just sets
+  `NEWB_CLAUDE_CODE_CREDENTIALS_JSON: ${{ secrets.CLAUDE_CREDENTIALS_JSON }}`
+  and lets newb materialise the file. One less moving piece per
+  adopting repo.
+- **`docs/badge.md` workflow template** updated to show the
+  env-var pattern. Required-secrets table grew a second row
+  (`CLAUDE_CREDENTIALS_JSON`) flagged "only for OAuth flat-rate".
+
 ## [0.26.4] — 2026-05-08
 
 ### Fixed

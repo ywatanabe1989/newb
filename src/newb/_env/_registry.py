@@ -36,6 +36,23 @@ REGISTRY: list[EnvVar] = [
         ),
         example="sk-ant-api03-...",
     ),
+    EnvVar(
+        name="NEWB_CLAUDE_CODE_CREDENTIALS_JSON",
+        category="auth",
+        secret=True,
+        description=(
+            "Full ~/.claude/.credentials.json content as the env-var "
+            "value (refresh_token + accessToken + expiresAt + scopes + "
+            "subscriptionType). When set, newb materialises it to a "
+            "0644 tempfile and bind-mounts it into the container, so "
+            "the SDK uses the file-based credentials_file flow. "
+            "Required for OAuth flat-rate billing in CI; Anthropic "
+            "rejects sk-ant-oat01-… tokens passed as a bare env var. "
+            "Real sk-ant-api* keys can use NEWB_ANTHROPIC_API_KEY "
+            "alone; this var is for OAuth-only paths."
+        ),
+        example='{"claudeAiOauth":{"accessToken":"sk-ant-oat01-…",…}}',
+    ),
     # --- runtime ---
     EnvVar(
         name="NEWB_DOCKER_IMAGE",

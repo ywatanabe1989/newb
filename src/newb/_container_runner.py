@@ -97,16 +97,37 @@ class _BaseContainerRunner:
             )
         self._api_key = api_key
         self.scope = scope if scope in {"all", "docs"} else "all"
-        # OAuth flat-rate path: if `~/.claude/.credentials.json` exists
-        # on the host (Claude Code Pro/Max), bind-mount it into the
+        # OAuth flat-rate path: bind-mount a credentials.json into the
         # container so the SDK uses the file-based auth flow instead
         # of the bare-env path. Anthropic rejects ``sk-ant-oat01-…``
         # OAuth tokens passed as ``ANTHROPIC_API_KEY`` env vars (no
         # refresh-token / expiresAt context); the file gives them the
         # full credentials shape they expect. The env var still flows
         # for ``sk-ant-api*`` real API keys, which work fine bare.
-        creds_path = Path("~/.claude/.credentials.json").expanduser()
-        self._host_credentials_json = creds_path if creds_path.is_file() else None
+        #
+        # Resolution order:
+        #   1. ``$NEWB_CLAUDE_CODE_CREDENTIALS_JSON`` — full file contents as the
+        #      env-var value. Materialise to a 0600 tempfile and
+        #      bind-mount that. Intended for CI: the workflow puts a
+        #      single secret in this env var, no shell provisioning
+        #      step needed. We own the file so the chmod is correct.
+        #   2. ``~/.claude/.credentials.json`` exists on the host —
+        #      bind-mount the original file (local-dev path).
+        #   3. Neither — env-var-only auth (works for sk-ant-api* keys).
+        self._credentials_tempfile: Path | None = None
+        env_creds = os.environ.get("NEWB_CLAUDE_CODE_CREDENTIALS_JSON", "").strip()
+        if env_creds:
+            tmp = tempfile.NamedTemporaryFile(
+                "w", prefix="newb-creds-", suffix=".json", delete=False
+            )
+            tmp.write(env_creds)
+            tmp.close()
+            os.chmod(tmp.name, 0o644)  # readable by container's newb uid
+            self._credentials_tempfile = Path(tmp.name)
+            self._host_credentials_json: Path | None = self._credentials_tempfile
+        else:
+            host_creds = Path("~/.claude/.credentials.json").expanduser()
+            self._host_credentials_json = host_creds if host_creds.is_file() else None
         # Validated host-side; container-side runner trusts the encoded
         # JSON. Empty / None → no NEWB_MCP_SERVERS_JSON env var, container
         # gets the SDK default (no MCP servers).
@@ -244,6 +265,16 @@ class _BaseContainerRunner:
     def close(self) -> None:
         if self._stage_dir.exists():
             shutil.rmtree(self._stage_dir, ignore_errors=True)
+        # Tempfile owned by us (materialised from NEWB_CLAUDE_CODE_CREDENTIALS_JSON)
+        # — host-side host file lifetimes are not ours to delete.
+        if (
+            self._credentials_tempfile is not None
+            and self._credentials_tempfile.exists()
+        ):
+            try:
+                self._credentials_tempfile.unlink()
+            except OSError:
+                pass
 
 
 class DockerRunner(_BaseContainerRunner):

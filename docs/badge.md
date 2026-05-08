@@ -42,7 +42,15 @@ jobs:
 
       - name: Run newb
         env:
+          # Real `sk-ant-api*` keys work as a bare env var.
           NEWB_ANTHROPIC_API_KEY: ${{ secrets.NEWB_ANTHROPIC_API_KEY }}
+          # OAuth flat-rate (Claude Code Pro/Max): pass the full
+          # ~/.claude/.credentials.json content as a secret. newb
+          # materialises it to a tempfile and bind-mounts it into
+          # the container so the SDK uses the file-based credentials_file
+          # flow (Anthropic rejects sk-ant-oat01-… tokens passed as
+          # bare env). Leave unset for sk-ant-api* keys.
+          NEWB_CLAUDE_CODE_CREDENTIALS_JSON: ${{ secrets.CLAUDE_CREDENTIALS_JSON }}
           NEWB_HARDEN_MEMORY: 4g
           NEWB_HARDEN_PIDS_LIMIT: 512
           NEWB_HARDEN_CPUS: "2"
@@ -89,11 +97,12 @@ recognizable.
 Typical placement is alongside your other CI/PyPI badges (under the
 project tagline, before the description body).
 
-## Required secret
+## Required secrets
 
-| Secret | Source | Notes |
+| Secret | When required | Notes |
 |---|---|---|
-| `NEWB_ANTHROPIC_API_KEY` | Anthropic API key OR Claude Code OAuth access token | newb forwards verbatim; the Anthropic backend accepts both on the same Authorization header. For CI, prefer a real API key with a per-key spend cap (Pro/Max OAuth tokens expire and Pro/Max licenses aren't sized for automated use). |
+| `NEWB_ANTHROPIC_API_KEY` | always | Anthropic API key (`sk-ant-api03-…`) OR OAuth access token (`sk-ant-oat01-…`). For CI, prefer a real API key with a per-key spend cap. |
+| `CLAUDE_CREDENTIALS_JSON` | only for OAuth flat-rate | Full `~/.claude/.credentials.json` content (the file `claude /login` writes locally — refresh_token + accessToken + expiresAt + scopes + subscriptionType). When the workflow exposes it as `NEWB_CLAUDE_CODE_CREDENTIALS_JSON`, newb materialises it to a tempfile and bind-mounts it into the container. Anthropic rejects bare `sk-ant-oat01-…` tokens; the file flow is the supported OAuth path. Skip this secret entirely if you're using a real `sk-ant-api*` key. |
 
 That's it — one secret. The runner image
 (`ghcr.io/ywatanabe1989/newb-runner`) is published publicly, so no

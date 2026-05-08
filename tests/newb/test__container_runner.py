@@ -103,6 +103,68 @@ def test_docker_argv_mounts_credentials_when_host_has_them(
     r.close()
 
 
+def test_docker_argv_materialises_credentials_from_env_var(monkeypatch, fake_runtime):
+    """``$NEWB_CLAUDE_CODE_CREDENTIALS_JSON`` (full file contents)
+    overrides the host file path: DockerRunner writes a tempfile
+    and bind-mounts that. Intended for CI — workflows pass the
+    secret as an env var, no shell provisioning step needed."""
+    from pathlib import Path
+
+    from newb._container_runner import DockerRunner
+
+    body = '{"claudeAiOauth": {"accessToken": "sk-ant-oat01-from-env"}}'
+    monkeypatch.setenv("NEWB_CLAUDE_CODE_CREDENTIALS_JSON", body)
+
+    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    try:
+        argv = r._build_argv()
+        mount = next(
+            a for a in argv if a.endswith(":/home/newb/.claude/.credentials.json:ro")
+        )
+        host_part, _, _ = mount.partition(":")
+        host_file = Path(host_part)
+        assert host_file.is_file()
+        assert host_file.read_text() == body
+        # 0644 so the container's `newb` UID can read across UID gaps.
+        assert (host_file.stat().st_mode & 0o777) == 0o644
+        cleanup_target = host_file
+    finally:
+        r.close()
+    # close() unlinks the tempfile.
+    assert not cleanup_target.exists()
+
+
+def test_env_var_credentials_take_precedence_over_host_file(
+    monkeypatch, fake_runtime, tmp_path
+):
+    """When both ``$NEWB_CLAUDE_CODE_CREDENTIALS_JSON`` and the host
+    file exist, the env-var path wins (it's the explicit signal)."""
+    from pathlib import Path
+
+    from newb._container_runner import DockerRunner
+
+    host_creds = tmp_path / "home" / ".claude" / ".credentials.json"
+    host_creds.parent.mkdir(parents=True)
+    host_creds.write_text('{"claudeAiOauth": {"accessToken": "from-host-file"}}')
+    monkeypatch.setenv(
+        "NEWB_CLAUDE_CODE_CREDENTIALS_JSON",
+        '{"claudeAiOauth": {"accessToken": "from-env-var"}}',
+    )
+
+    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    try:
+        argv = r._build_argv()
+        mount = next(
+            a for a in argv if a.endswith(":/home/newb/.claude/.credentials.json:ro")
+        )
+        host_part, _, _ = mount.partition(":")
+        # The mounted file is the tempfile (env var), not the host file.
+        assert Path(host_part) != host_creds
+        assert "from-env-var" in Path(host_part).read_text()
+    finally:
+        r.close()
+
+
 def test_docker_argv_uses_versioned_image_by_default(fake_runtime):
     import newb
     from newb._container_runner import DockerRunner
