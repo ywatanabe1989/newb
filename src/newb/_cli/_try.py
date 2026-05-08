@@ -27,9 +27,53 @@ from .._try import run as _run_impl
 from ..question_templates import DEFAULT_TEMPLATE, TEMPLATES
 
 
+def _find_subcommand_path(
+    group: click.Group, name: str, prefix: tuple[str, ...] = ()
+) -> tuple[str, ...] | None:
+    """Search ``group`` recursively for a subcommand named ``name``.
+
+    Returns the path of subcommand names from the root group to the
+    matching leaf (e.g. ``("dev", "rotate-github-secrets")``), or
+    ``None`` if no match is found.
+    """
+    for sub_name, sub_cmd in group.commands.items():
+        if sub_name == name:
+            return prefix + (sub_name,)
+        if isinstance(sub_cmd, click.Group):
+            hit = _find_subcommand_path(sub_cmd, name, prefix + (sub_name,))
+            if hit is not None:
+                return hit
+    return None
+
+
+def _looks_like_subcommand_typo(source: str) -> bool:
+    """True iff ``source`` looks like a CLI verb the user mistyped at top
+    level — no path separator, no dot, no URL scheme. We only suggest a
+    correction when the spelling fits a verb shape (avoids false positives
+    on legitimate bare-name directories like ``newb mypkg``)."""
+    return (
+        "/" not in source
+        and "\\" not in source
+        and ":" not in source
+        and not source.startswith(".")
+        and "." not in source
+    )
+
+
+def _newb_version() -> str:
+    """Resolve the installed newb version, or '?' on lookup failure."""
+    try:
+        from importlib.metadata import version
+
+        return version("newb")
+    except Exception:
+        return "?"
+
+
 class _NewbGroup(click.Group):
     """Yield to subcommand resolution before consuming the optional
-    SOURCE positional."""
+    SOURCE positional, and prepend ``newb (vX.Y.Z) — <desc>`` to help
+    output (per the SciTeX CLI audit §4 canonical-opening-line rule)."""
 
     def parse_args(self, ctx, args):
         first_pos = next((a for a in args if not a.startswith("-")), None)
@@ -47,6 +91,16 @@ class _NewbGroup(click.Group):
             ctx.params.setdefault("source", None)
             return result
         return super().parse_args(ctx, args)
+
+    def format_help_text(self, ctx, formatter):
+        # Canonical opening line: `<cli> (vX.Y.Z) — <description>`.
+        # Use the runtime-resolved version so the literal can never
+        # drift from pyproject.toml.
+        first_doc_line = (self.help or "").strip().splitlines()[0:1]
+        desc = first_doc_line[0] if first_doc_line else ""
+        formatter.write_paragraph()
+        formatter.write_text(f"newb (v{_newb_version()}) — {desc}")
+        super().format_help_text(ctx, formatter)
 
 
 def _print_help_recursive(ctx: click.Context, _param, value):
@@ -68,6 +122,11 @@ def _print_help_recursive(ctx: click.Context, _param, value):
     cls=_NewbGroup,
     invoke_without_command=True,
     context_settings={"help_option_names": ["-h", "--help"]},
+    epilog=(
+        f"newb (v{_newb_version()}) — A fresh AI agent tries to use your "
+        "package — pytest-style. Run `newb <SOURCE>` against any project "
+        "directory or git URL."
+    ),
 )
 @click.argument("source", required=False)
 @click.option("--model", default="claude-haiku-4-5", help="Claude model id.")
@@ -192,7 +251,7 @@ def _print_help_recursive(ctx: click.Context, _param, value):
     callback=_print_help_recursive,
     help="Flatten help for every subcommand.",
 )
-@click.version_option(prog_name="newb")
+@click.version_option(None, "-V", "--version", prog_name="newb")
 @click.pass_context
 def main(
     ctx: click.Context,
@@ -243,6 +302,29 @@ def main(
             "the canonical invocation is now pytest-style: `newb <target>`. "
             "(Drop the `verify` / `verify-package` token; everything else "
             "stays the same.)",
+            err=True,
+        )
+        ctx.exit(2)
+    # If SOURCE looks like a verb (no path / URL shape) and doesn't exist
+    # locally, check whether it's a subcommand the user forgot to prefix
+    # (e.g. `newb rotate-github-secrets` instead of `newb dev rotate-…`).
+    # We do this BEFORE _validate_source's FileNotFoundError so the user
+    # gets actionable guidance instead of a confusing path error.
+    from pathlib import Path as _Path
+
+    if _looks_like_subcommand_typo(source) and not _Path(source).exists():
+        root = ctx.command if isinstance(ctx.command, click.Group) else main
+        match = _find_subcommand_path(root, source)
+        if match is not None:
+            click.echo(
+                f"newb: '{source}' is not a top-level command. Did you mean "
+                f"`newb {' '.join(match)}`?",
+                err=True,
+            )
+            ctx.exit(2)
+        click.echo(
+            f"newb: '{source}' is neither a path nor a known subcommand. "
+            "Run `newb --help` for the command list.",
             err=True,
         )
         ctx.exit(2)

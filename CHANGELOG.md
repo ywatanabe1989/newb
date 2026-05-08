@@ -4,6 +4,76 @@ All notable changes to newb. Format loosely follows [Keep a Changelog](https://k
 versions follow [SemVer](https://semver.org/) with the pre-1.0 caveat
 that minor bumps may break.
 
+## [0.26.0] — 2026-05-08
+
+### Added
+
+- **`newb dev` group** — maintainer plumbing under a single noun.
+  Mirrors the `<cli> dev <verb>` shape used by other tooling. Keeps
+  the top-level CLI clean (`newb <SOURCE>` is the user-facing
+  primary action) and avoids SOURCE-positional collisions with verb
+  names. Verbs:
+    - `newb dev install <owner>/<repo>` — scaffold + set-secret combo
+    - `newb dev set-secret <owner>/<repo>` — push `NEWB_ANTHROPIC_API_KEY` to GH
+    - `newb dev scaffold-workflow <owner>/<repo>` — workflow file only
+- **`newb install-shell-completion`** and **`newb print-shell-completion`** —
+  native Click completion (no scitex-dev dependency).
+- **`newb skills install`** — copy newb's skill leaves into
+  `~/.claude/skills/newb/` for local discoverability.
+- **Friendlier unknown-positional error.** `newb rotate-github-secrets`
+  (typed without the `dev` prefix) used to fall through to a
+  `FileNotFoundError` on the SOURCE positional. Now the CLI walks the
+  registered subcommand tree and suggests the correct path:
+  `newb: 'rotate-github-secrets' is not a top-level command. Did you
+  mean 'newb dev set-secret'?` (Note: the actual rotate-github-secrets
+  verb was removed — see below.)
+- **Canonical version line in root `--help`.** `newb (vX.Y.Z) — …`
+  surfaces the installed version in the epilog so operators don't
+  need a separate `newb -V` call.
+- **`-V` short alias** for `--version`.
+
+### Changed
+
+- **`install` / `set-secret` / `scaffold-workflow` moved under `newb
+  dev`.** Previously top-level (0.25.0). Breaking surface change for
+  anyone who scripted against the top-level form, but adoption was
+  near-zero so the cleaner grammar wins. The verbs themselves are
+  unchanged in behavior.
+- **`env-template` → `show-env-template`.** Aligns with the SciTeX
+  CLI catalog (`show` is the canonical read verb; `env-template` was
+  not a verb at all). Added a `--json` flag to comply with the audit
+  rule that `show-*` verbs offer a machine-readable mode.
+- **Mutating verbs require `--yes / -y`.** `install`, `scaffold-workflow`,
+  `install-shell-completion`, and `skills install` refuse to run
+  without explicit confirmation; pair with `--dry-run` to preview.
+  Removes interactive `click.confirm()` prompts (forbidden by the
+  audit's §2 rule on machine-friendly CLIs).
+- **`Example:` blocks** added to every leaf command's docstring
+  (audit §4).
+- **Runner image is public** on ghcr.io; workflow templates and
+  `newb-self-verify.yml` no longer log into GHCR. Adopting repos
+  need exactly one secret (`NEWB_ANTHROPIC_API_KEY`).
+
+### Removed
+
+- **`newb dev credential2apikey`** — the bash bridge in
+  `01_newb.src` already extracts the access token from
+  `~/.claude/.credentials.json` via `jq` at shell startup; a CLI
+  alias was redundant.
+- **`newb dev rotate-github-secrets`** — collapsed into `set-secret`.
+  Auth flow stays one-directional
+  (`credentials.json → NEWB_ANTHROPIC_API_KEY → ANTHROPIC_API_KEY`);
+  newb never writes/synthesises credentials.json.
+- **`newb-self-verify.yml`** GHCR login step (image is public).
+- **Stale `MANIFEST.md`** skill leaf (forbidden by skills audit
+  SK105 — `SKILL.md` is the single canonical index).
+
+### Fixed
+
+- All five categories of `scitex-dev ecosystem audit-all newb`
+  now report **OK**.
+- 144 unit tests (was 140) pass.
+
 ## [0.25.0] — 2026-05-03
 
 ### Added

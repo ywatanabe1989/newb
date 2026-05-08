@@ -43,7 +43,6 @@ def cli_entrypoint():
     return main()
 
 
-
 # ---------------------------------------------------------------------------
 # Top-level group + implicit-try action live in ``_cli_try``.
 # Subcommands attach here.
@@ -51,13 +50,13 @@ def cli_entrypoint():
 
 from ._try import main  # noqa: E402
 
+from ._completion import (  # noqa: E402
+    install_shell_completion as _install_shell_completion_cmd,
+    print_shell_completion as _print_shell_completion_cmd,
+)
+from ._dev import dev as _dev_group  # noqa: E402
 from ._env import env_template as _env_template_cmd  # noqa: E402
 from ._gate import gate as _gate_cmd  # noqa: E402
-from ._install import (  # noqa: E402
-    install as _install_cmd,
-    scaffold_workflow as _scaffold_workflow_cmd,
-    set_secret as _set_secret_cmd,
-)
 from ._mcp import mcp as _mcp_group  # noqa: E402
 from ._skills import skills as _skills_group  # noqa: E402
 from ._templates import templates as _templates_group  # noqa: E402
@@ -67,9 +66,9 @@ main.add_command(_skills_group)
 main.add_command(_mcp_group)
 main.add_command(_env_template_cmd)
 main.add_command(_gate_cmd)
-main.add_command(_scaffold_workflow_cmd)
-main.add_command(_set_secret_cmd)
-main.add_command(_install_cmd)
+main.add_command(_dev_group)
+main.add_command(_install_shell_completion_cmd)
+main.add_command(_print_shell_completion_cmd)
 
 
 # ---------------------------------------------------------------------------

@@ -38,6 +38,12 @@ from .._gate import evaluate, load_gate_config
 def gate(report_path: str, pyproject_dir: str):
     """Evaluate a newb JSON report against [tool.newb.gate] criteria.
 
+    \b
+    Example:
+      $ newb . --format json > report.json
+      $ newb gate report.json                 # exits 0 (pass) or 1 (fail)
+      $ newb . --format json | newb gate -    # via stdin
+
     Pass '-' as REPORT_PATH to read from stdin.
     """
     if report_path == "-":

@@ -22,11 +22,11 @@ _SUBCOMMANDS = {
     "skills",
     "mcp",
     "list-python-apis",
-    "env-template",
+    "show-env-template",
     "gate",
-    "scaffold-workflow",
-    "set-secret",
-    "install",
+    "dev",
+    "install-shell-completion",
+    "print-shell-completion",
 }
 
 

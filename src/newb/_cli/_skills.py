@@ -88,3 +88,68 @@ def skills_get(name, as_json):
         click.echo(json.dumps({"path": str(p), "content": content}, indent=2))
         return
     click.echo(content, nl=False)
+
+
+@skills.command("install")
+@click.option(
+    "--target",
+    "target_dir",
+    type=click.Path(file_okay=False),
+    default="~/.claude/skills",
+    show_default=True,
+    help="Where to copy newb's skill leaves into.",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Overwrite existing files at the target.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Print what would be copied without writing.",
+)
+@click.option(
+    "--yes",
+    "-y",
+    is_flag=True,
+    default=False,
+    help="Skip the interactive confirmation prompt.",
+)
+def skills_install(target_dir: str, force: bool, dry_run: bool, yes: bool):
+    """Copy newb's skill leaves into TARGET (default ~/.claude/skills/newb/).
+
+    \b
+    Example:
+      $ newb skills install                    # ~/.claude/skills/newb/
+      $ newb skills install --target /tmp/foo  # custom location
+      $ newb skills install --dry-run          # preview only
+    """
+    import shutil
+
+    src = _skills_dir()
+    if not src.is_dir():
+        raise click.ClickException(f"newb skills dir missing: {src}")
+    dst = Path(target_dir).expanduser() / "newb"
+    if dry_run:
+        click.echo(
+            f"newb: dry-run — would copy {src} → {dst} "
+            f"({'overwrite' if force else 'skip-existing'})"
+        )
+        return
+    if dst.exists() and not force:
+        raise click.ClickException(
+            f"target already exists: {dst} (pass --force to overwrite)"
+        )
+    if not yes:
+        click.echo(
+            f"refusing to write {dst} without --yes/-y (or use --dry-run to preview).",
+            err=True,
+        )
+        return
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    click.echo(f"newb: installed skills to {dst}")

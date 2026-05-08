@@ -52,7 +52,7 @@ newb templates show python-package          # the actual prompts
 newb skills list                            # newb's own skill leaves
 newb mcp list-tools                         # MCP tools newb exposes
 newb mcp start                              # run as MCP server (stdio)
-newb env-template -o ~/.config/newb/local.src
+newb show-env-template -o ~/.config/newb/local.src
 newb list-python-apis                       # public Python surface
 newb gate report.json                       # exit 0/1 vs [tool.newb.gate]
 ```

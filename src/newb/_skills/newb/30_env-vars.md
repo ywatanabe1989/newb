@@ -52,7 +52,7 @@ CLI flags (`--harden-memory`, `--harden-cpus`, …) override these.
 
 | Variable | Purpose |
 |---|---|
-| `NEWB_ENV_SRC` | Path to a `.src` file (or directory of `.src` files) sourced at startup. Generate a template with `newb env-template -o ~/.config/newb/local.src`. |
+| `NEWB_ENV_SRC` | Path to a `.src` file (or directory of `.src` files) sourced at startup. Generate a template with `newb show-env-template -o ~/.config/newb/local.src`. |
 
 ## SDK-internal (set by the host runner, read by `containers/runner.py`)
 
