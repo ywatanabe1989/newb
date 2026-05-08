@@ -45,6 +45,7 @@ dev = [
     "pytest-timeout",
     "PyYAML>=6.0",
     "fastmcp>=2.0",
+    "scitex-dev>=0.11.5",
 ]
 
 [project.scripts]
