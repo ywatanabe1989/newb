@@ -51,7 +51,15 @@ jobs:
           if [ -n "${CLAUDE_CREDENTIALS_JSON}" ]; then
             mkdir -p "${HOME}/.claude"
             printf '%s' "${CLAUDE_CREDENTIALS_JSON}" > "${HOME}/.claude/.credentials.json"
-            chmod 600 "${HOME}/.claude/.credentials.json"
+            # 644, not 600. The newb-runner image runs as UID 1000
+            # (`newb` user); the GH runner host writes this file as
+            # UID 1001. With 600, the container can't read the
+            # bind-mounted file and the SDK silently falls back to
+            # the (now unset) env var -> 'Command failed with exit
+            # code 1' from the bundled CLI. The runner is ephemeral
+            # and the secret stays in GitHub, so 644 is acceptable
+            # for the ~1-minute job lifetime.
+            chmod 644 "${HOME}/.claude/.credentials.json"
             echo "auth: bind-mounted credentials.json (OAuth flat-rate)"
           else
             echo "auth: NEWB_ANTHROPIC_API_KEY only (no credentials.json secret set)"
