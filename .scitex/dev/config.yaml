@@ -1,0 +1,9 @@
+# scitex-dev project-type config
+# newb is a multi-distribution alias monorepo. `packages/agentic-test/`
+# and `packages/newbie-test/` are real PyPI alias distributions
+# (each redirects `pip install <name>` to the same `newb` library).
+# `containers/` carries CI Dockerfile + runner; not imported by src/.
+
+project-type:
+  - pip
+  - special
