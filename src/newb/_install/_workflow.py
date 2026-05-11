@@ -6,7 +6,17 @@ in scitex-dev (which consumes newb).
 The CI workflow we drop is the same template documented in
 ``docs/badge.md``. The runner image
 ``ghcr.io/ywatanabe1989/newb-runner`` is public, so adopting repos
-need exactly one secret: ``NEWB_ANTHROPIC_API_KEY``.
+need one of two secrets — set exactly one:
+
+  * ``NEWB_ANTHROPIC_API_KEY`` — real ``sk-ant-api*`` key, billed per
+    token.
+  * ``NEWB_CLAUDE_CODE_CREDENTIALS_JSON`` — full
+    ``~/.claude/.credentials.json`` content for OAuth (Claude Code
+    Pro / Max). Required for ``sk-ant-oat01-…`` tokens, which
+    Anthropic rejects bare without refresh-token / expiresAt context.
+
+The workflow forwards both env vars; the in-container runner picks
+whichever is non-empty.
 """
 
 from __future__ import annotations
@@ -51,13 +61,17 @@ jobs:
 
       - name: Run newb
         env:
+          # Set exactly one — API key for per-token billing, or the
+          # full ~/.claude/.credentials.json content for OAuth
+          # (Claude Code Pro / Max). See newb 30_env-vars docs.
           NEWB_ANTHROPIC_API_KEY: ${{ secrets.NEWB_ANTHROPIC_API_KEY }}
+          NEWB_CLAUDE_CODE_CREDENTIALS_JSON: ${{ secrets.NEWB_CLAUDE_CODE_CREDENTIALS_JSON }}
           NEWB_HARDEN_MEMORY: 4g
           NEWB_HARDEN_PIDS_LIMIT: 512
           NEWB_HARDEN_CPUS: "2"
         run: |
-          if [ -z "${NEWB_ANTHROPIC_API_KEY}" ]; then
-            echo "::error::secrets.NEWB_ANTHROPIC_API_KEY is not set." >&2
+          if [ -z "${NEWB_ANTHROPIC_API_KEY}" ] && [ -z "${NEWB_CLAUDE_CODE_CREDENTIALS_JSON}" ]; then
+            echo "::error::Neither secrets.NEWB_ANTHROPIC_API_KEY nor secrets.NEWB_CLAUDE_CODE_CREDENTIALS_JSON is set on this repo." >&2
             exit 1
           fi
           newb . --json -vv > newb-report.json
@@ -111,12 +125,16 @@ def _gh(*args: str, input: Optional[str] = None) -> str:
     return proc.stdout
 
 
-def secret_exists(target: str) -> bool:
+SECRET_API_KEY = "NEWB_ANTHROPIC_API_KEY"
+SECRET_CREDS_JSON = "NEWB_CLAUDE_CODE_CREDENTIALS_JSON"
+
+
+def secret_exists(target: str, name: str = SECRET_API_KEY) -> bool:
     try:
         out = _gh("secret", "list", "--repo", target, "--json", "name")
     except GhError:
         return False
-    return '"NEWB_ANTHROPIC_API_KEY"' in out
+    return f'"{name}"' in out
 
 
 def workflow_exists(target: str) -> bool:
@@ -137,22 +155,23 @@ def workflow_exists(target: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def set_secret(target: str, value: str, *, force: bool = False) -> str:
-    """Set ``NEWB_ANTHROPIC_API_KEY`` on ``target``.
+def set_secret(
+    target: str,
+    value: str,
+    *,
+    name: str = SECRET_API_KEY,
+    force: bool = False,
+) -> str:
+    """Set ``name`` (``NEWB_ANTHROPIC_API_KEY`` by default) on ``target``.
+
+    Pass ``name=SECRET_CREDS_JSON`` and ``value`` = full
+    ``~/.claude/.credentials.json`` content for the OAuth flat-rate path.
 
     Returns a short status string (``set`` / ``skip-existing``).
     """
-    if not force and secret_exists(target):
+    if not force and secret_exists(target, name):
         return "skip-existing"
-    _gh(
-        "secret",
-        "set",
-        "NEWB_ANTHROPIC_API_KEY",
-        "--repo",
-        target,
-        "--body",
-        value,
-    )
+    _gh("secret", "set", name, "--repo", target, "--body", value)
     return "set"
 
 
@@ -250,6 +269,7 @@ def install(
     target: str,
     *,
     secret_value: Optional[str] = None,
+    secret_name: str = SECRET_API_KEY,
     push: bool = False,
     force: bool = False,
 ) -> dict:
@@ -257,11 +277,13 @@ def install(
 
     ``secret_value`` of ``None`` means "skip the secret step" (for
     repos where the org secret is already in scope, or a separate
-    rotation flow handles it).
+    rotation flow handles it). ``secret_name`` selects which of the
+    two newb auth secrets to populate — ``SECRET_API_KEY`` (default)
+    or ``SECRET_CREDS_JSON`` for the OAuth flat-rate path.
     """
     out: dict = {}
     if secret_value is not None:
-        out["secret"] = set_secret(target, secret_value, force=force)
+        out["secret"] = set_secret(target, secret_value, name=secret_name, force=force)
     else:
         out["secret"] = "skip-no-value"
     out["workflow"] = scaffold_workflow(target, push=push, force=force)
