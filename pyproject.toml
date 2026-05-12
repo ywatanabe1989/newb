@@ -37,15 +37,22 @@ all  = [
 ]
 # PS210 — `[dev]` includes every dependency that the test suite imports
 # unguarded so a fresh `pip install -e .[dev]` runs the full suite.
-# fastmcp is here because tests/newb/test__mcp_inject.py imports it
-# without a `pytest.importorskip` guard.
+# - PyYAML / fastmcp: extras (yaml/mcp) used transitively via `from newb…`
+#   in tests; surfaced here so `pip install -e .[dev]` resolves cleanly.
+# - scitex-dev[cli-audit]: brings click + pyyaml so the `scitex-dev`
+#   console script (used by tests/develop/test_audit.py) can launch.
+# - coverage>=7: needed by tests/conftest.py subprocess-coverage shim
+#   (process_startup); transitive via pytest-cov but pinned explicitly
+#   for the parallel/concurrency keys (skill leaf
+#   05_development_06_subprocess-coverage.md).
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "pytest-timeout",
+    "coverage>=7.0",
     "PyYAML>=6.0",
     "fastmcp>=2.0",
-    "scitex-dev>=0.11.5",
+    "scitex-dev[cli-audit]>=0.11.5",
 ]
 
 [project.scripts]
@@ -63,3 +70,15 @@ where = ["src"]
 # `containers/runner.py` runs INSIDE the docker/apptainer container; it
 # is library-style (no scitex deps), not a SciTeX session script.
 library_dirs = ["src", "tests", "containers"]
+
+# Subprocess coverage wiring (see scitex-dev skill leaf
+# 05_development_06_subprocess-coverage.md). `parallel = true` lets each
+# child Python interpreter (`subprocess.run([sys.executable, ...])`,
+# container runners) write its own `.coverage.<host>.<pid>.<rand>` shard
+# instead of racing on a single file; pytest-cov calls `coverage combine`
+# at session end. Without this, demo / container subprocess coverage
+# silently disappears.
+[tool.coverage.run]
+parallel = true
+source = ["newb"]
+concurrency = ["multiprocessing", "thread"]

@@ -20,19 +20,42 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install package + test plugins
+      - name: Install package + test extras
+        # Fallback chain so packages that don't declare `[all]` still
+        # build. `[all,dev]` exercises optional-dep loaders so coverage
+        # reflects the full surface (skill leaf 02_package_11_ci-and-codecov).
         run: |
-          pip install --upgrade pip
-          pip install pytest pytest-cov pytest-timeout PyYAML
-          pip install -e ".[yaml]" || pip install -e .
+          python -m pip install --upgrade pip
+          pip install -e ".[all,dev]" || pip install -e ".[dev]" || pip install -e .
       - name: Run tests with coverage
         run: |
           python -m pytest "$GITHUB_WORKSPACE/tests/" -v --tb=short --timeout=120 \
             --cov=src/newb --cov-report=xml --cov-report=term
       - name: Upload coverage to Codecov
-        if: matrix.python-version == '3.12'
+        # `if: always()` so the upload still runs when a test row fails —
+        # otherwise GitHub Actions' implicit `success()` skips the step
+        # exactly when coverage visibility matters most.
+        if: always() && matrix.python-version == '3.12'
         uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  install-check:
+    # Belt-and-suspenders: a clean `pip install -e .` (no extras, no
+    # test plugins) imports the top-level package. Catches missing
+    # required deps, broken __init__.py, and packaging mistakes that
+    # the matrix above would mask via `[all,dev]`.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install bare package and import
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install --upgrade pip
+          .venv/bin/pip install -e .
+          .venv/bin/python -c "import newb; print(newb.__version__)"
