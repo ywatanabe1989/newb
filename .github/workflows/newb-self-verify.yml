@@ -63,7 +63,7 @@ jobs:
         # secret is unset, the workflow falls back to bare-key auth.
         env:
           NEWB_ANTHROPIC_API_KEY: ${{ secrets.NEWB_ANTHROPIC_API_KEY }}
-          NEWB_CLAUDE_CODE_CREDENTIALS_JSON: ${{ secrets.CLAUDE_CREDENTIALS_JSON }}
+          NEWB_CLAUDE_CODE_CREDENTIALS_JSON: ${{ secrets.NEWB_CLAUDE_CODE_CREDENTIALS_JSON }}
           # Resource caps — auditor flagged that cap-drop=ALL handles
           # capabilities but unconstrained memory/pids opens a DoS lane
           # if an attacker hijacks the agent. Generous-but-bounded is
