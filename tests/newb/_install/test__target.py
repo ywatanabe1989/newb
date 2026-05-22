@@ -20,44 +20,79 @@ def _git_init(path: Path, remote: str | None = None) -> None:
 
 
 def test_explicit_owner_repo_passthrough():
-    assert resolve_target("ywatanabe1989/newb") == "ywatanabe1989/newb"
+    # Arrange
+    spec = "ywatanabe1989/newb"
+    # Act
+    out = resolve_target(spec)
+    # Assert
+    assert out == "ywatanabe1989/newb"
 
 
 def test_dot_reads_current_git_remote(tmp_path: Path):
+    # Arrange
     _git_init(tmp_path, "git@github.com:owner/repo.git")
-    assert resolve_target(".", cwd=tmp_path) == "owner/repo"
+    # Act
+    out = resolve_target(".", cwd=tmp_path)
+    # Assert
+    assert out == "owner/repo"
 
 
 def test_none_reads_current_git_remote(tmp_path: Path):
+    # Arrange
     _git_init(tmp_path, "https://github.com/owner/repo.git")
-    assert resolve_target(None, cwd=tmp_path) == "owner/repo"
+    # Act
+    out = resolve_target(None, cwd=tmp_path)
+    # Assert
+    assert out == "owner/repo"
 
 
-def test_https_no_dotgit(tmp_path: Path):
+def test_https_remote_without_dotgit_suffix_is_parsed(tmp_path: Path):
+    # Arrange
     _git_init(tmp_path, "https://github.com/owner/repo")
-    assert resolve_target(".", cwd=tmp_path) == "owner/repo"
+    # Act
+    out = resolve_target(".", cwd=tmp_path)
+    # Assert
+    assert out == "owner/repo"
 
 
 def test_no_git_remote_raises(tmp_path: Path):
+    # Arrange
     _git_init(tmp_path)
-    with pytest.raises(ValueError, match="no git remote"):
+    # Act
+    ctx = pytest.raises(ValueError, match="no git remote")
+    # Assert
+    with ctx:
         resolve_target(".", cwd=tmp_path)
 
 
 def test_non_github_remote_raises(tmp_path: Path):
+    # Arrange
     _git_init(tmp_path, "git@gitlab.com:owner/repo.git")
-    with pytest.raises(ValueError, match="doesn't look like a GitHub URL"):
+    # Act
+    ctx = pytest.raises(ValueError, match="doesn't look like a GitHub URL")
+    # Assert
+    with ctx:
         resolve_target(".", cwd=tmp_path)
 
 
 def test_malformed_owner_repo_raises():
-    with pytest.raises(ValueError, match="not in <owner>/<repo>"):
-        resolve_target("not-a-repo-spec")
+    # Arrange
+    spec = "not-a-repo-spec"
+    # Act
+    ctx = pytest.raises(ValueError, match="not in <owner>/<repo>")
+    # Assert
+    with ctx:
+        resolve_target(spec)
 
 
-def test_owner_repo_with_dots_and_dashes():
+def test_owner_repo_with_dots_and_dashes_passes_through():
+    # Arrange
     # "owner.with.dots" isn't valid GitHub username, but "repo.with.dots" is.
-    assert resolve_target("owner-1/repo.x_y") == "owner-1/repo.x_y"
+    spec = "owner-1/repo.x_y"
+    # Act
+    out = resolve_target(spec)
+    # Assert
+    assert out == "owner-1/repo.x_y"
 
 
 # EOF

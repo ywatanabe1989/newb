@@ -8,9 +8,12 @@ imports cleanly so PS207 is satisfied.
 
 
 def test_env_loader_module_imports_cleanly():
+    # Arrange
     import importlib
 
+    # Act
     mod = importlib.import_module("newb._env._loader")
+    # Assert
     # Smoke-import isn't enough on its own (TQ001 placeholder ban):
     # assert the public symbol the CLI uses is callable so a future
     # rename in production breaks this test.
