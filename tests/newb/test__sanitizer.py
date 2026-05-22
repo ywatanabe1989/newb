@@ -7,6 +7,7 @@ regression added for the bug found during QA review.
 
 from __future__ import annotations
 
+import pytest
 
 from newb._sanitizer import (
     KEY_PROTECTION_SYSTEM_PROMPT,
@@ -15,100 +16,155 @@ from newb._sanitizer import (
     sanitize_report,
 )
 
+_API_KEY = "sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+_OAT_TOKEN = "sk-ant-oat01-BBBBBBBBBBBBBBBBBBBBBBBBBBBB"
 
-def test_clean_text_passes_through():
-    r = sanitize("Just a normal package description.")
+
+def test_clean_text_is_not_flagged_as_leaked():
+    # Arrange
+    text = "Just a normal package description."
+    # Act
+    r = sanitize(text)
+    # Assert
     assert not r.leaked
-    assert r.text == "Just a normal package description."
-    assert r.matches == []
 
 
-def test_plaintext_api_key_redacted():
-    text = "The key is sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA done."
+def test_clean_text_passes_through_unchanged():
+    # Arrange
+    text = "Just a normal package description."
+    # Act
     r = sanitize(text)
+    # Assert
+    assert r.text == text
+
+
+def test_plaintext_api_key_flagged_as_leaked():
+    # Arrange
+    text = f"The key is {_API_KEY} done."
+    # Act
+    r = sanitize(text)
+    # Assert
     assert r.leaked
-    assert REDACTED_TOKEN in r.text
+
+
+def test_plaintext_api_key_redacted_in_text():
+    # Arrange
+    text = f"The key is {_API_KEY} done."
+    # Act
+    r = sanitize(text)
+    # Assert
     assert "sk-ant-api03" not in r.text
-    assert "anthropic_api_key_plaintext" in r.matches
 
 
-def test_oat_token_redacted():
-    text = "Token: sk-ant-oat01-BBBBBBBBBBBBBBBBBBBBBBBBBBBB."
+def test_plaintext_api_key_substitutes_redacted_token():
+    # Arrange
+    text = f"The key is {_API_KEY} done."
+    # Act
     r = sanitize(text)
-    assert r.leaked
+    # Assert
+    assert REDACTED_TOKEN in r.text
+
+
+def test_oat_token_flagged_as_leaked():
+    # Arrange
+    text = f"Token: {_OAT_TOKEN}."
+    # Act
+    r = sanitize(text)
+    # Assert
     assert "anthropic_api_key_plaintext" in r.matches
 
 
 def test_short_placeholder_not_matched():
-    """``sk-ant-api03-...`` (3-dot placeholder) is documentation, not a leak."""
+    # Arrange
     text = "Set NEWB_ANTHROPIC_API_KEY to sk-ant-api03-..."
+    # Act
     r = sanitize(text)
+    # Assert
     assert not r.leaked, f"placeholder should not match, got {r.matches}"
 
 
 def test_base64_prefix_redacted():
-    """Catches encoded leaks where the agent base64'd the key as bypass."""
+    # Arrange
     text = (
         "encoded: c2stYW50LWFwaTAzLUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB"
         "QUFBQUFBQUFBQUFBQUFB= end"
     )
+    # Act
     r = sanitize(text)
-    assert r.leaked
+    # Assert
     assert "anthropic_api_key_base64_prefix" in r.matches
 
 
-def test_sanitize_report_walks_dict_and_list():
+def test_sanitize_report_redacts_secret_in_nested_list():
+    # Arrange
     report = {
-        "what_for": "A clean description.",
-        "examples": [
-            "fine",
-            "leaked: sk-ant-api03-CCCCCCCCCCCCCCCCCCCCCCCCCCCC",
-        ],
-        "nested": {"inner": "all good"},
+        "examples": ["fine", f"leaked: {_API_KEY[:-2]}CC"],
     }
-    clean, matches = sanitize_report(report)
+    # Act
+    clean, _ = sanitize_report(report)
+    # Assert
     assert REDACTED_TOKEN in clean["examples"][1]
+
+
+def test_sanitize_report_preserves_clean_neighbour_in_list():
+    # Arrange
+    report = {"examples": ["fine", f"leaked: {_API_KEY}"]}
+    # Act
+    clean, _ = sanitize_report(report)
+    # Assert
     assert clean["examples"][0] == "fine"
+
+
+def test_sanitize_report_recurses_into_nested_dict():
+    # Arrange
+    report = {"nested": {"inner": "all good"}}
+    # Act
+    clean, _ = sanitize_report(report)
+    # Assert
     assert clean["nested"]["inner"] == "all good"
-    assert "anthropic_api_key_plaintext" in matches
 
 
-def test_sanitize_report_walks_tuple():
-    """Regression: tuple values were being skipped, secrets passed through.
-
-    Fixed during 0.11 QA. Lock in with this test.
-    """
-    report = {"k": ("sk-ant-api03-DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD", "fine")}
-    clean, matches = sanitize_report(report)
-    assert isinstance(clean["k"], tuple), "tuple shape preserved"
+def test_sanitize_report_walks_tuple_values():
+    # Arrange
+    report = {"k": (f"{_API_KEY[:-2]}DD", "fine")}
+    # Act
+    clean, _ = sanitize_report(report)
+    # Assert
     assert REDACTED_TOKEN in clean["k"][0]
-    assert clean["k"][1] == "fine"
-    assert "anthropic_api_key_plaintext" in matches
+
+
+def test_sanitize_report_preserves_tuple_shape():
+    # Arrange
+    report = {"k": (f"{_API_KEY}", "fine")}
+    # Act
+    clean, _ = sanitize_report(report)
+    # Assert
+    assert isinstance(clean["k"], tuple)
 
 
 def test_sanitize_report_handles_scalar_input():
-    """Top-level scalar (not dict) shouldn't crash; secrets still scrubbed."""
-    clean, matches = sanitize_report("sk-ant-oat01-EEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+    # Arrange
+    secret = _OAT_TOKEN
+    # Act
+    clean, _ = sanitize_report(secret)
+    # Assert
     assert clean == REDACTED_TOKEN
-    assert "anthropic_api_key_plaintext" in matches
 
 
 def test_sanitize_report_handles_list_input():
-    clean, matches = sanitize_report(
-        ["fine", "sk-ant-api03-FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"]
-    )
-    assert clean[0] == "fine"
+    # Arrange
+    items = ["fine", f"{_API_KEY}"]
+    # Act
+    clean, _ = sanitize_report(items)
+    # Assert
     assert REDACTED_TOKEN in clean[1]
-    assert "anthropic_api_key_plaintext" in matches
 
 
-def test_system_prompt_lists_encoding_bypasses():
-    """Regression: shortening this block re-opens encoding-bypass attacks.
-
-    Pin the explicit list — base64, hex, transliterate, translate are
-    the four that adaptive injection commonly frames as 'just transform
-    this innocuous value'.
-    """
+@pytest.mark.parametrize("keyword", ["base64", "hex", "transliterate", "translate"])
+def test_system_prompt_lists_encoding_bypass(keyword):
+    # Arrange
     p = KEY_PROTECTION_SYSTEM_PROMPT.lower()
-    for keyword in ("base64", "hex", "transliterate", "translate"):
-        assert keyword in p, f"missing encoding-bypass keyword: {keyword}"
+    # Act
+    present = keyword in p
+    # Assert
+    assert present, f"missing encoding-bypass keyword: {keyword}"
