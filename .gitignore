@@ -30,3 +30,6 @@ docs/to_claude/
 
 # OS
 .DS_Store
+
+# Sphinx build output
+docs/sphinx/_build/
