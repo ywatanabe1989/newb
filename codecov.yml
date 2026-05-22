@@ -2,8 +2,8 @@ codecov:
   require_ci_to_pass: false
   # Treat develop as the de-facto default branch — main is a stable
   # release mirror that only fast-forwards from develop, so develop
-  # is where coverage uploads land. Makes the unbranched
-  # /graph/badge.svg endpoint follow develop's value.
+  # is where coverage uploads land. This makes the unbranched badge
+  # endpoint (/graph/badge.svg) follow develop's value.
   branch: develop
 
 coverage:
@@ -17,9 +17,13 @@ coverage:
         target: 80%
 
 ignore:
+  - "src/newb/_sphinx_html/**"
   - "src/newb/_skills/**"
+  - "src/newb/_completion.py"
   - "src/newb/_cli/_completion.py"
   - "tests/**"
   - "examples/**"
 
-comment: false
+comment:
+  layout: "diff, files"
+  require_changes: true
