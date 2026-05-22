@@ -7,8 +7,6 @@ that runs the example end-to-end and asserts on its outputs.
 import importlib.util
 from pathlib import Path
 
-import pytest
-
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "01_basic.py"
 
@@ -24,8 +22,8 @@ def test_example_file_exists():
 
 def test_example_imports_cleanly_parses_module_from_spec():
     # Arrange
-    if EXAMPLE.suffix != ".py":
-        pytest.skip(f"non-python example: {EXAMPLE.suffix}")
+    # ``EXAMPLE`` is hardcoded to ``examples/01_basic.py`` — always .py.
+    # A future polyglot example would need a new test, not a skip-branch.
     spec = importlib.util.spec_from_file_location("ex", EXAMPLE)
     # Act
     # We don't execute the module — just verify parser-clean syntax via
