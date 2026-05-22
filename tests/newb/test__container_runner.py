@@ -1,10 +1,15 @@
 """End-to-end shape tests for DockerRunner / ApptainerRunner.
 
-These tests do NOT spin up real containers — they monkeypatch
-``shutil.which`` so the constructor accepts a missing binary, and
-inspect the argv that would be sent to ``subprocess.run``. The point
-is to catch host/container path mismatches (the kind that produced
-the v0.10.0 'Working directory does not exist: /work/skills' break).
+These tests do NOT spin up real containers — they inject a fake
+``which`` callable so the constructor accepts a missing runtime
+binary, and inspect the argv that would be sent to ``subprocess.run``.
+The point is to catch host/container path mismatches (the kind that
+produced the v0.10.0 'Working directory does not exist: /work/skills'
+break).
+
+No mocks (PA-306): env-var mutations go through the ``env_save_restore``
+yield fixture; ``shutil.which`` is injected via the ``which=`` kwarg
+on the runner constructor rather than patched.
 """
 
 from __future__ import annotations
@@ -14,18 +19,23 @@ import os
 import pytest
 
 
+def _always_found(_binary: str) -> str:
+    """Inject this as ``which=`` to pretend any runtime binary is on PATH."""
+    return "/usr/bin/fake"
+
+
 @pytest.fixture
-def fake_runtime(monkeypatch, tmp_path):
-    """Pretend `docker`/`apptainer` exist on PATH and opt newb in
+def fake_runtime(env_save_restore, tmp_path):
+    """Pretend ``docker``/``apptainer`` exist on PATH and opt newb in
     via the single ``NEWB_ANTHROPIC_API_KEY`` env var. Re-roots HOME
     to a tmpdir so tests are hermetic w.r.t. the developer's actual
     ``~/.claude/.credentials.json`` (which would otherwise alter the
-    bind-mount argv)."""
-    import shutil
+    bind-mount argv).
 
-    monkeypatch.setattr(shutil, "which", lambda _: "/usr/bin/fake")
-    monkeypatch.setenv("NEWB_ANTHROPIC_API_KEY", "sk-ant-api03-TEST")
-    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    Yields a `dict` with the staged project src dir.
+    """
+    env_save_restore("NEWB_ANTHROPIC_API_KEY", "sk-ant-api03-TEST")
+    env_save_restore("HOME", str(tmp_path / "home"))
     (tmp_path / "home").mkdir()
 
     src = tmp_path / "pkg"
@@ -47,7 +57,9 @@ def test_default_image_pins_to_current_newb_version():
 def test_docker_argv_mounts_project_at_correct_path(fake_runtime):
     from newb._container_runner import DockerRunner
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
 
     project_mount = next(a for a in argv if a.endswith(":/work/project"))
@@ -71,7 +83,9 @@ def test_docker_argv_forwards_newb_api_key_only(fake_runtime):
     """
     from newb._container_runner import DockerRunner
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
     assert any(a == "NEWB_ANTHROPIC_API_KEY=sk-ant-api03-TEST" for a in argv), argv
     assert not any(a.startswith("ANTHROPIC_API_KEY=") for a in argv), argv
@@ -79,9 +93,7 @@ def test_docker_argv_forwards_newb_api_key_only(fake_runtime):
     r.close()
 
 
-def test_docker_argv_mounts_credentials_when_host_has_them(
-    monkeypatch, fake_runtime, tmp_path
-):
+def test_docker_argv_mounts_credentials_when_host_has_them(fake_runtime, tmp_path):
     """When ``~/.claude/.credentials.json`` exists on the host,
     DockerRunner bind-mounts it read-only into the container at
     ``/home/newb/.claude/.credentials.json``. This is the OAuth
@@ -93,7 +105,9 @@ def test_docker_argv_mounts_credentials_when_host_has_them(
     creds.parent.mkdir(parents=True)
     creds.write_text('{"claudeAiOauth": {"accessToken": "sk-ant-oat01-x"}}')
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
     mount = next(
         a for a in argv if a.endswith(":/home/newb/.claude/.credentials.json:ro")
@@ -103,7 +117,9 @@ def test_docker_argv_mounts_credentials_when_host_has_them(
     r.close()
 
 
-def test_docker_argv_materialises_credentials_from_env_var(monkeypatch, fake_runtime):
+def test_docker_argv_materialises_credentials_from_env_var(
+    env_save_restore, fake_runtime
+):
     """``$NEWB_CLAUDE_CODE_CREDENTIALS_JSON`` (full file contents)
     overrides the host file path: DockerRunner writes a tempfile
     and bind-mounts that. Intended for CI — workflows pass the
@@ -113,9 +129,11 @@ def test_docker_argv_materialises_credentials_from_env_var(monkeypatch, fake_run
     from newb._container_runner import DockerRunner
 
     body = '{"claudeAiOauth": {"accessToken": "sk-ant-oat01-from-env"}}'
-    monkeypatch.setenv("NEWB_CLAUDE_CODE_CREDENTIALS_JSON", body)
+    env_save_restore("NEWB_CLAUDE_CODE_CREDENTIALS_JSON", body)
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     try:
         argv = r._build_argv()
         mount = next(
@@ -135,7 +153,7 @@ def test_docker_argv_materialises_credentials_from_env_var(monkeypatch, fake_run
 
 
 def test_env_var_credentials_take_precedence_over_host_file(
-    monkeypatch, fake_runtime, tmp_path
+    env_save_restore, fake_runtime, tmp_path
 ):
     """When both ``$NEWB_CLAUDE_CODE_CREDENTIALS_JSON`` and the host
     file exist, the env-var path wins (it's the explicit signal)."""
@@ -146,12 +164,14 @@ def test_env_var_credentials_take_precedence_over_host_file(
     host_creds = tmp_path / "home" / ".claude" / ".credentials.json"
     host_creds.parent.mkdir(parents=True)
     host_creds.write_text('{"claudeAiOauth": {"accessToken": "from-host-file"}}')
-    monkeypatch.setenv(
+    env_save_restore(
         "NEWB_CLAUDE_CODE_CREDENTIALS_JSON",
         '{"claudeAiOauth": {"accessToken": "from-env-var"}}',
     )
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     try:
         argv = r._build_argv()
         mount = next(
@@ -169,37 +189,43 @@ def test_docker_argv_uses_versioned_image_by_default(fake_runtime):
     import newb
     from newb._container_runner import DockerRunner
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
     image_tag = argv[-1]
     assert image_tag.endswith(f":{newb.__version__}"), image_tag
     r.close()
 
 
-def test_oauth_token_passes_through_opaquely(monkeypatch, fake_runtime):
+def test_oauth_token_passes_through_opaquely(env_save_restore, fake_runtime):
     """OAuth tokens (sk-ant-oat*) pass through verbatim. Host runner
     does not inspect token shape — that's the in-container runner.py."""
     from newb._container_runner import DockerRunner
 
-    monkeypatch.setenv("NEWB_ANTHROPIC_API_KEY", "sk-ant-oat01-TEST")
+    env_save_restore("NEWB_ANTHROPIC_API_KEY", "sk-ant-oat01-TEST")
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
     assert any(a == "NEWB_ANTHROPIC_API_KEY=sk-ant-oat01-TEST" for a in argv), argv
     assert not any(a.startswith("ANTHROPIC_API_KEY=") for a in argv), argv
     r.close()
 
 
-def test_missing_newb_api_key_raises_clearly(monkeypatch, fake_runtime):
+def test_missing_newb_api_key_raises_clearly(env_save_restore, fake_runtime):
     """Constructor must fail loud when NEWB_ANTHROPIC_API_KEY is unset
     — no silent fallback to the upstream ANTHROPIC_API_KEY env var."""
     from newb._container_runner import DockerRunner
 
-    monkeypatch.delenv("NEWB_ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-api03-LEAK-FROM-SHELL")
+    env_save_restore("NEWB_ANTHROPIC_API_KEY", None)
+    env_save_restore("ANTHROPIC_API_KEY", "sk-ant-api03-LEAK-FROM-SHELL")
 
     with pytest.raises(RuntimeError, match=r"NEWB_ANTHROPIC_API_KEY"):
-        DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+        DockerRunner(
+            skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+        )
 
 
 def test_docker_argv_includes_default_hardening(fake_runtime):
@@ -207,7 +233,9 @@ def test_docker_argv_includes_default_hardening(fake_runtime):
     Resource caps stay off so the agent can exercise the package."""
     from newb._container_runner import DockerRunner
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
     assert "--cap-drop=ALL" in argv
     assert "--security-opt=no-new-privileges" in argv
@@ -219,15 +247,17 @@ def test_docker_argv_includes_default_hardening(fake_runtime):
     r.close()
 
 
-def test_docker_argv_resource_caps_via_env(monkeypatch, fake_runtime):
+def test_docker_argv_resource_caps_via_env(env_save_restore, fake_runtime):
     """NEWB_HARDEN_* env vars enable resource caps."""
     from newb._container_runner import DockerRunner
 
-    monkeypatch.setenv("NEWB_HARDEN_MEMORY", "4g")
-    monkeypatch.setenv("NEWB_HARDEN_CPUS", "2")
-    monkeypatch.setenv("NEWB_HARDEN_PIDS_LIMIT", "256")
+    env_save_restore("NEWB_HARDEN_MEMORY", "4g")
+    env_save_restore("NEWB_HARDEN_CPUS", "2")
+    env_save_restore("NEWB_HARDEN_PIDS_LIMIT", "256")
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
     assert "--memory=4g" in argv
     assert "--cpus=2" in argv
@@ -235,12 +265,14 @@ def test_docker_argv_resource_caps_via_env(monkeypatch, fake_runtime):
     r.close()
 
 
-def test_docker_argv_no_network_via_env(monkeypatch, fake_runtime):
+def test_docker_argv_no_network_via_env(env_save_restore, fake_runtime):
     """NEWB_HARDEN_NO_NETWORK=1 swaps bridge for none."""
     from newb._container_runner import DockerRunner
 
-    monkeypatch.setenv("NEWB_HARDEN_NO_NETWORK", "1")
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    env_save_restore("NEWB_HARDEN_NO_NETWORK", "1")
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
     assert "--network=none" in argv
     assert "--network=bridge" not in argv
@@ -252,7 +284,9 @@ def test_podman_argv_swaps_only_the_binary(fake_runtime):
     leading ``docker`` token becomes ``podman``."""
     from newb._container_runner import PodmanRunner
 
-    podman = PodmanRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    podman = PodmanRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = podman._build_argv()
 
     assert argv[0] == "podman"
@@ -264,17 +298,21 @@ def test_podman_argv_swaps_only_the_binary(fake_runtime):
     podman.close()
 
 
-def test_apptainer_argv_picks_up_resource_caps_from_env(monkeypatch, fake_runtime):
+def test_apptainer_argv_picks_up_resource_caps_from_env(
+    env_save_restore, fake_runtime
+):
     """ApptainerRunner forwards memory/cpus/pids-limit from
     NEWB_HARDEN_* env vars (best-effort parity with docker; not all
     flags map cleanly — see apptainer_hardening_argv docstring)."""
     from newb._container_runner import ApptainerRunner
 
-    monkeypatch.setenv("NEWB_HARDEN_MEMORY", "4g")
-    monkeypatch.setenv("NEWB_HARDEN_CPUS", "2")
-    monkeypatch.setenv("NEWB_HARDEN_PIDS_LIMIT", "256")
+    env_save_restore("NEWB_HARDEN_MEMORY", "4g")
+    env_save_restore("NEWB_HARDEN_CPUS", "2")
+    env_save_restore("NEWB_HARDEN_PIDS_LIMIT", "256")
 
-    r = ApptainerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = ApptainerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
 
     # Apptainer takes flag value pairs, not docker-style --flag=value
@@ -292,7 +330,9 @@ def test_apptainer_argv_mounts_project_and_forwards_token(fake_runtime):
     read-write, token forwarded as NEWB_ANTHROPIC_API_KEY env."""
     from newb._container_runner import ApptainerRunner
 
-    r = ApptainerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = ApptainerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
     project_bind = next(a for a in argv if a.endswith(":/work/project"))
     _, _, container_part = project_bind.partition(":")
@@ -314,6 +354,7 @@ def test_docker_argv_mounts_pip_cache_when_configured(fake_runtime, tmp_path):
         skills_mount=fake_runtime,
         project_root=fake_runtime,
         pip_cache_dir=str(cache),
+        which=_always_found,
     )
     argv = r._build_argv()
     assert cache.is_dir(), "runner should mkdir the cache dir"
@@ -324,7 +365,9 @@ def test_docker_argv_mounts_pip_cache_when_configured(fake_runtime, tmp_path):
 def test_docker_argv_no_pip_cache_when_unset(fake_runtime):
     from newb._container_runner import DockerRunner
 
-    r = DockerRunner(skills_mount=fake_runtime, project_root=fake_runtime)
+    r = DockerRunner(
+        skills_mount=fake_runtime, project_root=fake_runtime, which=_always_found
+    )
     argv = r._build_argv()
     assert not any("/home/newb/.cache/pip" in a for a in argv), argv
     r.close()

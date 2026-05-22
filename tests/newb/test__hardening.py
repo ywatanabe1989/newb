@@ -1,6 +1,10 @@
 """Tests for newb._hardening.HardeningOptions resolution.
 
 Three-layer order: explicit kwargs > NEWB_HARDEN_* env vars > defaults.
+
+Env-var-driven tests use the ``env_save_restore`` fixture from
+``tests/conftest.py`` (yield-based snapshot/restore) instead of the
+banned ``monkeypatch`` fixture.
 """
 
 from __future__ import annotations
@@ -39,11 +43,11 @@ def test_default_argv_minimal():
     assert "--tmpfs" not in argv
 
 
-def test_from_env_picks_up_resource_caps(monkeypatch):
-    monkeypatch.setenv("NEWB_HARDEN_MEMORY", "8g")
-    monkeypatch.setenv("NEWB_HARDEN_MEMORY_SWAP", "8g")
-    monkeypatch.setenv("NEWB_HARDEN_CPUS", "4")
-    monkeypatch.setenv("NEWB_HARDEN_PIDS_LIMIT", "512")
+def test_from_env_picks_up_resource_caps(env_save_restore):
+    env_save_restore("NEWB_HARDEN_MEMORY", "8g")
+    env_save_restore("NEWB_HARDEN_MEMORY_SWAP", "8g")
+    env_save_restore("NEWB_HARDEN_CPUS", "4")
+    env_save_restore("NEWB_HARDEN_PIDS_LIMIT", "512")
 
     opts = HardeningOptions.from_env()
     assert opts.memory == "8g"
@@ -58,16 +62,16 @@ def test_from_env_picks_up_resource_caps(monkeypatch):
     assert "--pids-limit=512" in argv
 
 
-def test_from_env_pids_limit_invalid_int_falls_back_to_none(monkeypatch):
+def test_from_env_pids_limit_invalid_int_falls_back_to_none(env_save_restore):
     """Garbage in NEWB_HARDEN_PIDS_LIMIT shouldn't crash; just disable."""
-    monkeypatch.setenv("NEWB_HARDEN_PIDS_LIMIT", "not-a-number")
+    env_save_restore("NEWB_HARDEN_PIDS_LIMIT", "not-a-number")
     opts = HardeningOptions.from_env()
     assert opts.pids_limit is None
 
 
-def test_from_env_no_network_truthy_values(monkeypatch):
+def test_from_env_no_network_truthy_values(env_save_restore):
     for v in ("1", "true", "True", "yes", "on"):
-        monkeypatch.setenv("NEWB_HARDEN_NO_NETWORK", v)
+        env_save_restore("NEWB_HARDEN_NO_NETWORK", v)
         opts = HardeningOptions.from_env()
         assert opts.no_network is True, f"value {v!r} should be truthy"
         argv = hardening_argv(opts)
@@ -75,25 +79,25 @@ def test_from_env_no_network_truthy_values(monkeypatch):
         assert "--network=bridge" not in argv
 
 
-def test_from_env_cap_drop_can_be_disabled(monkeypatch):
-    monkeypatch.setenv("NEWB_HARDEN_CAP_DROP_ALL", "0")
+def test_from_env_cap_drop_can_be_disabled(env_save_restore):
+    env_save_restore("NEWB_HARDEN_CAP_DROP_ALL", "0")
     opts = HardeningOptions.from_env()
     assert opts.cap_drop_all is False
     argv = hardening_argv(opts)
     assert "--cap-drop=ALL" not in argv
 
 
-def test_merged_with_kwargs_override_env(monkeypatch):
+def test_merged_with_kwargs_override_env(env_save_restore):
     """CLI flag layer: ``--harden-memory 16g`` clobbers env-supplied 8g."""
-    monkeypatch.setenv("NEWB_HARDEN_MEMORY", "8g")
+    env_save_restore("NEWB_HARDEN_MEMORY", "8g")
     base = HardeningOptions.from_env()
     cli = base.merged_with(memory="16g")
     assert cli.memory == "16g"
 
 
-def test_merged_with_none_does_not_clobber(monkeypatch):
+def test_merged_with_none_does_not_clobber(env_save_restore):
     """Absent CLI flag (None) must NOT erase env-supplied value."""
-    monkeypatch.setenv("NEWB_HARDEN_CPUS", "4")
+    env_save_restore("NEWB_HARDEN_CPUS", "4")
     base = HardeningOptions.from_env()
     cli = base.merged_with(cpus=None)
     assert cli.cpus == "4", "None override clobbered the env value"
@@ -105,8 +109,8 @@ def test_tmpfs_noexec_off_by_default():
     assert not any("noexec" in a for a in argv)
 
 
-def test_tmpfs_noexec_opt_in(monkeypatch):
-    monkeypatch.setenv("NEWB_HARDEN_TMPFS_NOEXEC", "1")
+def test_tmpfs_noexec_opt_in(env_save_restore):
+    env_save_restore("NEWB_HARDEN_TMPFS_NOEXEC", "1")
     opts = HardeningOptions.from_env()
     assert opts.tmpfs_noexec is True
     argv = hardening_argv(opts)
