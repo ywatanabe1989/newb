@@ -1,28 +1,36 @@
-"""Smoke test for examples/01_basic.py.
+"""Run examples/01_basic.py end-to-end and assert it succeeds.
 
-Auto-generated stub (audit-project PS303). Replace with a real test
-that runs the example end-to-end and asserts on its outputs.
+The example is offline (no Anthropic / Docker), so we execute its real
+``main()`` and check behaviour rather than only parsing the file.
 """
 
 import importlib.util
 from pathlib import Path
 
-import pytest
-
-
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "01_basic.py"
 
 
-def test_example_file_exists():
-    assert EXAMPLE.exists(), f"missing example file: {EXAMPLE}"
-
-
-def test_example_imports_cleanly():
-    if EXAMPLE.suffix != ".py":
-        pytest.skip(f"non-python example: {EXAMPLE.suffix}")
-    spec = importlib.util.spec_from_file_location("ex", EXAMPLE)
-    assert spec is not None and spec.loader is not None
+def _load_main():
+    spec = importlib.util.spec_from_file_location("ex01_basic", EXAMPLE)
     module = importlib.util.module_from_spec(spec)
-    # We don't execute the module — just verify parser-clean syntax via
-    # spec resolution. A real test should import + invoke main().
-    assert module is not None
+    spec.loader.exec_module(module)
+    return module.main
+
+
+def test_basic_example_returns_zero():
+    # Arrange
+    main = _load_main()
+    # Act
+    rc = main()
+    # Assert
+    assert rc == 0
+
+
+def test_basic_example_prints_the_question_keys(capsys):
+    # Arrange
+    main = _load_main()
+    # Act
+    main()
+    out = capsys.readouterr().out
+    # Assert
+    assert "what_for" in out

@@ -1,0 +1,57 @@
+definition file : 02_verdict_workflow_sample/_skills/greetlib/tests_newb.yaml
+
+parsed 2 author test(s):
+  - quick_start_imports_greet
+      expect_contains : ['from greetlib import greet']
+      expect_excludes : []
+      judge           : False
+  - redirects_parallel
+      expect_contains : ['does not']
+      expect_excludes : ['--parallel', '-j']
+      judge           : True
+
+run with        :
+  $ newb examples/02_verdict_workflow_sample/_skills/greetlib --json
+
+expected verdict (jq-able for CI gating):
+{
+  "package": "greetlib",
+  "template": "python-package",
+  "post_install_check_parsed": {
+    "install": "ok",
+    "import": "ok",
+    "cli": "n/a"
+  },
+  "prompt_injection_check_parsed": {
+    "verdict": "no",
+    "evidence": ""
+  },
+  "tests": [
+    {
+      "name": "quick_start_imports_greet",
+      "substring": {
+        "contains_ok": true,
+        "excludes_ok": true,
+        "passed": true
+      },
+      "passed": true
+    },
+    {
+      "name": "redirects_parallel",
+      "substring": {
+        "contains_ok": true,
+        "excludes_ok": true,
+        "passed": true
+      },
+      "judge": {
+        "passed": true,
+        "reason": "PASS: redirects, no flag invented"
+      },
+      "passed": true
+    }
+  ],
+  "tests_summary": {
+    "passed": 2,
+    "total": 2
+  }
+}

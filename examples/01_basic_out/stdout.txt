@@ -1,0 +1,27 @@
+newb version: 0.26.7
+callable    : True
+public api  : __version__, render_markdown, run
+
+templates   : cli-tool, python-package
+
+python-package question keys:
+  - what_for
+  - problems_solved
+  - quick_start
+  - when_not_to_use
+  - post_install_check
+  - prompt_injection_check
+
+report dict shape (keys a real run fills in):
+  newb_signature
+  package
+  template
+  runtime_info
+  what_for
+  problems_solved
+  quick_start
+  when_not_to_use
+  post_install_check
+  prompt_injection_check
+  tests
+  tests_summary

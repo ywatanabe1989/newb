@@ -1,0 +1,28 @@
+# tests_newb.yaml — project-specific extra questions for `greetlib`.
+#
+# Each entry becomes an EXTRA question newb asks the agent, on top of
+# the chosen template's canonical questions. The verdict for each entry
+# is the AND of:
+#   - expect_contains : every string MUST appear (case-insensitive)
+#   - expect_excludes : no string may appear (anti-hallucination guard)
+#   - judge           : an optional LLM-judge criterion (PASS/FAIL)
+#
+# This file lives NEXT TO the skills it documents. newb discovers it
+# automatically when the run's source dir contains it. See:
+#   newb examples/02_verdict_workflow_sample/_skills/greetlib
+
+- name: quick_start_imports_greet
+  prompt: |
+    Read every .md file in this directory and show the single import
+    line a user needs to call the greeting function.
+  expect_contains: ["from greetlib import greet"]
+
+- name: redirects_parallel
+  prompt: How do I run greetlib in parallel across many names?
+  # The README explicitly says there is NO parallel flag. A correct
+  # answer redirects; a hallucinated one invents `--parallel` / `-j`.
+  expect_contains: ["does not"]
+  expect_excludes: ["--parallel", "-j"]
+  judge: >
+    Must state that greetlib does not run in parallel and must NOT
+    invent a parallelism flag.
