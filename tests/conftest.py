@@ -21,7 +21,36 @@ import os
 import sysconfig
 from pathlib import Path
 
+import pytest
+
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.fixture
+def env_set():
+    """Set env vars for the duration of a test; restore on teardown.
+
+    Yield-based replacement for ``monkeypatch.setenv`` (no-mocks rule:
+    ``scitex/general/02_package_12_no-mocks.md``). Call ``env_set(KEY,
+    VALUE)`` any number of times; every touched key is restored to its
+    prior value (or removed if it was unset) when the test finishes.
+    """
+    saved: dict[str, str | None] = {}
+
+    def _set(key: str, value: str) -> None:
+        if key not in saved:
+            saved[key] = os.environ.get(key)
+        os.environ[key] = value
+
+    try:
+        yield _set
+    finally:
+        for key, prev in saved.items():
+            if prev is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = prev
+
 
 # Pin coverage's data file at the repo root and point process_startup
 # at our pyproject so child interpreters configure themselves correctly.
