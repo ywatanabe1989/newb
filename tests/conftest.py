@@ -13,13 +13,22 @@ default pytest-cov setup, because pytest-cov has already pinned
 **force-set** (not `setdefault` — that's a silent no-op) the canonical
 env vars and drop an idempotent `.pth` shim into site-packages so
 `coverage.process_startup()` runs in every child.
+
+The :func:`env_save_restore` fixture is the canonical replacement for
+``monkeypatch.setenv`` / ``monkeypatch.delenv`` under the SciTeX
+no-mocks rule (PA-306, STX-NM002): the fixture snapshots ``os.environ``,
+yields it for direct mutation by the test, and restores on teardown.
+See ``~/.claude/skills/scitex/general/02_package_12_no-mocks.md``.
 """
 
 from __future__ import annotations
 
 import os
+import stat
 import sysconfig
 from pathlib import Path
+
+import pytest
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -51,3 +60,59 @@ def _ensure_subprocess_coverage_shim() -> None:
 
 
 _ensure_subprocess_coverage_shim()
+
+
+# ---------------------------------------------------------------------------
+# Shared fixtures (no-mocks campaign — replaces monkeypatch idioms)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def env_save_restore():
+    """Snapshot ``os.environ``; restore on teardown.
+
+    Canonical no-mocks replacement for ``monkeypatch.setenv`` /
+    ``monkeypatch.delenv``. Tests mutate ``os.environ`` directly; this
+    fixture guarantees the mutation does not leak across tests.
+
+    Yields
+    ------
+    os._Environ
+        The live ``os.environ`` mapping. Mutate via ``[]=`` / ``pop()``
+        / ``update()`` as normal.
+    """
+    saved = dict(os.environ)
+    try:
+        yield os.environ
+    finally:
+        os.environ.clear()
+        os.environ.update(saved)
+
+
+@pytest.fixture
+def fake_runtime_bin(tmp_path, env_save_restore):
+    """Write empty-but-executable ``docker`` / ``podman`` / ``apptainer``
+    fakes into ``tmp_path/bin`` and prepend it to ``$PATH``.
+
+    Production code under test calls ``shutil.which(self.runtime_bin)``
+    to refuse construction when the runtime is absent; the fakes are
+    enough to satisfy that check. The fakes are never actually invoked
+    by the tests in this file — only ``_build_argv()`` is exercised,
+    which is a pure string-building method.
+
+    This replaces the previous ``monkeypatch.setattr(shutil, 'which',
+    lambda _: '/usr/bin/fake')`` idiom (STX-NM002 / PA-306).
+
+    Returns
+    -------
+    pathlib.Path
+        The ``tmp_path/bin`` directory containing the shims.
+    """
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    for name in ("docker", "podman", "apptainer"):
+        binary = bin_dir / name
+        binary.write_text("#!/usr/bin/env bash\nexit 0\n")
+        binary.chmod(binary.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    env_save_restore["PATH"] = f"{bin_dir}:{env_save_restore.get('PATH', '')}"
+    return bin_dir

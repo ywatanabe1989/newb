@@ -101,7 +101,8 @@ jobs:
 
 
 # ---------------------------------------------------------------------------
-# gh CLI surface — kept thin so tests can monkeypatch _gh()
+# gh CLI surface — kept thin so tests can substitute a hand-rolled fake
+# via the ``gh=`` keyword. The default ``_gh`` runs the real binary.
 # ---------------------------------------------------------------------------
 
 
@@ -129,18 +130,27 @@ SECRET_API_KEY = "NEWB_ANTHROPIC_API_KEY"
 SECRET_CREDS_JSON = "NEWB_CLAUDE_CODE_CREDENTIALS_JSON"
 
 
-def secret_exists(target: str, name: str = SECRET_API_KEY) -> bool:
+def secret_exists(target: str, name: str = SECRET_API_KEY, *, gh=None) -> bool:
+    """True iff repository ``target`` already has a secret called ``name``.
+
+    ``gh`` (keyword-only): the callable invoked instead of the real
+    ``gh`` CLI. Defaults to :func:`_gh`. Tests pass a hand-rolled fake
+    that records calls and returns canned output — the canonical
+    no-mocks injection pattern (PA-306 §3).
+    """
+    gh = gh or _gh
     try:
-        out = _gh("secret", "list", "--repo", target, "--json", "name")
+        out = gh("secret", "list", "--repo", target, "--json", "name")
     except GhError:
         return False
     return f'"{name}"' in out
 
 
-def workflow_exists(target: str) -> bool:
+def workflow_exists(target: str, *, gh=None) -> bool:
     """True iff `.github/workflows/newb.yml` is present on the default branch."""
+    gh = gh or _gh
     try:
-        _gh(
+        gh(
             "api",
             f"/repos/{target}/contents/{WORKFLOW_PATH}",
             "--silent",
@@ -161,6 +171,7 @@ def set_secret(
     *,
     name: str = SECRET_API_KEY,
     force: bool = False,
+    gh=None,
 ) -> str:
     """Set ``name`` (``NEWB_ANTHROPIC_API_KEY`` by default) on ``target``.
 
@@ -169,9 +180,10 @@ def set_secret(
 
     Returns a short status string (``set`` / ``skip-existing``).
     """
-    if not force and secret_exists(target, name):
+    gh = gh or _gh
+    if not force and secret_exists(target, name, gh=gh):
         return "skip-existing"
-    _gh("secret", "set", name, "--repo", target, "--body", value)
+    gh("secret", "set", name, "--repo", target, "--body", value)
     return "set"
 
 
@@ -180,25 +192,28 @@ def scaffold_workflow(
     *,
     push: bool = False,
     force: bool = False,
+    gh=None,
 ) -> str:
     """Drop ``.github/workflows/newb.yml`` into ``target``.
 
     Default action: open a PR. ``push=True`` direct-pushes to default
     branch (faster, no review). Returns a status string.
     """
-    if not force and workflow_exists(target):
+    gh = gh or _gh
+    if not force and workflow_exists(target, gh=gh):
         return "skip-existing"
     if push:
-        return _scaffold_via_direct_push(target)
-    return _scaffold_via_pr(target)
+        return _scaffold_via_direct_push(target, gh=gh)
+    return _scaffold_via_pr(target, gh=gh)
 
 
-def _scaffold_via_pr(target: str) -> str:
+def _scaffold_via_pr(target: str, *, gh=None) -> str:
     """Clone, branch, write file, push branch, open PR."""
+    gh = gh or _gh
     workdir = Path(tempfile.mkdtemp(prefix="newb-install-"))
     try:
         repo_dir = workdir / "repo"
-        _gh("repo", "clone", target, str(repo_dir), "--", "--depth=1")
+        gh("repo", "clone", target, str(repo_dir), "--", "--depth=1")
         wf = repo_dir / WORKFLOW_PATH
         wf.parent.mkdir(parents=True, exist_ok=True)
         wf.write_text(WORKFLOW_BODY)
@@ -230,7 +245,7 @@ def _scaffold_via_pr(target: str) -> str:
             "the run is green, then add the badge to README per "
             "https://github.com/ywatanabe1989/newb/blob/main/docs/badge.md."
         )
-        out = _gh(
+        out = gh(
             "pr",
             "create",
             "--repo",
@@ -247,12 +262,13 @@ def _scaffold_via_pr(target: str) -> str:
         shutil.rmtree(workdir, ignore_errors=True)
 
 
-def _scaffold_via_direct_push(target: str) -> str:
+def _scaffold_via_direct_push(target: str, *, gh=None) -> str:
     """Use the contents API to create the file on the default branch."""
     import base64
 
+    gh = gh or _gh
     encoded = base64.b64encode(WORKFLOW_BODY.encode()).decode()
-    _gh(
+    gh(
         "api",
         "--method",
         "PUT",
@@ -272,6 +288,7 @@ def install(
     secret_name: str = SECRET_API_KEY,
     push: bool = False,
     force: bool = False,
+    gh=None,
 ) -> dict:
     """Combined: set secret + scaffold workflow.
 
@@ -281,12 +298,15 @@ def install(
     two newb auth secrets to populate — ``SECRET_API_KEY`` (default)
     or ``SECRET_CREDS_JSON`` for the OAuth flat-rate path.
     """
+    gh = gh or _gh
     out: dict = {}
     if secret_value is not None:
-        out["secret"] = set_secret(target, secret_value, name=secret_name, force=force)
+        out["secret"] = set_secret(
+            target, secret_value, name=secret_name, force=force, gh=gh
+        )
     else:
         out["secret"] = "skip-no-value"
-    out["workflow"] = scaffold_workflow(target, push=push, force=force)
+    out["workflow"] = scaffold_workflow(target, push=push, force=force, gh=gh)
     return out
 
 
