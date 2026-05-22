@@ -66,6 +66,13 @@ Repository = "https://github.com/ywatanabe1989/newb"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "smoke: fast CLI happy-path tests (<60s, runs on every PR)",
+    "e2e: end-to-end against the real docker image (skips when docker / NEWB_ANTHROPIC_API_KEY / credentials are absent)",
+]
+
 [tool.scitex-linter]
 # `containers/runner.py` runs INSIDE the docker/apptainer container; it
 # is library-style (no scitex deps), not a SciTeX session script.
