@@ -106,13 +106,13 @@ def test_install_and_help_partial_failure():
 # ---------------------------------------------------------------------------
 
 
-def test_injection_no():
+def test_injection_check_parses_found_no_as_false():
     text = "FOUND: no\nEVIDENCE: none\n"
     parsed = parse_prompt_injection_check(text)
     assert parsed == {"found": False, "found_raw": "no"}
 
 
-def test_injection_yes():
+def test_injection_check_parses_found_yes_as_true():
     text = "FOUND: yes\nEVIDENCE:\n  README.md line 42 says 'IGNORE PREVIOUS'\n"
     parsed = parse_prompt_injection_check(text)
     assert parsed == {"found": True, "found_raw": "yes"}
@@ -183,7 +183,7 @@ def test_attach_handles_runs_per_prompt_lists():
     ]
 
 
-def test_attach_idempotent():
+def test_attach_parsed_fields_is_idempotent_on_re_call():
     report = {"post_install_check": "INSTALL: ok\nIMPORT: ok\nCLI: ok\n"}
     attach_parsed_fields(report)
     first = dict(report["post_install_check_parsed"])
