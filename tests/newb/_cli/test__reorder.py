@@ -10,70 +10,87 @@ is being invoked.
 
 from __future__ import annotations
 
+import pytest
+
 from newb._cli._reorder import _reorder_argv
 
 
 def test_options_after_source_get_reordered_before():
-    """`newb <SRC> --format markdown` → `newb --format markdown <SRC>`."""
-    assert _reorder_argv(["~/proj/newb", "--format", "markdown"]) == [
-        "--format",
-        "markdown",
-        "~/proj/newb",
-    ]
+    # Arrange
+    argv = ["~/proj/newb", "--format", "markdown"]
+    # Act
+    reordered = _reorder_argv(argv)
+    # Assert
+    assert reordered == ["--format", "markdown", "~/proj/newb"]
 
 
-def test_flag_after_source_gets_reordered():
-    assert _reorder_argv(["~/proj/newb", "--markdown"]) == [
-        "--markdown",
-        "~/proj/newb",
-    ]
+def test_flag_after_source_gets_reordered_before():
+    # Arrange
+    argv = ["~/proj/newb", "--markdown"]
+    # Act
+    reordered = _reorder_argv(argv)
+    # Assert
+    assert reordered == ["--markdown", "~/proj/newb"]
 
 
 def test_options_already_before_source_left_alone():
-    assert _reorder_argv(["--format", "markdown", "~/proj/newb"]) == [
-        "--format",
-        "markdown",
-        "~/proj/newb",
-    ]
+    # Arrange
+    argv = ["--format", "markdown", "~/proj/newb"]
+    # Act
+    reordered = _reorder_argv(argv)
+    # Assert
+    assert reordered == ["--format", "markdown", "~/proj/newb"]
 
 
-def test_subcommand_invocation_left_alone():
-    """Don't touch real subcommand invocations — Click handles those."""
-    assert _reorder_argv(["templates", "list"]) == ["templates", "list"]
-    assert _reorder_argv(["mcp", "start"]) == ["mcp", "start"]
+@pytest.mark.parametrize("argv", [["templates", "list"], ["mcp", "start"]])
+def test_subcommand_invocation_left_alone(argv):
+    # Arrange
+    expected = list(argv)
+    # Act
+    reordered = _reorder_argv(argv)
+    # Assert
+    assert reordered == expected
 
 
-def test_value_taking_option_does_not_eat_source():
-    """`--runs 3 <SRC>` — `--runs` takes a value (3), not the SOURCE."""
-    assert _reorder_argv(["--runs", "3", "~/proj/newb"]) == [
-        "--runs",
-        "3",
-        "~/proj/newb",
-    ]
+def test_value_taking_option_before_source_does_not_eat_source():
+    # Arrange
+    argv = ["--runs", "3", "~/proj/newb"]
+    # Act
+    reordered = _reorder_argv(argv)
+    # Assert
+    assert reordered == ["--runs", "3", "~/proj/newb"]
 
 
 def test_value_taking_option_after_source_gets_reordered():
-    """`<SRC> --runs 3` → `--runs 3 <SRC>`."""
-    assert _reorder_argv(["~/proj/newb", "--runs", "3"]) == [
-        "--runs",
-        "3",
-        "~/proj/newb",
-    ]
+    # Arrange
+    argv = ["~/proj/newb", "--runs", "3"]
+    # Act
+    reordered = _reorder_argv(argv)
+    # Assert
+    assert reordered == ["--runs", "3", "~/proj/newb"]
 
 
 def test_no_args_returns_empty():
-    assert _reorder_argv([]) == []
+    # Arrange
+    # Act
+    reordered = _reorder_argv([])
+    # Assert
+    assert reordered == []
 
 
 def test_just_source_returns_unchanged():
-    assert _reorder_argv(["~/proj/newb"]) == ["~/proj/newb"]
+    # Arrange
+    argv = ["~/proj/newb"]
+    # Act
+    reordered = _reorder_argv(argv)
+    # Assert
+    assert reordered == ["~/proj/newb"]
 
 
 def test_double_dash_separator_is_passthrough():
-    """`--` means caller is doing explicit separation; don't reorder."""
-    assert _reorder_argv(["~/proj/newb", "--", "--format", "json"]) == [
-        "~/proj/newb",
-        "--",
-        "--format",
-        "json",
-    ]
+    # Arrange
+    argv = ["~/proj/newb", "--", "--format", "json"]
+    # Act
+    reordered = _reorder_argv(argv)
+    # Assert
+    assert reordered == ["~/proj/newb", "--", "--format", "json"]
