@@ -58,13 +58,12 @@ def _newb_cli() -> str:
     return str(p)
 
 
-@requires_docker_and_key
-def test_docker_runner_against_newb_self(newb_repo: Path):
-    """`newb <newb-repo>` end-to-end: real docker, real SDK, real Claude.
-
-    Asserts the report has the canonical python-package keys.
+@pytest.fixture
+def _newb_against_self_proc(newb_repo: Path) -> subprocess.CompletedProcess[str]:
+    """Run ``newb <newb-repo>`` once and share the result across e2e tests
+    that need to inspect different aspects of it (rc, JSON, stderr).
     """
-    proc = subprocess.run(
+    return subprocess.run(
         # Click @group with own options + subcommands consumes its
         # options BEFORE the positional. Put flags first.
         [_newb_cli(), "--runs", "1", "--format", "json", str(newb_repo)],
@@ -72,23 +71,52 @@ def test_docker_runner_against_newb_self(newb_repo: Path):
         text=True,
         timeout=600,
     )
-    assert proc.returncode == 0, (
-        f"newb exited rc={proc.returncode}\n--- STDOUT ---\n{proc.stdout[:1500]}"
+
+
+@requires_docker_and_key
+def test_docker_runner_against_newb_self_exits_zero(_newb_against_self_proc):
+    """`newb <newb-repo>` end-to-end exits 0 (real docker, real Claude)."""
+    # Arrange
+    proc = _newb_against_self_proc
+    # Act
+    rc = proc.returncode
+    # Assert
+    assert rc == 0, (
+        f"newb exited rc={rc}\n--- STDOUT ---\n{proc.stdout[:1500]}"
         f"\n--- STDERR ---\n{proc.stderr[:1500]}"
     )
-    report = json.loads(proc.stdout)
-    assert report["package"] == newb_repo.name
-    assert report["template"] == "python-package"
-    for key in (
+
+
+@requires_docker_and_key
+def test_docker_runner_against_newb_self_report_has_canonical_keys(
+    _newb_against_self_proc, newb_repo: Path
+):
+    """E2E report has the python-package canonical key set and non-empty values."""
+    # Arrange
+    expected_keys = (
         "what_for",
         "problems_solved",
         "quick_start",
         "when_not_to_use",
         "post_install_check",
         "prompt_injection_check",
-    ):
-        assert key in report, f"missing canonical key: {key}"
-        assert isinstance(report[key], str) and report[key].strip()
+    )
+    proc = _newb_against_self_proc
+    # Act
+    report = json.loads(proc.stdout)
+    missing_or_empty = [
+        k
+        for k in expected_keys
+        if k not in report
+        or not isinstance(report[k], str)
+        or not report[k].strip()
+    ]
+    # Assert
+    assert (
+        not missing_or_empty
+        and report.get("package") == newb_repo.name
+        and report.get("template") == "python-package"
+    ), (missing_or_empty, report.get("package"), report.get("template"))
 
 
 @requires_docker_and_key
@@ -100,6 +128,8 @@ def test_docker_image_path_matches_host_mount(newb_repo: Path):
     ``CLIConnectionError: Working directory does not exist``. Detect
     that string in stderr if it appears.
     """
+    # Arrange
+    # Act
     proc = subprocess.run(
         # Click @group with own options + subcommands consumes its
         # options BEFORE the positional. Put flags first.
@@ -109,6 +139,7 @@ def test_docker_image_path_matches_host_mount(newb_repo: Path):
         timeout=600,
     )
     combined = (proc.stdout + proc.stderr).lower()
+    # Assert
     assert "working directory does not exist" not in combined, (
         "host/container path mismatch — likely a stale local image. "
         "Run `docker pull ghcr.io/ywatanabe1989/newb-runner:<this-newb-version>` "
