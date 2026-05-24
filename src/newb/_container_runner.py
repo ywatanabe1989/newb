@@ -72,8 +72,14 @@ class _BaseContainerRunner:
         scope: str = "all",
         mcp_servers: dict | None = None,
         pip_cache_dir: str | None = None,
+        which=None,
     ):
-        if not shutil.which(self.runtime_bin):
+        # `which` is injectable so tests can run without the real
+        # docker/apptainer binaries on PATH. Production callers leave
+        # it as ``None`` and we use ``shutil.which`` — no patching.
+        if which is None:
+            which = shutil.which
+        if not which(self.runtime_bin):
             raise RuntimeError(
                 f"{type(self).__name__} requires `{self.runtime_bin}` on PATH."
             )

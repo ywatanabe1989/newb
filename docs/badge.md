@@ -8,8 +8,14 @@ your docs alone. This is the same workflow newb runs against itself
 ## TL;DR
 
 1. Drop the workflow file (below) at `.github/workflows/newb.yml`.
-2. Set repo / org secret `NEWB_ANTHROPIC_API_KEY` (any
-   `sk-ant-api03-…` API key or `sk-ant-oat01-…` OAuth token).
+2. Set exactly one of these repo / org secrets:
+   - `NEWB_ANTHROPIC_API_KEY` — `sk-ant-api03-…` real API key
+     (per-token billing).
+   - `NEWB_CLAUDE_CODE_CREDENTIALS_JSON` — full
+     `~/.claude/.credentials.json` content for OAuth flat-rate
+     (Claude Code Pro / Max). Required for `sk-ant-oat01-…` tokens
+     — Anthropic rejects them bare without refresh-token /
+     expiresAt context.
 3. Trigger once manually from the Actions tab to confirm green.
 4. Add the badge to your README (markdown one-liner below).
 
@@ -42,7 +48,8 @@ jobs:
 
       - name: Run newb
         env:
-          # Real `sk-ant-api*` keys work as a bare env var.
+          # Set exactly one — real `sk-ant-api*` keys work as a bare
+          # env var (per-token billing).
           NEWB_ANTHROPIC_API_KEY: ${{ secrets.NEWB_ANTHROPIC_API_KEY }}
           # OAuth flat-rate (Claude Code Pro/Max): pass the full
           # ~/.claude/.credentials.json content as a secret. newb
@@ -50,13 +57,13 @@ jobs:
           # the container so the SDK uses the file-based credentials_file
           # flow (Anthropic rejects sk-ant-oat01-… tokens passed as
           # bare env). Leave unset for sk-ant-api* keys.
-          NEWB_CLAUDE_CODE_CREDENTIALS_JSON: ${{ secrets.CLAUDE_CREDENTIALS_JSON }}
+          NEWB_CLAUDE_CODE_CREDENTIALS_JSON: ${{ secrets.NEWB_CLAUDE_CODE_CREDENTIALS_JSON }}
           NEWB_HARDEN_MEMORY: 4g
           NEWB_HARDEN_PIDS_LIMIT: 512
           NEWB_HARDEN_CPUS: "2"
         run: |
-          if [ -z "${NEWB_ANTHROPIC_API_KEY}" ]; then
-            echo "::error::secrets.NEWB_ANTHROPIC_API_KEY is not set." >&2
+          if [ -z "${NEWB_ANTHROPIC_API_KEY}" ] && [ -z "${NEWB_CLAUDE_CODE_CREDENTIALS_JSON}" ]; then
+            echo "::error::Neither secrets.NEWB_ANTHROPIC_API_KEY nor secrets.NEWB_CLAUDE_CODE_CREDENTIALS_JSON is set on this repo." >&2
             exit 1
           fi
           newb . --json -vv > newb-report.json
@@ -99,18 +106,19 @@ project tagline, before the description body).
 
 ## Required secrets
 
-| Secret | When required | Notes |
+Set exactly one of:
+
+| Secret | When | Notes |
 |---|---|---|
-| `NEWB_ANTHROPIC_API_KEY` | always | Anthropic API key (`sk-ant-api03-…`) OR OAuth access token (`sk-ant-oat01-…`). For CI, prefer a real API key with a per-key spend cap. |
-| `CLAUDE_CREDENTIALS_JSON` | only for OAuth flat-rate | Full `~/.claude/.credentials.json` content (the file `claude /login` writes locally — refresh_token + accessToken + expiresAt + scopes + subscriptionType). When the workflow exposes it as `NEWB_CLAUDE_CODE_CREDENTIALS_JSON`, newb materialises it to a tempfile and bind-mounts it into the container. Anthropic rejects bare `sk-ant-oat01-…` tokens; the file flow is the supported OAuth path. Skip this secret entirely if you're using a real `sk-ant-api*` key. |
+| `NEWB_ANTHROPIC_API_KEY` | per-token billing | Real Anthropic API key (`sk-ant-api03-…`). For CI, prefer this with a per-key spend cap. Bare OAuth tokens (`sk-ant-oat01-…`) will NOT work here — use the credentials-json secret below. |
+| `NEWB_CLAUDE_CODE_CREDENTIALS_JSON` | OAuth flat-rate (Claude Code Pro / Max) | Full `~/.claude/.credentials.json` content (the file `claude /login` writes locally — refresh_token + accessToken + expiresAt + scopes + subscriptionType). newb materialises it to a tempfile and bind-mounts it into the container so the SDK uses the file-based credentials_file flow. Anthropic rejects bare `sk-ant-oat01-…` tokens; this is the supported OAuth path. |
 
-That's it — one secret. The runner image
-(`ghcr.io/ywatanabe1989/newb-runner`) is published publicly, so no
-docker login step is required.
+The runner image (`ghcr.io/ywatanabe1989/newb-runner`) is published
+publicly, so no docker login step is required.
 
-If you're rolling out across many repos under one org, set
-`NEWB_ANTHROPIC_API_KEY` once as an organization secret with
-selected-repo access — one place to rotate.
+If you're rolling out across many repos under one org, set the chosen
+secret once as an organization secret with selected-repo access — one
+place to rotate.
 
 ## Triggers — start manual, scale up
 

@@ -9,7 +9,7 @@
 <p align="center"><b>Test your package through the eyes of a newbie agent — because that's who's reading your docs now.</b></p>
 
 <p align="center">
-  <a href="https://newb.readthedocs.io/">Full Documentation</a> · <code>pip install newb</code>
+  <a href="https://newb.readthedocs.io/">Full Documentation</a> · <code>uv pip install newb[all]</code>
 </p>
 
 <!-- scitex-badges:start -->

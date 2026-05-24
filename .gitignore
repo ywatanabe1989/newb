@@ -12,6 +12,7 @@ venv/
 # Test/coverage
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
 .tox/
 

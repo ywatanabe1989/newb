@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 import click
 
 from .._install._target import resolve_target
 from .._install._workflow import (
     GhError,
+    SECRET_API_KEY,
+    SECRET_CREDS_JSON,
     install as _install,
     scaffold_workflow as _scaffold,
     set_secret as _set_secret,
@@ -29,17 +32,31 @@ def _resolve_or_die(target: str | None) -> str:
         sys.exit(2)
 
 
-def _read_secret_value() -> str:
-    """Read NEWB_ANTHROPIC_API_KEY from env; fail loudly if missing."""
-    v = os.environ.get("NEWB_ANTHROPIC_API_KEY", "").strip()
-    if not v:
-        click.echo(
-            "newb: NEWB_ANTHROPIC_API_KEY env var is empty — set it "
-            "before running set-secret / install.",
-            err=True,
-        )
-        sys.exit(2)
-    return v
+def _read_secret_value() -> tuple[str, str]:
+    """Resolve the auth secret to push to the repo.
+
+    Resolution order (first non-empty wins):
+      1. ``NEWB_CLAUDE_CODE_CREDENTIALS_JSON`` env var (full file contents).
+      2. ``~/.claude/.credentials.json`` on disk (OAuth users' default).
+      3. ``NEWB_ANTHROPIC_API_KEY`` env var (real ``sk-ant-api*`` keys).
+
+    Returns ``(secret_name, value)``. Fails loudly if none are set.
+    """
+    creds_env = os.environ.get(SECRET_CREDS_JSON, "").strip()
+    if creds_env:
+        return SECRET_CREDS_JSON, creds_env
+    creds_file = Path("~/.claude/.credentials.json").expanduser()
+    if creds_file.is_file():
+        return SECRET_CREDS_JSON, creds_file.read_text()
+    api_key = os.environ.get(SECRET_API_KEY, "").strip()
+    if api_key:
+        return SECRET_API_KEY, api_key
+    click.echo(
+        f"newb: no auth source available — set {SECRET_API_KEY} or "
+        f"{SECRET_CREDS_JSON}, or place ~/.claude/.credentials.json.",
+        err=True,
+    )
+    sys.exit(2)
 
 
 _DRY_RUN_HELP = "Print what would happen without making any remote changes."
@@ -107,26 +124,31 @@ def scaffold_workflow(
     help="Overwrite an existing secret.",
 )
 def set_secret(target: str | None, force: bool):
-    """Set NEWB_ANTHROPIC_API_KEY on TARGET.
+    """Set the newb auth secret on TARGET.
 
     \b
     Example:
-      $ export NEWB_ANTHROPIC_API_KEY=sk-ant-...
+      # API-key path (per-token billing)
+      $ export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-...
       $ newb dev set-secret owner/repo
-      $ newb dev set-secret .                  # current git remote
-      $ newb dev set-secret owner/repo --force # overwrite
+
+      # OAuth flat-rate path (Claude Code Pro / Max). Auto-detected
+      # from ~/.claude/.credentials.json or NEWB_CLAUDE_CODE_CREDENTIALS_JSON.
+      $ newb dev set-secret owner/repo
 
     TARGET = <owner>/<repo>; '.' or omitted = current git remote.
-    Reads the value from the host's NEWB_ANTHROPIC_API_KEY env var.
+    Picks NEWB_CLAUDE_CODE_CREDENTIALS_JSON if either the env var
+    or ~/.claude/.credentials.json is available; otherwise falls
+    back to NEWB_ANTHROPIC_API_KEY from the host env.
     """
     repo = _resolve_or_die(target)
-    value = _read_secret_value()
+    name, value = _read_secret_value()
     try:
-        status = _set_secret(repo, value, force=force)
+        status = _set_secret(repo, value, name=name, force=force)
     except GhError as exc:
         click.echo(f"newb dev set-secret ({repo}): {exc}", err=True)
         sys.exit(1)
-    click.echo(f"{repo}: secret {status}")
+    click.echo(f"{repo}: secret {name} {status}")
 
 
 @click.command("install")
@@ -170,12 +192,17 @@ def install(
       $ newb dev install owner/repo --dry-run  # preview
 
     TARGET = <owner>/<repo>; '.' or omitted = current git remote.
-    NEWB_ANTHROPIC_API_KEY env var is required unless --no-secret.
+    An auth source (NEWB_ANTHROPIC_API_KEY,
+    NEWB_CLAUDE_CODE_CREDENTIALS_JSON, or ~/.claude/.credentials.json)
+    is required unless --no-secret.
     """
     repo = _resolve_or_die(target)
-    value = None if no_secret else _read_secret_value()
+    name: str = SECRET_API_KEY
+    value: str | None = None
+    if not no_secret:
+        name, value = _read_secret_value()
     if dry_run:
-        secret_part = "skip-no-value" if value is None else "would-set"
+        secret_part = "skip-no-value" if value is None else f"would-set {name}"
         click.echo(
             f"{repo}: dry-run — secret {secret_part}, workflow "
             f"would-{'push' if push else 'pr'}"
@@ -189,7 +216,13 @@ def install(
         )
         sys.exit(1)
     try:
-        out = _install(repo, secret_value=value, push=push, force=force)
+        out = _install(
+            repo,
+            secret_value=value,
+            secret_name=name,
+            push=push,
+            force=force,
+        )
     except GhError as exc:
         click.echo(f"newb dev install ({repo}): {exc}", err=True)
         sys.exit(1)
