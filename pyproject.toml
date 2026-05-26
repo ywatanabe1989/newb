@@ -59,6 +59,9 @@ dev = [
 newb = "newb._cli:cli_entrypoint"
 scitex-newb = "newb._cli:cli_entrypoint"   # SciTeX-namespaced alias
 
+[project.entry-points."scitex_dev.skills"]
+newb = "newb"
+
 [project.urls]
 Homepage = "https://github.com/ywatanabe1989/newb"
 Repository = "https://github.com/ywatanabe1989/newb"
