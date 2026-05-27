@@ -58,7 +58,7 @@ is a dict `{key: prompt}` where prompts use these placeholders:
   `pip install -e .` (editable) / `pip wheel … && pip install …`
   (wheel) / `pip install <pkg-name>` (pypi).
 
-## Execution model (0.19.0+)
+## Execution model
 
 All prompts in a template run in **one** container per invocation:
 
@@ -84,7 +84,7 @@ Every `newb` run also calls `_load_tests()` to pick up
 `tests_newb.yaml` / `tests_newb.py` / `test_newb_*.py` (see
 `newb-author-tests`).
 
-## Structured emission (since 0.24.0)
+## Structured emission
 
 The three structured prompts (`post_install_check`,
 `install_and_help`, `prompt_injection_check`) end with a worked

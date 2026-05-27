@@ -24,17 +24,21 @@ Probe a target with a fresh agent in a sandboxed container.
 import newb
 
 report = newb(".")                            # bare-module call shortcut
-report = newb.run(".", runtime="docker", scope="all", format="json")
+report = newb.run(".", runtime="docker", scope="all")
 report = newb.run("https://github.com/u/r.git")
 ```
 
-| Argument   | Default     | Purpose                                          |
-|------------|-------------|--------------------------------------------------|
-| `target`   | required    | Local path or git URL                            |
-| `runtime`  | auto        | `docker` / `podman` / `apptainer`                |
-| `scope`    | `"all"`     | `"all"` (full agentic) or `"docs"` (read-only)   |
-| `format`   | `"json"`    | `"json"` / `"markdown"`                          |
-| `tests`    | None        | Path to `tests_newb.yaml`; enables author tests  |
+| Argument         | Default     | Purpose                                          |
+|------------------|-------------|--------------------------------------------------|
+| `skills_dir`     | required    | Local path or git URL                            |
+| `model`          | haiku-4-5   | Claude model id                                  |
+| `runs_per_prompt`| 1           | Repeat each prompt N times                       |
+| `runtime`        | docker      | `docker` / `podman` / `apptainer`                |
+| `template`       | python-pkg  | `python-package` / `cli-tool`                    |
+| `install_mode`   | editable    | `editable` / `wheel` / `pypi`                    |
+| `scope`          | all         | `all` (full agentic) or `docs` (read-only)       |
+| `pip_cache_dir`  | None        | Host pip cache dir (local-dev speed-up)          |
+| `verbosity`      | 0           | Verbosity level (0-3)                            |
 
 Returns a dict with per-prompt results, judge gradings (if `tests=`), and
 overall pass/fail.

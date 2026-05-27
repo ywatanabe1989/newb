@@ -72,12 +72,12 @@ try the package: `pip install -e .`, `python -c "import pkg"`,
 switches to read-only audit (`acceptEdits` + `Read/Glob/Grep`
 allowlist). The container itself is the real isolation boundary.
 
-Since 0.19.0, all template prompts run in **one** container per
+All template prompts run in **one** container per
 `newb` invocation — per-prompt `query()` keeps conversations
 isolated, but on-disk state (`pip install -e .` from
 `post_install_check`) persists across prompts within the run.
 
-The `host` runtime was removed in 0.9 — full agentic permissions on
+The `host` runtime was removed — full agentic permissions on
 the host are unsafe (agent could `rm -rf` your projects, `pip install`
 into the global env). Use a container.
 

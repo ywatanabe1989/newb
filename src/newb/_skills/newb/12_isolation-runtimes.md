@@ -20,12 +20,9 @@ actually try the package the way a real new user would.
 | `podman` | same image, rootless | **hard** | bridged | `_container_runner.PodmanRunner` |
 | `apptainer` | `apptainer run docker://…` | **hard** — `--no-home --containall` + bind | rootless | `_container_runner.ApptainerRunner` |
 
-## One container per run (0.19.0+)
+## One container per run
 
-Earlier newb (≤0.18) spawned one container per question — for the 6
-template questions that's 6× container startup, 6× project staging,
-6× `pip install` (when `post_install_check` ran). 0.19.0 batches all
-prompts into a single container:
+All prompts run in a single container:
 
 - The host runner builds a JSON envelope `{"prompts": [...]}` and
   pipes it to the container on stdin.
@@ -101,7 +98,7 @@ isolation = container, behavior = SDK, exploration = agent.
 `permission_mode="acceptEdits"` only auto-approves edits — `Bash`
 calls (`pip install -e .`, `python -c "import pkg"`,
 `<pkg> --help`) hit a permission prompt and deadlock the
-non-interactive runner. 0.18.1 switched `--scope all` to
+non-interactive runner. `--scope all` uses
 `bypassPermissions` (the SDK equivalent of
 `--dangerously-skip-permissions`). Safe because the container is
 the boundary, single-shot, and the staged project is the agent's

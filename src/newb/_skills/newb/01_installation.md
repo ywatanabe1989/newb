@@ -13,7 +13,7 @@ tags: [newb-installation]
 pip install newb
 ```
 
-Pulls `claude-agent-sdk` + click + pyyaml. You also need:
+Pulls `claude-agent-sdk` + click. You also need:
 
 | Requirement                  | Why                                          |
 |------------------------------|----------------------------------------------|

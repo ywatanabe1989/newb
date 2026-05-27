@@ -16,8 +16,8 @@
 <p align="center">
   <a href="https://pypi.org/project/newb/"><img src="https://img.shields.io/pypi/v/newb.svg" alt="PyPI"></a>
   <a href="https://pypi.org/project/newb/"><img src="https://img.shields.io/pypi/pyversions/newb.svg" alt="Python"></a>
-  <a href="https://github.com/ywatanabe1989/newb/actions/workflows/test.yml"><img src="https://github.com/ywatanabe1989/newb/actions/workflows/test.yml/badge.svg" alt="Tests"></a>
-  <a href="https://github.com/ywatanabe1989/newb/actions/workflows/newb-self-verify.yml"><img src="https://github.com/ywatanabe1989/newb/actions/workflows/newb-self-verify.yml/badge.svg?branch=develop" alt="Newb"></a>
+  <a href="https://github.com/ywatanabe1989/newb/actions/workflows/pytest-matrix-on-ubuntu-py3-11-3-12-3-13.yml"><img src="https://github.com/ywatanabe1989/newb/actions/workflows/pytest-matrix-on-ubuntu-py3-11-3-12-3-13.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/ywatanabe1989/newb/actions/workflows/newb-docs-quality-on-ubuntu-latest.yml"><img src="https://github.com/ywatanabe1989/newb/actions/workflows/newb-docs-quality-on-ubuntu-latest.yml/badge.svg?branch=develop" alt="Docs quality"></a>
   <a href="https://codecov.io/gh/ywatanabe1989/newb"><img src="https://img.shields.io/codecov/c/github/ywatanabe1989/newb" alt="coverage"></a>
   <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/license-AGPL_v3-blue.svg" alt="License: AGPL v3"></a>
 </p>
@@ -368,7 +368,7 @@ Source: [`src/newb/_skills/newb/`](src/newb/_skills/newb/).
 
 <br>
 
-newb 0.9 dropped the `host` runtime — full agentic permissions on the
+newb dropped the `host` runtime — full agentic permissions on the
 host are unsafe (agent could `rm -rf` your projects, `pip install` into
 your global env). **The container is the boundary, not the SDK
 options** — inside, the agent gets full `Read+Write+Edit+Bash+Glob+Grep`
@@ -378,7 +378,7 @@ default) + `max_turns=15` so it can actually try the package
 a small example). `--scope docs` switches to `acceptEdits` +
 `allowed_tools=["Read","Glob","Grep"]` for read-only audits.
 
-Since 0.19.0 all prompts in a run share **one** container — per-prompt
+All prompts in a run share **one** container — per-prompt
 `query()` keeps conversations isolated, but on-disk state
 (`pip install -e .` from `post_install_check`) persists across
 prompts within the run.

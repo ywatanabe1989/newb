@@ -27,14 +27,14 @@ exits 1 when criteria fail.
 newb ./docs --format json > report.json
 ```
 
-Top-level shape (since 0.24.0):
+Top-level shape:
 
 ```json
 {
-  "newb_signature": { "tool": "newb", "version": "0.24.0", ... },
+  "newb_signature": { "tool": "newb", "version": "0.26.7", ... },
   "package": "<dirname>",
   "template": "python-package",
-  "runtime_info": { "newb_version": "0.24.0", "runtime": "docker", ... },
+  "runtime_info": { "newb_version": "0.26.7", "runtime": "docker", ... },
   "what_for": "...",
   "problems_solved": "...",
   "quick_start": "...",
@@ -53,7 +53,7 @@ The `<key>_parsed` siblings are populated by host-side parsers
 trailer when present; otherwise they regex over the prose. Off-script
 replies yield `"unknown"` instead of raising.
 
-## `newb gate` — declarative CI criteria (since 0.24.0)
+## `newb gate` — declarative CI criteria
 
 ```bash
 newb ./docs --format json > report.json
@@ -126,9 +126,9 @@ For badge-only adoption (no hard gating), see
 | Multi-package scan | one workflow matrix entry per `_skills/<pkg>/` directory |
 | Hard isolation in CI | `--runtime docker` (image pre-pulled in a setup step) |
 
-## Legacy `jq` pattern (pre-0.24.0)
+## Legacy `jq` pattern
 
-If you can't bump newb, the old recipe still works:
+The old recipe still works:
 
 ```bash
 jq -e '.post_install_check_parsed.install == "ok"' report.json

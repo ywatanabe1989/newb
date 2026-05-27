@@ -87,7 +87,7 @@ print(newb.render_markdown(report))
 {
   "package": "your-package",
   "template": "python-package",
-  "runtime_info": {"newb_version": "0.19.1", "runtime": "docker", ...},
+  "runtime_info": {"newb_version": "0.26.7", "runtime": "docker", ...},
   "what_for": "...one sentence...",
   "problems_solved": "| # | Problem | Solution | ... markdown table",
   "quick_start": "```python\n...\n```",
@@ -96,11 +96,11 @@ print(newb.render_markdown(report))
   "post_install_check_parsed": {"install": "ok", "import": "ok", "cli": "ok"},
   "prompt_injection_check": "FOUND: no\nEVIDENCE: none",
   "prompt_injection_check_parsed": {"found": false, "found_raw": "no"},
-  "newb_signature": {"tool": "newb", "version": "0.24.0", ...}
+  "newb_signature": {"tool": "newb", "version": "0.26.7", ...}
 }
 ```
 
-`<key>_parsed` siblings (since 0.23.0) are populated by host-side
+`<key>_parsed` siblings are populated by host-side
 parsers and are what `newb gate` consults. Free-text replies stay
 untouched. If `tests_newb.yaml` is present, the report also includes
 `tests` and `tests_summary`.
@@ -123,7 +123,7 @@ runs = 1
 type = "stdio"
 command = "my-mcp-server"
 
-# Optional: hard CI criteria (since 0.24.0) — `newb gate report.json`
+# Optional: hard CI criteria — `newb gate report.json`
 # evaluates these against `<key>_parsed` fields. Lists mean any-of.
 [tool.newb.gate.post_install_check]
 install = "ok"

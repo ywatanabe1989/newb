@@ -168,7 +168,7 @@ report — a report that says `INSTALL: fail` will still produce a
 green workflow and a `Newb | passing` badge. This is by design:
 newb's value is in the *evidence*, not in a binary verdict.
 
-If you DO want hard-gating, append a `newb gate` step (since 0.24.0):
+If you DO want hard-gating, append a `newb gate` step:
 
 ```yaml
       - name: Gate on report

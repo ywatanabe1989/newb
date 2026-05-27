@@ -20,13 +20,15 @@ server with the command above as the launcher.
 
 ## Tools
 
-| Tool                | Purpose                                              |
-|---------------------|------------------------------------------------------|
-| `newb_run`          | Probe a target package (mirrors `newb <target>`)     |
-| `newb_gate`         | Run gating with `tests_newb.yaml`                    |
-| `newb_skills_list`  | List embedded skill pages                            |
-| `newb_skills_get`   | Retrieve one skill page                              |
-| `newb_templates`    | Inspect canonical-question templates                 |
+| Tool                     | Purpose                                              |
+|--------------------------|------------------------------------------------------|
+| `newb_verify`            | Probe a target package (mirrors `newb <target>`)     |
+| `newb_run`               | Alias for `newb_verify`                              |
+| `newb_render_markdown`   | Render a report dict as README-ready markdown         |
+| `newb_skills_list`       | List embedded skill pages                             |
+| `newb_skills_get`        | Retrieve one skill page                               |
+| `newb_templates_list`    | List built-in question templates                     |
+| `newb_templates_show`    | Show prompts in one named template                   |
 
 ## Tool inventory
 

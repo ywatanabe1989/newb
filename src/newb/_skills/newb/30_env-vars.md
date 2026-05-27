@@ -48,6 +48,7 @@ export NEWB_CLAUDE_CODE_CREDENTIALS_JSON="$(cat ~/.claude/.credentials.json)"
 | `NEWB_HARDEN_NO_NEW_PRIVS` | Block setuid privilege escalation. | `1` | bool |
 | `NEWB_HARDEN_NO_NETWORK` | If 1, `--network=none` (breaks pip + SDK). | `0` | bool |
 | `NEWB_HARDEN_MEMORY` | Container memory cap (e.g. `4g`). | unlimited | str |
+| `NEWB_HARDEN_MEMORY_SWAP` | Container memory-swap cap (e.g. `4g`). | unlimited | str |
 | `NEWB_HARDEN_CPUS` | Container CPU cap (cores). | unlimited | str |
 | `NEWB_HARDEN_PIDS_LIMIT` | Container PID cap. | unlimited | int |
 | `NEWB_HARDEN_TMPFS_NOEXEC` | Mount `/tmp` with `noexec,nosuid`. | `0` | bool |
@@ -67,6 +68,7 @@ CLI flags (`--harden-memory`, `--harden-cpus`, …) override these.
 | `NEWB_CWD` | Working directory the SDK uses inside the container. | `/work/project` |
 | `NEWB_SKILLS_PATH` | Absolute path inside the container of the focused docs subdir; interpolated into prompts via `{skills_path}`. | `/work/project` |
 | `NEWB_SCOPE` | `all` (full agentic, `bypassPermissions`) or `docs` (read-only audit, `acceptEdits` + `Read/Glob/Grep` allowlist). | `all` |
+| `NEWB_VERBOSE` | Verbosity level (0-3) forwarded into the container for per-prompt timing on stderr. | unset |
 | `NEWB_MCP_SERVERS_JSON` | JSON-encoded `mcp_servers` table — produced from `[tool.newb] mcp_servers` and decoded by `containers/runner.py` for `ClaudeAgentOptions(mcp_servers=...)`. | unset |
 
 These are produced by the host runner and consumed by the
