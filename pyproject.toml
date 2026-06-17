@@ -74,9 +74,16 @@ newb = "newb"
 [project.urls]
 Homepage = "https://github.com/ywatanabe1989/newb"
 Repository = "https://github.com/ywatanabe1989/newb"
+Documentation = "https://newb.readthedocs.io"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+# Ship the agent-facing skill leaves and the in-wheel Sphinx HTML bundle.
+# scitex-cloud serves per-package docs from src/newb/_sphinx_html/ (PS-121),
+# refreshed in CI by the `docs` workflow on every push to develop.
+newb = ["_skills/**/*.md", "_sphinx_html/**/*"]
 
 [tool.scitex-linter]
 # `containers/runner.py` runs INSIDE the docker/apptainer container; it

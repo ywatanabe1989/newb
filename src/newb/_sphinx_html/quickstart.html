@@ -1,0 +1,154 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick start &mdash; newb 0.26.6</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2553ce2e"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="CLI reference" href="cli.html" />
+    <link rel="prev" title="newb" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            newb
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quick start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#install">Install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#run-a-verdict">Run a verdict</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#author-defined-tests">Author-defined tests</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">CLI reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Python API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">newb</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Quick start</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/ywatanabe1989/newb/blob/develop/docs/sphinx/quickstart.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="quick-start">
+<h1>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h1>
+<section id="install">
+<h2>Install<a class="headerlink" href="#install" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>newb<span class="w">           </span><span class="c1"># core (CLI + Python API)</span>
+pip<span class="w"> </span>install<span class="w"> </span>newb<span class="o">[</span>yaml<span class="o">]</span><span class="w">     </span><span class="c1"># + custom YAML templates / tests_newb.yaml</span>
+pip<span class="w"> </span>install<span class="w"> </span>newb<span class="o">[</span>mcp<span class="o">]</span><span class="w">      </span><span class="c1"># + FastMCP server (newb mcp start)</span>
+pip<span class="w"> </span>install<span class="w"> </span>newb<span class="o">[</span>all<span class="o">]</span><span class="w">      </span><span class="c1"># everything above</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">claude-agent-sdk</span></code> (Anthropic, MIT) is pulled in as a dependency.
+Set <code class="docutils literal notranslate"><span class="pre">NEWB_ANTHROPIC_API_KEY</span></code> (a real <code class="docutils literal notranslate"><span class="pre">sk-ant-api*</span></code> key) or pass the
+full <code class="docutils literal notranslate"><span class="pre">~/.claude/.credentials.json</span></code> content via
+<code class="docutils literal notranslate"><span class="pre">NEWB_CLAUDE_CODE_CREDENTIALS_JSON</span></code> for the OAuth flat-rate path.</p>
+</section>
+<section id="run-a-verdict">
+<h2>Run a verdict<a class="headerlink" href="#run-a-verdict" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span>.<span class="w">                              </span><span class="c1"># current project — docker by default</span>
+newb<span class="w"> </span>./src/mypkg/_skills/mypkg<span class="w">      </span><span class="c1"># focused docs subdir</span>
+newb<span class="w"> </span>.<span class="w"> </span>--json<span class="w"> </span>&gt;<span class="w"> </span>report.json<span class="w">        </span><span class="c1"># machine-readable, jq-able for CI</span>
+newb<span class="w"> </span>gate<span class="w"> </span>report.json<span class="w">              </span><span class="c1"># exit 0/1 vs [tool.newb.gate]</span>
+</pre></div>
+</div>
+</section>
+<section id="author-defined-tests">
+<h2>Author-defined tests<a class="headerlink" href="#author-defined-tests" title="Link to this heading"></a></h2>
+<p>Drop a <code class="docutils literal notranslate"><span class="pre">tests_newb.yaml</span></code> next to your docs; each entry becomes an
+extra question, graded by the AND of substring filters and an optional
+LLM judge:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redirects_parallel</span>
+<span class="w">  </span><span class="nt">prompt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">How do I run things in parallel?</span>
+<span class="w">  </span><span class="nt">expect_contains</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;does</span><span class="nv"> </span><span class="s">not&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">expect_excludes</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;--parallel&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;-j&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">judge</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Must</span><span class="nv"> </span><span class="s">redirect</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">an</span><span class="nv"> </span><span class="s">alternative</span><span class="nv"> </span><span class="s">tool,</span><span class="nv"> </span><span class="s">not</span><span class="nv"> </span><span class="s">invent</span><span class="nv"> </span><span class="s">a</span><span class="nv"> </span><span class="s">flag.&quot;</span>
+</pre></div>
+</div>
+<p>The grading detail lands in the report’s <code class="docutils literal notranslate"><span class="pre">tests[]</span></code> array and
+<code class="docutils literal notranslate"><span class="pre">tests_summary</span></code>. A runnable demo of the full flow lives in
+<a class="reference external" href="https://github.com/ywatanabe1989/newb/blob/develop/examples/02_verdict_workflow.py">examples/02_verdict_workflow.py</a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="newb" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="cli.html" class="btn btn-neutral float-right" title="CLI reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Yusuke Watanabe.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
