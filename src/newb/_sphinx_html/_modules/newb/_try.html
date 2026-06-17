@@ -1,0 +1,496 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>newb._try &mdash; newb 0.26.6</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=2553ce2e"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            newb
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cli.html">CLI reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">Python API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">newb</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">newb._try</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for newb._try</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Have a fresh agent (mounted with only your skills/docs) self-explain it.</span>
+
+<span class="sd">Decoupled from scitex-dev&#39;s ECOSYSTEM registry — public API takes a</span>
+<span class="sd">``Path`` to a skills directory rather than an ecosystem distribution name.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Canonical prompts</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<span class="c1"># Prompt sets live in ``question_templates/`` so new templates</span>
+<span class="c1"># (api_sdk, cli_tool, scientific, …) can land alongside the</span>
+<span class="c1"># python_package default without touching this file.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.question_templates</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_template</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Helpers</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="c1"># Grading helpers extracted to ._grading; runtime-info to ._runtime_info.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._grading</span><span class="w"> </span><span class="kn">import</span> <span class="n">_grade</span><span class="p">,</span> <span class="n">_judge</span><span class="p">,</span> <span class="n">_JUDGE_PROMPT</span><span class="p">,</span> <span class="n">_load_tests</span>  <span class="c1"># noqa: F401, E402</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._runtime_info</span><span class="w"> </span><span class="kn">import</span> <span class="n">_build_runtime_info</span><span class="p">,</span> <span class="n">_build_signature</span><span class="p">,</span> <span class="n">_newb_version</span>  <span class="c1"># noqa: F401, E402</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_stage_skills_mount</span><span class="p">(</span><span class="n">skills_src</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a temp dir shaped as ``&lt;tmp&gt;/.claude/skills/&lt;name&gt;/``.&quot;&quot;&quot;</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;newb-self-explain-</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-&quot;</span><span class="p">))</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">tmp</span> <span class="o">/</span> <span class="s2">&quot;.claude&quot;</span> <span class="o">/</span> <span class="s2">&quot;skills&quot;</span> <span class="o">/</span> <span class="n">name</span>
+    <span class="n">target</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">skills_src</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tmp</span>
+
+
+<span class="n">_PROJECT_ROOT_MARKERS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="s2">&quot;.git&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pyproject.toml&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;setup.py&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;package.json&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;Cargo.toml&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;go.mod&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_find_project_root</span><span class="p">(</span><span class="n">start</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Walk up from ``start`` looking for a project-root marker.</span>
+
+<span class="sd">    Returns the first ancestor (or ``start`` itself) that contains any</span>
+<span class="sd">    of ``.git``, ``pyproject.toml``, ``setup.py``, ``package.json``,</span>
+<span class="sd">    ``Cargo.toml``, or ``go.mod``. If nothing is found before reaching</span>
+<span class="sd">    the filesystem root, returns ``None`` (caller falls back to</span>
+<span class="sd">    ``start``).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">start</span> <span class="k">if</span> <span class="n">start</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="k">else</span> <span class="n">start</span><span class="o">.</span><span class="n">parent</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">((</span><span class="n">p</span> <span class="o">/</span> <span class="n">m</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">_PROJECT_ROOT_MARKERS</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">p</span>
+        <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">parent</span> <span class="o">==</span> <span class="n">p</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">parent</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_validate_source</span><span class="p">(</span><span class="n">source_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sanity-check the source directory.</span>
+
+<span class="sd">    Must be a directory and non-empty. Any file type is acceptable —</span>
+<span class="sd">    README, .py, .ipynb, .pdf, .yaml, scratch notes, anything. The</span>
+<span class="sd">    agent&#39;s Read tool sees every file inside the staged cwd; newb</span>
+<span class="sd">    doesn&#39;t filter by extension. (Earlier versions required at least</span>
+<span class="sd">    one .md file as a smoke test; lifted in 0.10 — pip-installable</span>
+<span class="sd">    packages without ANY .md still benefit from a try-run.)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">p</span><span class="o">.</span><span class="n">is_dir</span><span class="p">():</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;source is not a directory: </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;source directory is empty: </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">p</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_is_url</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+        <span class="n">spec</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">&quot;http://&quot;</span><span class="p">,</span> <span class="s2">&quot;https://&quot;</span><span class="p">,</span> <span class="s2">&quot;git@&quot;</span><span class="p">))</span> <span class="ow">or</span> <span class="n">spec</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.git&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_resolve_source</span><span class="p">(</span><span class="n">spec</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Resolve a source spec to a local docs/skills directory.</span>
+
+<span class="sd">    Returns ``(docs_dir, cleanup_dir_or_None)``. The cleanup dir (the</span>
+<span class="sd">    parent of a git clone) is the caller&#39;s responsibility to ``rmtree``.</span>
+
+<span class="sd">    Local paths pass through. Git URLs (``http(s)://``, ``git@``, or</span>
+<span class="sd">    ``*.git``) are shallow-cloned to a temp dir; we then prefer</span>
+<span class="sd">    ``_skills/``, then ``docs/``, then the repo root.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_url</span><span class="p">(</span><span class="n">spec</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">(),</span> <span class="kc">None</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">tempfile</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;newb-clone-&quot;</span><span class="p">))</span>
+    <span class="n">repo</span> <span class="o">=</span> <span class="n">tmp</span> <span class="o">/</span> <span class="s2">&quot;repo&quot;</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="p">[</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;clone&quot;</span><span class="p">,</span> <span class="s2">&quot;--depth=1&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">spec</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">repo</span><span class="p">)],</span>
+        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">text</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;git clone failed for </span><span class="si">{</span><span class="n">spec</span><span class="si">!r}</span><span class="s2">: </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="n">stderr</span><span class="p">[:</span><span class="mi">300</span><span class="p">]</span><span class="w"> </span><span class="ow">or</span><span class="w"> </span><span class="n">proc</span><span class="o">.</span><span class="n">stdout</span><span class="p">[:</span><span class="mi">300</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+    <span class="c1"># No .md filter — clone-root always wins. The agent decides what</span>
+    <span class="c1"># to read once cwd is the staged project root.</span>
+    <span class="k">if</span> <span class="n">repo</span><span class="o">.</span><span class="n">is_dir</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">repo</span><span class="o">.</span><span class="n">iterdir</span><span class="p">()):</span>
+        <span class="k">return</span> <span class="n">repo</span><span class="p">,</span> <span class="n">tmp</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;cloned repo is empty: </span><span class="si">{</span><span class="n">spec</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_runner</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">skills_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">project_root</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">runtime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;docker&quot;</span><span class="p">,</span>
+    <span class="n">hardening</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+    <span class="n">mcp_servers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">pip_cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a runner.</span>
+
+<span class="sd">    ``project_root`` is what the agent will see as cwd — the package&#39;s</span>
+<span class="sd">    install location (auto-detected from ``.git`` / ``pyproject.toml``</span>
+<span class="sd">    / ``setup.py`` markers). ``skills_dir`` is the focused docs/skills</span>
+<span class="sd">    subdir the prompts point at via the ``{skills_path}`` placeholder.</span>
+
+<span class="sd">    ``runtime`` selects the container isolation backend:</span>
+
+<span class="sd">    * ``docker`` (default) — run the SDK inside</span>
+<span class="sd">      ``ghcr.io/ywatanabe1989/newb-runner``; hard isolation (only the</span>
+<span class="sd">      staged project root is bind-mounted ro). ~15-20s/q after image</span>
+<span class="sd">      pull. The agent gets full agentic permissions inside (Read +</span>
+<span class="sd">      Write + Edit + Bash + Glob + Grep) — container is the boundary,</span>
+<span class="sd">      not the SDK options.</span>
+<span class="sd">    * ``apptainer`` — same image via ``apptainer run docker://...``;</span>
+<span class="sd">      HPC use case where docker isn&#39;t allowed.</span>
+
+<span class="sd">    The ``host`` runtime was removed in newb 0.9 — full agent</span>
+<span class="sd">    permissions on the host are unsafe (agent could ``rm -rf`` the</span>
+<span class="sd">    user&#39;s projects, ``pip install`` into the global env, …) and</span>
+<span class="sd">    &quot;container is the boundary&quot; only holds when there IS a container.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">runtime</span> <span class="o">==</span> <span class="s2">&quot;docker&quot;</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">._container_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">DockerRunner</span>
+
+        <span class="k">return</span> <span class="n">DockerRunner</span><span class="p">(</span>
+            <span class="n">skills_mount</span><span class="o">=</span><span class="n">skills_dir</span><span class="p">,</span>
+            <span class="n">project_root</span><span class="o">=</span><span class="n">project_root</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">hardening</span><span class="o">=</span><span class="n">hardening</span><span class="p">,</span>
+            <span class="n">scope</span><span class="o">=</span><span class="n">scope</span><span class="p">,</span>
+            <span class="n">mcp_servers</span><span class="o">=</span><span class="n">mcp_servers</span><span class="p">,</span>
+            <span class="n">pip_cache_dir</span><span class="o">=</span><span class="n">pip_cache_dir</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">runtime</span> <span class="o">==</span> <span class="s2">&quot;podman&quot;</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">._container_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">PodmanRunner</span>
+
+        <span class="k">return</span> <span class="n">PodmanRunner</span><span class="p">(</span>
+            <span class="n">skills_mount</span><span class="o">=</span><span class="n">skills_dir</span><span class="p">,</span>
+            <span class="n">project_root</span><span class="o">=</span><span class="n">project_root</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">hardening</span><span class="o">=</span><span class="n">hardening</span><span class="p">,</span>
+            <span class="n">scope</span><span class="o">=</span><span class="n">scope</span><span class="p">,</span>
+            <span class="n">mcp_servers</span><span class="o">=</span><span class="n">mcp_servers</span><span class="p">,</span>
+            <span class="n">pip_cache_dir</span><span class="o">=</span><span class="n">pip_cache_dir</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">runtime</span> <span class="o">==</span> <span class="s2">&quot;apptainer&quot;</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">._container_runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">ApptainerRunner</span>
+
+        <span class="k">return</span> <span class="n">ApptainerRunner</span><span class="p">(</span>
+            <span class="n">skills_mount</span><span class="o">=</span><span class="n">skills_dir</span><span class="p">,</span>
+            <span class="n">project_root</span><span class="o">=</span><span class="n">project_root</span><span class="p">,</span>
+            <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+            <span class="n">scope</span><span class="o">=</span><span class="n">scope</span><span class="p">,</span>
+            <span class="n">mcp_servers</span><span class="o">=</span><span class="n">mcp_servers</span><span class="p">,</span>
+            <span class="n">pip_cache_dir</span><span class="o">=</span><span class="n">pip_cache_dir</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;unknown runtime: </span><span class="si">{</span><span class="n">runtime</span><span class="si">!r}</span><span class="s2"> (expected docker / podman / apptainer; &quot;</span>
+        <span class="s2">&quot;host removed in newb 0.9 — see CHANGELOG)&quot;</span>
+    <span class="p">)</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Public entry point</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+
+<span class="n">_INSTALL_MODE_CMD</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;editable&quot;</span><span class="p">:</span> <span class="s2">&quot;pip install -e .&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;wheel&quot;</span><span class="p">:</span> <span class="s2">&quot;pip wheel --no-deps -w /tmp/newb-wheel . &amp;&amp; pip install /tmp/newb-wheel/*.whl&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;pypi&quot;</span><span class="p">:</span> <span class="s2">&quot;pip install $(grep -oP &#39;(?&lt;=^name = </span><span class="se">\&quot;</span><span class="s2">)[^</span><span class="se">\&quot;</span><span class="s2">]+&#39; pyproject.toml | head -1)&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="run">
+<a class="viewcode-back" href="../../api.html#newb.run">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span>
+    <span class="n">skills_dir</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Path</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;claude-haiku-4-5&quot;</span><span class="p">,</span>
+    <span class="n">runs_per_prompt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="n">runtime</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;docker&quot;</span><span class="p">,</span>
+    <span class="n">template</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;python-package&quot;</span><span class="p">,</span>
+    <span class="n">hardening</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">scope</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+    <span class="n">install_mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;editable&quot;</span><span class="p">,</span>
+    <span class="n">mcp_servers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">pip_cache_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">verbosity</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="n">_runner</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Have an agent (mounted with only the given skills) self-explain.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    skills_dir</span>
+<span class="sd">        Path to a directory containing ``.md`` skill files (and optionally</span>
+<span class="sd">        a ``tests_newb.yaml``).</span>
+<span class="sd">    model</span>
+<span class="sd">        Claude model id passed to the SDK.</span>
+<span class="sd">    runs_per_prompt</span>
+<span class="sd">        How many times to ask each prompt. &gt;1 returns lists; ==1 returns</span>
+<span class="sd">        scalars.</span>
+<span class="sd">    runtime</span>
+<span class="sd">        Container backend: ``docker`` (default) or ``apptainer``.</span>
+<span class="sd">    template</span>
+<span class="sd">        Question-template name from ``newb.question_templates`` (default</span>
+<span class="sd">        ``python-package``).</span>
+<span class="sd">    _runner</span>
+<span class="sd">        Test seam — inject a runner with a ``.run(prompt, model=...)``</span>
+<span class="sd">        method to bypass docker.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        ``{&quot;package&quot;, &lt;prompt-keys-from-the-template&gt;...</span>
+<span class="sd">        [, &quot;tests&quot;, &quot;tests_summary&quot;]}``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">prompts</span> <span class="o">=</span> <span class="n">get_template</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">_runner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">resolved</span><span class="p">,</span> <span class="n">cleanup_clone</span> <span class="o">=</span> <span class="n">_resolve_source</span><span class="p">(</span><span class="n">skills_dir</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">resolved</span><span class="p">,</span> <span class="n">cleanup_clone</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">skills_dir</span><span class="p">),</span> <span class="kc">None</span>
+    <span class="n">skills_src</span> <span class="o">=</span> <span class="n">_validate_source</span><span class="p">(</span><span class="n">resolved</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">skills_src</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="c1"># The agent&#39;s cwd should be the package&#39;s install location — the</span>
+    <span class="c1"># full project context (README, src/, tests/, _skills/, examples/),</span>
+    <span class="c1"># not just the focused docs subdir. Auto-detect via .git/pyproject</span>
+    <span class="c1"># markers; fall back to the docs dir itself if nothing found.</span>
+    <span class="n">project_root</span> <span class="o">=</span> <span class="n">_find_project_root</span><span class="p">(</span><span class="n">skills_src</span><span class="p">)</span> <span class="ow">or</span> <span class="n">skills_src</span>
+
+    <span class="n">runner</span> <span class="o">=</span> <span class="n">_runner</span>
+    <span class="n">cleanup_mount</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Path</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">runner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">runner</span> <span class="o">=</span> <span class="n">_make_runner</span><span class="p">(</span>
+                <span class="n">skills_dir</span><span class="o">=</span><span class="n">skills_src</span><span class="p">,</span>
+                <span class="n">project_root</span><span class="o">=</span><span class="n">project_root</span><span class="p">,</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">runtime</span><span class="o">=</span><span class="n">runtime</span><span class="p">,</span>
+                <span class="n">hardening</span><span class="o">=</span><span class="n">hardening</span><span class="p">,</span>
+                <span class="n">scope</span><span class="o">=</span><span class="n">scope</span><span class="p">,</span>
+                <span class="n">mcp_servers</span><span class="o">=</span><span class="n">mcp_servers</span><span class="p">,</span>
+                <span class="n">pip_cache_dir</span><span class="o">=</span><span class="n">pip_cache_dir</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Resolve the skills path the agent will see inside the runner.</span>
+        <span class="c1"># Docker mounts at /home/agent/.claude/skills/; LocalRunner uses</span>
+        <span class="c1"># an isolated HOME. Each runner can expose `.skills_path` to</span>
+        <span class="c1"># override the default. The path is interpolated into prompts so</span>
+        <span class="c1"># the agent reads from the right place.</span>
+        <span class="n">skills_path</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">runner</span><span class="p">,</span> <span class="s2">&quot;skills_path&quot;</span><span class="p">,</span> <span class="s2">&quot;/home/agent/.claude/skills/&quot;</span><span class="p">)</span>
+
+        <span class="n">out</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;newb_signature&quot;</span><span class="p">:</span> <span class="n">_build_signature</span><span class="p">(),</span>
+            <span class="s2">&quot;package&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;template&quot;</span><span class="p">:</span> <span class="n">template</span><span class="p">,</span>
+            <span class="s2">&quot;runtime_info&quot;</span><span class="p">:</span> <span class="n">_build_runtime_info</span><span class="p">(</span>
+                <span class="n">runtime</span><span class="o">=</span><span class="n">runtime</span><span class="p">,</span>
+                <span class="n">runner</span><span class="o">=</span><span class="n">runner</span><span class="p">,</span>
+                <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">template</span><span class="o">=</span><span class="n">template</span><span class="p">,</span>
+                <span class="n">scope</span><span class="o">=</span><span class="n">scope</span><span class="p">,</span>
+                <span class="n">install_mode</span><span class="o">=</span><span class="n">install_mode</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">}</span>
+        <span class="n">install_cmd</span> <span class="o">=</span> <span class="n">_INSTALL_MODE_CMD</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">install_mode</span><span class="p">,</span> <span class="n">_INSTALL_MODE_CMD</span><span class="p">[</span><span class="s2">&quot;editable&quot;</span><span class="p">])</span>
+        <span class="c1"># Build a single batch covering every (key, run-index) pair so</span>
+        <span class="c1"># the entire template runs in ONE container invocation. The</span>
+        <span class="c1"># in-container runner shares /work/project&#39;s filesystem state</span>
+        <span class="c1"># across prompts (so `pip install -e .` from post_install_check</span>
+        <span class="c1"># carries forward) but uses an independent ``query()`` per</span>
+        <span class="c1"># prompt so conversation context never leaks between answers.</span>
+        <span class="n">batch_keys</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">batch_prompts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">prompt</span> <span class="ow">in</span> <span class="n">prompts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">rendered</span> <span class="o">=</span> <span class="n">prompt</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">skills_path</span><span class="o">=</span><span class="n">skills_path</span><span class="p">,</span>
+                <span class="n">install_cmd</span><span class="o">=</span><span class="n">install_cmd</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">run_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">runs_per_prompt</span><span class="p">))):</span>
+                <span class="n">batch_keys</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">key</span><span class="p">,</span> <span class="n">run_idx</span><span class="p">))</span>
+                <span class="n">batch_prompts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rendered</span><span class="p">)</span>
+        <span class="n">run_batch</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">runner</span><span class="p">,</span> <span class="s2">&quot;run_batch&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">callable</span><span class="p">(</span><span class="n">run_batch</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">batch_results</span> <span class="o">=</span> <span class="n">run_batch</span><span class="p">(</span>
+                    <span class="n">batch_prompts</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="n">verbosity</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="c1"># Older runner shims without `verbosity` kwarg.</span>
+                <span class="n">batch_results</span> <span class="o">=</span> <span class="n">run_batch</span><span class="p">(</span><span class="n">batch_prompts</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Test-seam runners that only implement .run(prompt) — fall</span>
+            <span class="c1"># back to per-prompt calls. Real container runners always</span>
+            <span class="c1"># implement run_batch (single docker startup).</span>
+            <span class="n">batch_results</span> <span class="o">=</span> <span class="p">[</span><span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">batch_prompts</span><span class="p">]</span>
+        <span class="n">per_key</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">_</span><span class="p">),</span> <span class="n">result</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">batch_keys</span><span class="p">,</span> <span class="n">batch_results</span><span class="p">):</span>
+            <span class="n">per_key</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_extract_text</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">answers</span> <span class="ow">in</span> <span class="n">per_key</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">out</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">answers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">runs_per_prompt</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">answers</span>
+
+        <span class="c1"># Attach structured `&lt;key&gt;_parsed` siblings so CI can gate</span>
+        <span class="c1"># on clean values instead of grepping free-text replies.</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">._parsers</span><span class="w"> </span><span class="kn">import</span> <span class="n">attach_parsed_fields</span>
+
+        <span class="n">attach_parsed_fields</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+        <span class="n">test_results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">_load_tests</span><span class="p">(</span><span class="n">skills_src</span><span class="p">):</span>
+            <span class="n">ans_text</span> <span class="o">=</span> <span class="n">_extract_text</span><span class="p">(</span><span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;prompt&quot;</span><span class="p">],</span> <span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">))</span>
+            <span class="n">test_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_grade</span><span class="p">(</span><span class="n">entry</span><span class="p">,</span> <span class="n">ans_text</span><span class="p">,</span> <span class="n">runner</span><span class="p">,</span> <span class="n">model</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">test_results</span><span class="p">:</span>
+            <span class="n">passed</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">test_results</span> <span class="k">if</span> <span class="n">t</span><span class="p">[</span><span class="s2">&quot;passed&quot;</span><span class="p">])</span>
+            <span class="n">out</span><span class="p">[</span><span class="s2">&quot;tests&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">test_results</span>
+            <span class="n">out</span><span class="p">[</span><span class="s2">&quot;tests_summary&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;passed&quot;</span><span class="p">:</span> <span class="n">passed</span><span class="p">,</span>
+                <span class="s2">&quot;total&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">test_results</span><span class="p">),</span>
+            <span class="p">}</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">cleanup_mount</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">cleanup_mount</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">cleanup_mount</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cleanup_clone</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">cleanup_clone</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">cleanup_clone</span><span class="p">,</span> <span class="n">ignore_errors</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">runner</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">runner</span><span class="p">,</span> <span class="s2">&quot;close&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">_runner</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">runner</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">pass</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_text</span><span class="p">(</span><span class="n">result</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pull the assistant&#39;s final text from a ``claude -p`` JSON envelope.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">r</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">result</span>
+    <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+
+<span class="c1"># Markdown rendering lives in ``_render.py`` (line-budget hygiene).</span>
+<span class="c1"># Re-exported here so existing call sites (``newb._try.render_markdown``)</span>
+<span class="c1"># keep working.</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">._render</span><span class="w"> </span><span class="kn">import</span> <span class="n">render_markdown</span>  <span class="c1"># noqa: F401, E402</span>
+
+
+<span class="c1"># EOF</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Yusuke Watanabe.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

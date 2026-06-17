@@ -35,6 +35,15 @@ all  = [
     "torch>=2.0",
     "sentencepiece>=0.1.99",
 ]
+# Sphinx docs build (`docs` CI workflow runs `pip install -e .[docs]`
+# then sphinx-build docs/sphinx). sphinx-click renders the CLI tree
+# from the live Click group so the CLI reference can't drift.
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "myst-parser>=2.0",
+    "sphinx-click>=5.0",
+]
 # PS210 — `[dev]` includes every dependency that the test suite imports
 # unguarded so a fresh `pip install -e .[dev]` runs the full suite.
 # - PyYAML / fastmcp: extras (yaml/mcp) used transitively via `from newb…`
@@ -65,9 +74,16 @@ newb = "newb"
 [project.urls]
 Homepage = "https://github.com/ywatanabe1989/newb"
 Repository = "https://github.com/ywatanabe1989/newb"
+Documentation = "https://newb.readthedocs.io"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+# Ship the agent-facing skill leaves and the in-wheel Sphinx HTML bundle.
+# scitex-cloud serves per-package docs from src/newb/_sphinx_html/ (PS-121),
+# refreshed in CI by the `docs` workflow on every push to develop.
+newb = ["_skills/**/*.md", "_sphinx_html/**/*"]
 
 [tool.scitex-linter]
 # `containers/runner.py` runs INSIDE the docker/apptainer container; it

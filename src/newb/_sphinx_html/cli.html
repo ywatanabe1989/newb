@@ -1,0 +1,846 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLI reference &mdash; newb 0.26.6</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2553ce2e"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Python API" href="api.html" />
+    <link rel="prev" title="Quick start" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            newb
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">CLI reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#newb">newb</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#newb-source-dev">dev</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-dev-install">install</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-dev-scaffold-workflow">scaffold-workflow</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-dev-set-secret">set-secret</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#newb-source-gate">gate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#newb-source-install-shell-completion">install-shell-completion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#newb-source-list-python-apis">list-python-apis</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#newb-source-mcp">mcp</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-mcp-list-tools">list-tools</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-mcp-start">start</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#newb-source-print-shell-completion">print-shell-completion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#newb-source-show-env-template">show-env-template</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#newb-source-skills">skills</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-skills-get">get</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-skills-install">install</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-skills-list">list</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#newb-source-templates">templates</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-templates-list">list</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#newb-source-templates-show">show</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">Python API</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">newb</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">CLI reference</li>
+      <li class="wy-breadcrumbs-aside">
+              <a href="https://github.com/ywatanabe1989/newb/blob/develop/docs/sphinx/cli.rst" class="fa fa-github"> Edit on GitHub</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="cli-reference">
+<h1>CLI reference<a class="headerlink" href="#cli-reference" title="Link to this heading"></a></h1>
+<p>Rendered from the live Click group via <code class="docutils literal notranslate"><span class="pre">sphinx-click</span></code> — this tree
+cannot drift from <code class="docutils literal notranslate"><span class="pre">newb</span> <span class="pre">--help-recursive</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">newb</span> <span class="pre">&lt;target&gt;</span></code> is the canonical, verb-less invocation (pytest-style);
+the subcommands below are introspection / maintainer plumbing.</p>
+<section id="newb">
+<h2>newb<a class="headerlink" href="#newb" title="Link to this heading"></a></h2>
+<p>A fresh AI agent tries to use your package — pytest-style.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb .                                # current project</div>
+<div class="line">$ newb <a class="reference external" href="https://github.com/user/repo.git">https://github.com/user/repo.git</a> # git URL — shallow-clones</div>
+<div class="line">$ newb . –template cli-tool –json</div>
+<div class="line">$ newb templates list                   # introspect</div>
+<div class="line">$ newb mcp start                        # MCP server (stdio)</div>
+</div>
+</div>
+<p>SOURCE may be a local directory or a git URL (<a class="reference external" href="https://">https://</a>, git&#64;, <a href="#id1"><span class="problematic" id="id2">*</span></a>.git).
+A sandboxed container session reads your project (respecting
+.gitignore) and answers the questions in the chosen template.
+Runtime defaults to docker; auth via NEWB_ANTHROPIC_API_KEY.</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-model">
+<span class="sig-name descname"><span class="pre">--model</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;model&gt;</span></span><a class="headerlink" href="#cmdoption-newb-model" title="Link to this definition"></a></dt>
+<dd><p>Claude model id.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-runs">
+<span class="sig-name descname"><span class="pre">--runs</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;runs&gt;</span></span><a class="headerlink" href="#cmdoption-newb-runs" title="Link to this definition"></a></dt>
+<dd><p>Runs per prompt.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-template">
+<span class="sig-name descname"><span class="pre">--template</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;template&gt;</span></span><a class="headerlink" href="#cmdoption-newb-template" title="Link to this definition"></a></dt>
+<dd><p>Question template — which prompt set to send the agent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Options<span class="colon">:</span></dt>
+<dd class="field-odd"><p>cli-tool | python-package</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-format">
+<span class="sig-name descname"><span class="pre">--format</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;out_format&gt;</span></span><a class="headerlink" href="#cmdoption-newb-format" title="Link to this definition"></a></dt>
+<dd><p>Output format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Options<span class="colon">:</span></dt>
+<dd class="field-odd"><p>json | markdown</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-json">
+<span class="sig-name descname"><span class="pre">--json</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-json" title="Link to this definition"></a></dt>
+<dd><p>Alias for –format json (universal SciTeX flag).</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-markdown">
+<span class="sig-name descname"><span class="pre">--markdown</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-markdown" title="Link to this definition"></a></dt>
+<dd><p>Alias for –format markdown.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-runtime">
+<span class="sig-name descname"><span class="pre">--runtime</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;runtime&gt;</span></span><a class="headerlink" href="#cmdoption-newb-runtime" title="Link to this definition"></a></dt>
+<dd><p>Container runtime. docker (default), podman (rootless), or apptainer (HPC).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Options<span class="colon">:</span></dt>
+<dd class="field-odd"><p>docker | podman | apptainer</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-scope">
+<span class="sig-name descname"><span class="pre">--scope</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;scope&gt;</span></span><a class="headerlink" href="#cmdoption-newb-scope" title="Link to this definition"></a></dt>
+<dd><p>Agent scope. ‘all’ (default): full agentic permissions — agent can install/run/test the package. ‘docs’: read-only audit mode — Read/Glob/Grep only, no Bash/Write/Edit.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Options<span class="colon">:</span></dt>
+<dd class="field-odd"><p>all | docs</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-install-mode">
+<span class="sig-name descname"><span class="pre">--install-mode</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;install_mode&gt;</span></span><a class="headerlink" href="#cmdoption-newb-install-mode" title="Link to this definition"></a></dt>
+<dd><p>How the agent installs the package for post_install_check. ‘editable’ (default): pip install -e . (dev loop). ‘wheel’: build a wheel and install it (release sanity). ‘pypi’: pip install &lt;pkg-name&gt; from PyPI (real-user reproduction).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Options<span class="colon">:</span></dt>
+<dd class="field-odd"><p>editable | wheel | pypi</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-harden-memory">
+<span class="sig-name descname"><span class="pre">--harden-memory</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;SIZE&gt;</span></span><a class="headerlink" href="#cmdoption-newb-harden-memory" title="Link to this definition"></a></dt>
+<dd><p>Container memory cap, e.g. 2g. Default: unlimited (agent runs free).</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-harden-cpus">
+<span class="sig-name descname"><span class="pre">--harden-cpus</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;N&gt;</span></span><a class="headerlink" href="#cmdoption-newb-harden-cpus" title="Link to this definition"></a></dt>
+<dd><p>Container CPU cap (cores). Default: unlimited.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-harden-pids-limit">
+<span class="sig-name descname"><span class="pre">--harden-pids-limit</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;N&gt;</span></span><a class="headerlink" href="#cmdoption-newb-harden-pids-limit" title="Link to this definition"></a></dt>
+<dd><p>Container PID cap. Default: unlimited.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-harden-no-network">
+<span id="cmdoption-newb-harden-network"></span><span class="sig-name descname"><span class="pre">--harden-no-network</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--harden-network</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-harden-no-network" title="Link to this definition"></a></dt>
+<dd><p>–harden-no-network adds –network=none (breaks pip + SDK; only for fully offline workflows). Default: bridge.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-harden-tmpfs-noexec">
+<span id="cmdoption-newb-no-harden-tmpfs-noexec"></span><span class="sig-name descname"><span class="pre">--harden-tmpfs-noexec</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--no-harden-tmpfs-noexec</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-harden-tmpfs-noexec" title="Link to this definition"></a></dt>
+<dd><p>Mount /tmp with noexec,nosuid. Default: off (pip/pytest sometimes write+exec wheels in /tmp).</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-pip-cache">
+<span class="sig-name descname"><span class="pre">--pip-cache</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;PATH&gt;</span></span><a class="headerlink" href="#cmdoption-newb-pip-cache" title="Link to this definition"></a></dt>
+<dd><p>Mount a host pip cache into the container at ~/.cache/pip. Speeds up local-dev iteration on repeated runs. Leave unset for CI (cold install is the honest newbie test). Falls back to NEWB_PIP_CACHE_DIR.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-v">
+<span id="cmdoption-newb-verbose"></span><span class="sig-name descname"><span class="pre">-v</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--verbose</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-v" title="Link to this definition"></a></dt>
+<dd><p>Verbosity: -v echoes the resolved config + total wall time; -vv also streams container stderr in real time (per-prompt timing + SDK chatter); -vvv adds the raw container argv.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-help-recursive">
+<span class="sig-name descname"><span class="pre">--help-recursive</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-help-recursive" title="Link to this definition"></a></dt>
+<dd><p>Flatten help for every subcommand.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-V">
+<span id="cmdoption-newb-version"></span><span class="sig-name descname"><span class="pre">-V</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--version</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-V" title="Link to this definition"></a></dt>
+<dd><p>Show the version and exit.</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-arg-SOURCE">
+<span class="sig-name descname"><span class="pre">SOURCE</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-arg-SOURCE" title="Link to this definition"></a></dt>
+<dd><p>Optional argument</p>
+</dd></dl>
+
+<p>newb (v0.26.6) — A fresh AI agent tries to use your package — pytest-style. Run <cite>newb &lt;SOURCE&gt;</cite> against any project directory or git URL.</p>
+<section id="newb-source-dev">
+<h3>dev<a class="headerlink" href="#newb-source-dev" title="Link to this heading"></a></h3>
+<p>Developer / maintainer plumbing (CI secrets, repo bootstrap).</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>dev<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="newb-source-dev-install">
+<h4>install<a class="headerlink" href="#newb-source-dev-install" title="Link to this heading"></a></h4>
+<p>Install newb CI on TARGET = scaffold-workflow + set-secret.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ export NEWB_ANTHROPIC_API_KEY=sk-ant-…</div>
+<div class="line">$ newb dev install owner/repo            # PR + secret</div>
+<div class="line">$ newb dev install owner/repo –push     # direct-push + secret</div>
+<div class="line">$ newb dev install . –no-secret         # workflow only</div>
+<div class="line">$ newb dev install owner/repo –dry-run  # preview</div>
+</div>
+</div>
+<p>TARGET = &lt;owner&gt;/&lt;repo&gt;; ‘.’ or omitted = current git remote.
+An auth source (NEWB_ANTHROPIC_API_KEY,
+NEWB_CLAUDE_CODE_CREDENTIALS_JSON, or ~/.claude/.credentials.json)
+is required unless –no-secret.</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>dev<span class="w"> </span>install<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">[</span>TARGET<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-install-push">
+<span class="sig-name descname"><span class="pre">--push</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-install-push" title="Link to this definition"></a></dt>
+<dd><p>Direct-push the workflow instead of opening a PR.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-install-force">
+<span class="sig-name descname"><span class="pre">--force</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-install-force" title="Link to this definition"></a></dt>
+<dd><p>Overwrite an existing secret AND workflow.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-install-no-secret">
+<span class="sig-name descname"><span class="pre">--no-secret</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-install-no-secret" title="Link to this definition"></a></dt>
+<dd><p>Skip the secret step (e.g. if an org-level secret is already in scope).</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-install-dry-run">
+<span class="sig-name descname"><span class="pre">--dry-run</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-install-dry-run" title="Link to this definition"></a></dt>
+<dd><p>Print what would happen without making any remote changes.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-install-y">
+<span id="cmdoption-newb-SOURCE-dev-install-yes"></span><span class="sig-name descname"><span class="pre">-y</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--yes</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-install-y" title="Link to this definition"></a></dt>
+<dd><p>Skip the interactive confirmation prompt.</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-install-arg-TARGET">
+<span class="sig-name descname"><span class="pre">TARGET</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-install-arg-TARGET" title="Link to this definition"></a></dt>
+<dd><p>Optional argument</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-dev-scaffold-workflow">
+<h4>scaffold-workflow<a class="headerlink" href="#newb-source-dev-scaffold-workflow" title="Link to this heading"></a></h4>
+<p>Drop .github/workflows/newb.yml into TARGET.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb dev scaffold-workflow owner/repo            # open a PR</div>
+<div class="line">$ newb dev scaffold-workflow owner/repo –push     # direct-push</div>
+<div class="line">$ newb dev scaffold-workflow .                     # current git remote</div>
+<div class="line">$ newb dev scaffold-workflow owner/repo –dry-run  # preview only</div>
+</div>
+</div>
+<p>TARGET = &lt;owner&gt;/&lt;repo&gt;; ‘.’ or omitted = current git remote.</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>dev<span class="w"> </span>scaffold-workflow<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">[</span>TARGET<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-scaffold-workflow-push">
+<span class="sig-name descname"><span class="pre">--push</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-scaffold-workflow-push" title="Link to this definition"></a></dt>
+<dd><p>Direct-push to default branch instead of opening a PR.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-scaffold-workflow-force">
+<span class="sig-name descname"><span class="pre">--force</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-scaffold-workflow-force" title="Link to this definition"></a></dt>
+<dd><p>Overwrite an existing newb.yml workflow.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-scaffold-workflow-dry-run">
+<span class="sig-name descname"><span class="pre">--dry-run</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-scaffold-workflow-dry-run" title="Link to this definition"></a></dt>
+<dd><p>Print what would happen without making any remote changes.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-scaffold-workflow-y">
+<span id="cmdoption-newb-SOURCE-dev-scaffold-workflow-yes"></span><span class="sig-name descname"><span class="pre">-y</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--yes</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-scaffold-workflow-y" title="Link to this definition"></a></dt>
+<dd><p>Skip the interactive confirmation prompt.</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-scaffold-workflow-arg-TARGET">
+<span class="sig-name descname"><span class="pre">TARGET</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-scaffold-workflow-arg-TARGET" title="Link to this definition"></a></dt>
+<dd><p>Optional argument</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-dev-set-secret">
+<h4>set-secret<a class="headerlink" href="#newb-source-dev-set-secret" title="Link to this heading"></a></h4>
+<p>Set the newb auth secret on TARGET.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line"># API-key path (per-token billing)</div>
+<div class="line">$ export NEWB_ANTHROPIC_API_KEY=sk-ant-api03-…</div>
+<div class="line">$ newb dev set-secret owner/repo</div>
+</div>
+</div>
+<blockquote>
+<div><p># OAuth flat-rate path (Claude Code Pro / Max). Auto-detected
+# from ~/.claude/.credentials.json or NEWB_CLAUDE_CODE_CREDENTIALS_JSON.
+$ newb dev set-secret owner/repo</p>
+</div></blockquote>
+<p>TARGET = &lt;owner&gt;/&lt;repo&gt;; ‘.’ or omitted = current git remote.
+Picks NEWB_CLAUDE_CODE_CREDENTIALS_JSON if either the env var
+or ~/.claude/.credentials.json is available; otherwise falls
+back to NEWB_ANTHROPIC_API_KEY from the host env.</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>dev<span class="w"> </span>set-secret<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">[</span>TARGET<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-set-secret-force">
+<span class="sig-name descname"><span class="pre">--force</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-set-secret-force" title="Link to this definition"></a></dt>
+<dd><p>Overwrite an existing secret.</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-dev-set-secret-arg-TARGET">
+<span class="sig-name descname"><span class="pre">TARGET</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-dev-set-secret-arg-TARGET" title="Link to this definition"></a></dt>
+<dd><p>Optional argument</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="newb-source-gate">
+<h3>gate<a class="headerlink" href="#newb-source-gate" title="Link to this heading"></a></h3>
+<p>Evaluate a newb JSON report against [tool.newb.gate] criteria.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb . –format json &gt; report.json</div>
+<div class="line">$ newb gate report.json                 # exits 0 (pass) or 1 (fail)</div>
+<div class="line">$ newb . –format json | newb gate -    # via stdin</div>
+</div>
+</div>
+<p>Pass ‘-’ as REPORT_PATH to read from stdin.</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>gate<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>REPORT_PATH
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-gate-pyproject">
+<span class="sig-name descname"><span class="pre">--pyproject</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;pyproject_dir&gt;</span></span><a class="headerlink" href="#cmdoption-newb-SOURCE-gate-pyproject" title="Link to this definition"></a></dt>
+<dd><p>Directory to search upward from for pyproject.toml.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Default<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">'.'</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-gate-arg-REPORT_PATH">
+<span class="sig-name descname"><span class="pre">REPORT_PATH</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-gate-arg-REPORT_PATH" title="Link to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-install-shell-completion">
+<h3>install-shell-completion<a class="headerlink" href="#newb-source-install-shell-completion" title="Link to this heading"></a></h3>
+<p>Install shell completion for SHELL.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb install-shell-completion bash</div>
+<div class="line">$ newb install-shell-completion          # auto-detect</div>
+<div class="line">$ newb install-shell-completion zsh –dry-run</div>
+</div>
+</div>
+<p>Appends an <code class="docutils literal notranslate"><span class="pre">eval</span></code> line (bash/zsh) or writes a completion file
+(fish). Idempotent — re-runs are no-ops.</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>install-shell-completion<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">[[</span>bash<span class="p">|</span>zsh<span class="p">|</span>fish<span class="o">]]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-install-shell-completion-rc-path">
+<span class="sig-name descname"><span class="pre">--rc-path</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;rc_path&gt;</span></span><a class="headerlink" href="#cmdoption-newb-SOURCE-install-shell-completion-rc-path" title="Link to this definition"></a></dt>
+<dd><p>Override the rc / completion file (default depends on shell).</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-install-shell-completion-dry-run">
+<span class="sig-name descname"><span class="pre">--dry-run</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-install-shell-completion-dry-run" title="Link to this definition"></a></dt>
+<dd><p>Print what would be written without modifying any file.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-install-shell-completion-y">
+<span id="cmdoption-newb-SOURCE-install-shell-completion-yes"></span><span class="sig-name descname"><span class="pre">-y</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--yes</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-install-shell-completion-y" title="Link to this definition"></a></dt>
+<dd><p>Skip the interactive confirmation prompt.</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-install-shell-completion-arg-SHELL">
+<span class="sig-name descname"><span class="pre">SHELL</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-install-shell-completion-arg-SHELL" title="Link to this definition"></a></dt>
+<dd><p>Optional argument</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-list-python-apis">
+<h3>list-python-apis<a class="headerlink" href="#newb-source-list-python-apis" title="Link to this heading"></a></h3>
+<p>List newb’s public Python API surface (callables in <cite>import newb</cite>).</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb list-python-apis</div>
+<div class="line">$ newb list-python-apis –json</div>
+</div>
+</div>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>list-python-apis<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-list-python-apis-json">
+<span class="sig-name descname"><span class="pre">--json</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-list-python-apis-json" title="Link to this definition"></a></dt>
+<dd><p>Machine-readable JSON output.</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-mcp">
+<h3>mcp<a class="headerlink" href="#newb-source-mcp" title="Link to this heading"></a></h3>
+<p>MCP server commands (start, list-tools).</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>mcp<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="newb-source-mcp-list-tools">
+<h4>list-tools<a class="headerlink" href="#newb-source-mcp-list-tools" title="Link to this heading"></a></h4>
+<p>List MCP tools exposed by newb’s server.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb mcp list-tools</div>
+<div class="line">$ newb mcp list-tools –json</div>
+</div>
+</div>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>mcp<span class="w"> </span>list-tools<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-mcp-list-tools-json">
+<span class="sig-name descname"><span class="pre">--json</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-mcp-list-tools-json" title="Link to this definition"></a></dt>
+<dd><p>Machine-readable JSON output.</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-mcp-start">
+<h4>start<a class="headerlink" href="#newb-source-mcp-start" title="Link to this heading"></a></h4>
+<p>Start the newb MCP server (stdio transport).</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb mcp start</div>
+<div class="line">$ newb mcp start –dry-run</div>
+</div>
+</div>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>mcp<span class="w"> </span>start<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-mcp-start-dry-run">
+<span class="sig-name descname"><span class="pre">--dry-run</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-mcp-start-dry-run" title="Link to this definition"></a></dt>
+<dd><p>Print the planned action and exit (don’t bind / serve).</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-mcp-start-y">
+<span id="cmdoption-newb-SOURCE-mcp-start-yes"></span><span class="sig-name descname"><span class="pre">-y</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--yes</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-mcp-start-y" title="Link to this definition"></a></dt>
+<dd><p>Bypass any TTY confirm (no-op here; present for SciTeX CLI parity).</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="newb-source-print-shell-completion">
+<h3>print-shell-completion<a class="headerlink" href="#newb-source-print-shell-completion" title="Link to this heading"></a></h3>
+<p>Print the shell-completion script for SHELL to stdout.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb print-shell-completion bash</div>
+<div class="line">$ newb print-shell-completion zsh &gt; ~/.zsh-newb-completion</div>
+<div class="line">$ newb print-shell-completion          # auto-detect from $SHELL</div>
+</div>
+</div>
+<p>SHELL is one of: bash, zsh, fish. Auto-detected when omitted.</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>print-shell-completion<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">[[</span>bash<span class="p">|</span>zsh<span class="p">|</span>fish<span class="o">]]</span>
+</pre></div>
+</div>
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-print-shell-completion-arg-SHELL">
+<span class="sig-name descname"><span class="pre">SHELL</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-print-shell-completion-arg-SHELL" title="Link to this definition"></a></dt>
+<dd><p>Optional argument</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-show-env-template">
+<h3>show-env-template<a class="headerlink" href="#newb-source-show-env-template" title="Link to this heading"></a></h3>
+<p>Emit a copy-pasteable NEWB_* env-var template.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb show-env-template                              # to stdout</div>
+<div class="line">$ newb show-env-template -o ~/.config/newb/local.src  # to file</div>
+<div class="line">$ newb show-env-template –json                       # JSON schema</div>
+</div>
+</div>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>show-env-template<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-show-env-template-o">
+<span id="cmdoption-newb-SOURCE-show-env-template-output"></span><span class="sig-name descname"><span class="pre">-o</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--output</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;output&gt;</span></span><a class="headerlink" href="#cmdoption-newb-SOURCE-show-env-template-o" title="Link to this definition"></a></dt>
+<dd><p>Write to a file instead of stdout.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-show-env-template-json">
+<span class="sig-name descname"><span class="pre">--json</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-show-env-template-json" title="Link to this definition"></a></dt>
+<dd><p>Machine-readable JSON (env-var schema) instead of the .src template.</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-skills">
+<h3>skills<a class="headerlink" href="#newb-source-skills" title="Link to this heading"></a></h3>
+<p>newb’s own agent-facing skill leaves (under src/newb/_skills/newb/).</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>skills<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="newb-source-skills-get">
+<h4>get<a class="headerlink" href="#newb-source-skills-get" title="Link to this heading"></a></h4>
+<p>Print one skill leaf’s content (e.g. <cite>newb skills get SKILL.md</cite>).</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb skills get SKILL.md</div>
+<div class="line">$ newb skills get 04_isolation</div>
+<div class="line">$ newb skills get 01_quick-start –json</div>
+</div>
+</div>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>skills<span class="w"> </span>get<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>NAME
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-skills-get-json">
+<span class="sig-name descname"><span class="pre">--json</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-skills-get-json" title="Link to this definition"></a></dt>
+<dd><p>Machine-readable JSON output (path + content fields).</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-skills-get-arg-NAME">
+<span class="sig-name descname"><span class="pre">NAME</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-skills-get-arg-NAME" title="Link to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-skills-install">
+<h4>install<a class="headerlink" href="#newb-source-skills-install" title="Link to this heading"></a></h4>
+<p>Copy newb’s skill leaves into TARGET (default ~/.claude/skills/newb/).</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb skills install                    # ~/.claude/skills/newb/</div>
+<div class="line">$ newb skills install –target /tmp/foo  # custom location</div>
+<div class="line">$ newb skills install –dry-run          # preview only</div>
+</div>
+</div>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>skills<span class="w"> </span>install<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-skills-install-target">
+<span class="sig-name descname"><span class="pre">--target</span></span><span class="sig-prename descclassname"> <span class="pre">&lt;target_dir&gt;</span></span><a class="headerlink" href="#cmdoption-newb-SOURCE-skills-install-target" title="Link to this definition"></a></dt>
+<dd><p>Where to copy newb’s skill leaves into.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Default<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">'~/.claude/skills'</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-skills-install-force">
+<span class="sig-name descname"><span class="pre">--force</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-skills-install-force" title="Link to this definition"></a></dt>
+<dd><p>Overwrite existing files at the target.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-skills-install-dry-run">
+<span class="sig-name descname"><span class="pre">--dry-run</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-skills-install-dry-run" title="Link to this definition"></a></dt>
+<dd><p>Print what would be copied without writing.</p>
+</dd></dl>
+
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-skills-install-y">
+<span id="cmdoption-newb-SOURCE-skills-install-yes"></span><span class="sig-name descname"><span class="pre">-y</span></span><span class="sig-prename descclassname"></span><span class="sig-prename descclassname"><span class="pre">,</span> </span><span class="sig-name descname"><span class="pre">--yes</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-skills-install-y" title="Link to this definition"></a></dt>
+<dd><p>Skip the interactive confirmation prompt.</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-skills-list">
+<h4>list<a class="headerlink" href="#newb-source-skills-list" title="Link to this heading"></a></h4>
+<p>List newb’s skill leaves (SKILL.md + NN_*.md sub-skills).</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb skills list</div>
+<div class="line">$ newb skills list –json</div>
+</div>
+</div>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>skills<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-skills-list-json">
+<span class="sig-name descname"><span class="pre">--json</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-skills-list-json" title="Link to this definition"></a></dt>
+<dd><p>Machine-readable JSON output.</p>
+</dd></dl>
+
+</section>
+</section>
+<section id="newb-source-templates">
+<h3>templates<a class="headerlink" href="#newb-source-templates" title="Link to this heading"></a></h3>
+<p>Built-in question templates — what newb asks the agent.</p>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>templates<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>COMMAND<span class="w"> </span><span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<section id="newb-source-templates-list">
+<h4>list<a class="headerlink" href="#newb-source-templates-list" title="Link to this heading"></a></h4>
+<p>List all built-in question templates.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb templates list</div>
+<div class="line">$ newb templates list –json</div>
+</div>
+</div>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>templates<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-templates-list-json">
+<span class="sig-name descname"><span class="pre">--json</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-templates-list-json" title="Link to this definition"></a></dt>
+<dd><p>Machine-readable JSON output.</p>
+</dd></dl>
+
+</section>
+<section id="newb-source-templates-show">
+<h4>show<a class="headerlink" href="#newb-source-templates-show" title="Link to this heading"></a></h4>
+<p>Show the prompts in a template.</p>
+<div class="line-block">
+<div class="line">Example:</div>
+<div class="line-block">
+<div class="line">$ newb templates show python-package</div>
+<div class="line">$ newb templates show cli-tool –json</div>
+</div>
+</div>
+<p class="rubric">Usage</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>newb<span class="w"> </span><span class="o">[</span>SOURCE<span class="o">]</span><span class="w"> </span>templates<span class="w"> </span>show<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span>NAME
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-templates-show-json">
+<span class="sig-name descname"><span class="pre">--json</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-templates-show-json" title="Link to this definition"></a></dt>
+<dd><p>Machine-readable JSON output.</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="std option">
+<dt class="sig sig-object std" id="cmdoption-newb-SOURCE-templates-show-arg-NAME">
+<span class="sig-name descname"><span class="pre">NAME</span></span><span class="sig-prename descclassname"></span><a class="headerlink" href="#cmdoption-newb-SOURCE-templates-show-arg-NAME" title="Link to this definition"></a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quick start" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api.html" class="btn btn-neutral float-right" title="Python API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Yusuke Watanabe.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
