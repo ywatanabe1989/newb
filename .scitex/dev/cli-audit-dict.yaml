@@ -1,0 +1,8 @@
+# Project word-class overrides for `scitex-dev ecosystem audit-cli` (§1).
+# `newb gate <report>` uses "gate" as a verb — evaluate a JSON report
+# against the [tool.newb.gate] criteria in pyproject.toml. Moby lists
+# "gate" as both noun and verb, and the §1 top-level-leaf rule flags such
+# homonyms; this entry declares the verb reading (the escape hatch the
+# audit message itself recommends, same as `next`).
+intransitive_verbs:
+  - gate
