@@ -33,3 +33,4 @@ docs/to_claude/
 
 # Sphinx build output
 docs/sphinx/_build/
+.worktrees/
