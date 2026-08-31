@@ -9,7 +9,7 @@ description = "A fresh AI agent tries to use your package — pytest-style. If i
 readme = "README.md"
 license = "AGPL-3.0-only"
 requires-python = ">=3.10"
-authors = [{name = "Yusuke Watanabe", email = "ywata1989@gmail.com"}]
+authors = [{name = "Yusuke Watanabe", email = "dev@scitex.ai"}]
 dependencies = ["click>=8.0", "claude-agent-sdk>=0.1.0"]
 keywords = ["agentic-test", "newbie-test", "skill-verify", "documentation-testing", "ai-agent", "llm"]
 classifiers = [
